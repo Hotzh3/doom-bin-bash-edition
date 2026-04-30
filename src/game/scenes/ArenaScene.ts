@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { Enemy } from '../entities/Enemy';
 import { Player } from '../entities/Player';
 import { Projectile } from '../entities/Projectile';
+import { GAME_HEIGHT, GAME_WIDTH } from '../config';
 import { applyDamage } from '../systems/CombatSystem';
 import { createControls, type PlayerControls } from '../systems/InputManager';
 import { HUDSystem } from '../systems/HUDSystem';
@@ -22,7 +23,7 @@ export class ArenaScene extends Phaser.Scene {
   }
 
   create(): void {
-    this.physics.world.setBounds(0, 0, 960, 540);
+    this.physics.world.setBounds(0, 0, GAME_WIDTH, GAME_HEIGHT);
     this.p1 = new Player(this, 180, 280, 0x44ddff, 'P1');
     this.p2 = new Player(this, 760, 280, 0x66ff66, 'P2');
     this.p1Controls = createControls(this, ['A', 'D', 'W', 'S', 'F']);
