@@ -55,6 +55,43 @@ describe('GameDirector', () => {
     expect(decision.spawn).toBeNull();
   });
 
+  it('does not spawn while both players are dead', () => {
+    const director = new GameDirector({ spawnCooldownMs: 0 });
+    const decision = director.update({
+      ...baseInput,
+      elapsedTime: 10_000,
+      p1Alive: false,
+      p2Alive: false
+    });
+
+    expect(decision.intensity).toBe(0);
+    expect(decision.spawn).toBeNull();
+  });
+
+  it('respects spawn cooldown', () => {
+    const director = new GameDirector({ spawnCooldownMs: 5000 });
+    director.createOpeningSpawns();
+
+    const decision = director.update({
+      ...baseInput,
+      elapsedTime: 3000
+    });
+
+    expect(decision.spawn).toBeNull();
+  });
+
+  it('does not exceed total spawn budget', () => {
+    const director = new GameDirector({
+      maxTotalSpawns: 2,
+      openingSpawnCount: 1,
+      spawnCooldownMs: 0
+    });
+
+    expect(director.createOpeningSpawns()).toHaveLength(1);
+    expect(director.update({ ...baseInput, elapsedTime: 1000 }).spawn).not.toBeNull();
+    expect(director.update({ ...baseInput, elapsedTime: 2000 }).spawn).toBeNull();
+  });
+
   it('chooses enemy types according to progression', () => {
     const director = new GameDirector();
     expect(director.selectEnemyKind(baseInput)).toBe('GRUNT');

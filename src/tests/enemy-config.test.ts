@@ -4,6 +4,7 @@ import { ENEMY_CONFIG, ENEMY_KINDS, getEnemyConfig } from '../game/entities/enem
 describe('enemy config', () => {
   it('defines stats for every enemy kind', () => {
     expect(ENEMY_KINDS).toEqual(['GRUNT', 'BRUTE', 'STALKER']);
+    expect(Object.keys(ENEMY_CONFIG)).toEqual(ENEMY_KINDS);
 
     ENEMY_KINDS.forEach((kind) => {
       const config = getEnemyConfig(kind);
