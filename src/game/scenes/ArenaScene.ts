@@ -171,8 +171,17 @@ export class ArenaScene extends Phaser.Scene {
 
     this.lastShotByTeam[player.team] = time;
     const directionX = player === this.p1 ? 1 : -1;
-    const bullet = new Projectile(this, player.x + directionX * 18, player.y, 360 * directionX, 0, player.team);
+    const muzzleX = player.x + directionX * 18;
+    const bullet = new Projectile(this, muzzleX, player.y, 360 * directionX, 0, player.team);
     this.projectiles.add(bullet);
+    this.createMuzzleFlash(muzzleX, player.y, directionX);
+  }
+
+  private createMuzzleFlash(x: number, y: number, directionX: number): void {
+    const flash = this.add.rectangle(x + directionX * 8, y, 14, 8, 0xfff29e);
+    flash.setAlpha(0.86);
+    flash.setDepth(8);
+    this.time.delayedCall(45, () => flash.destroy());
   }
 
   private updateEnemies(time: number): void {
