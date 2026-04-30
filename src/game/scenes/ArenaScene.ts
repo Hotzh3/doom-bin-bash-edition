@@ -113,9 +113,9 @@ export class ArenaScene extends Phaser.Scene {
 
   private hitPlayer(player: Player, damage: number): void {
     const dead = applyDamage(player, damage);
+    if (!dead) player.flashHit();
     if (dead) {
-      player.setTint(0x666666);
-      player.setVelocity(0, 0);
+      player.markDefeated();
     }
   }
 
@@ -214,9 +214,9 @@ export class ArenaScene extends Phaser.Scene {
       if (!enemy.alive) return;
 
       const dead = applyDamage(enemy, bullet.damage);
+      if (!dead) enemy.flashHit();
       if (dead) {
-        enemy.setVisible(false);
-        enemy.disableBody(true, true);
+        enemy.markDefeated();
         this.enemiesKilled += 1;
         if (bullet.ownerTeam === 'P1') this.p1.kills += 1;
         if (bullet.ownerTeam === 'P2') this.p2.kills += 1;
