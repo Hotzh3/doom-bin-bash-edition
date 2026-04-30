@@ -54,6 +54,7 @@ export class ArenaScene extends Phaser.Scene {
     const frameInner = this.add.rectangle(GAME_WIDTH * 0.5, GAME_HEIGHT * 0.5, GAME_WIDTH - 28, GAME_HEIGHT - 28);
     frameInner.setStrokeStyle(2, 0x9e2f3e, 0.82);
     frameInner.setDepth(-26);
+    this.createArenaDecoration();
 
     this.p1 = new Player(this, 180, 280, 0x44ddff, 'P1');
     this.p2 = new Player(this, 760, 280, 0x66ff66, 'P2');
@@ -106,6 +107,47 @@ export class ArenaScene extends Phaser.Scene {
     text.setDepth(30);
     text.setVisible(false);
     return text;
+  }
+
+  private createArenaDecoration(): void {
+    const circuitLines: Array<[number, number, number, number, number]> = [
+      [80, 118, 210, 118, 0x263145],
+      [210, 118, 210, 178, 0x263145],
+      [710, 420, 860, 420, 0x263145],
+      [710, 360, 710, 420, 0x263145],
+      [96, 420, 250, 420, 0x2f1b2d],
+      [250, 360, 250, 420, 0x2f1b2d],
+      [720, 120, 860, 120, 0x12382f],
+      [720, 120, 720, 176, 0x12382f]
+    ];
+
+    circuitLines.forEach(([x1, y1, x2, y2, color]) => {
+      const line = this.add.line(0, 0, x1, y1, x2, y2, color, 0.34);
+      line.setOrigin(0, 0);
+      line.setDepth(-25);
+    });
+
+    [
+      { x: 118, y: 118 },
+      { x: 842, y: 118 },
+      { x: 118, y: 422 },
+      { x: 842, y: 422 }
+    ].forEach(({ x, y }) => {
+      const column = this.add.rectangle(x, y, 28, 42, 0x05070d, 0.55);
+      column.setStrokeStyle(1, 0x5c2636, 0.38);
+      column.setDepth(-24);
+    });
+
+    [
+      { x: 480, y: 270, color: 0x3a1833 },
+      { x: 480, y: 100, color: 0x113a32 },
+      { x: 480, y: 440, color: 0x113a32 }
+    ].forEach(({ x, y, color }) => {
+      const mark = this.add.rectangle(x, y, 74, 2, color, 0.34);
+      const cross = this.add.rectangle(x, y, 2, 34, color, 0.28);
+      mark.setDepth(-24);
+      cross.setDepth(-24);
+    });
   }
 
   private updatePlayer(player: Player, controls: PlayerControls, time: number): void {
