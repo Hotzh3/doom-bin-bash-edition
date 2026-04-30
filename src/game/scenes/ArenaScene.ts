@@ -18,7 +18,10 @@ export class ArenaScene extends Phaser.Scene {
   private projectiles!: Phaser.Physics.Arcade.Group;
   private enemies!: Phaser.Physics.Arcade.Group;
   private hud!: HUDSystem;
-  private statusText!: Phaser.GameObjects.Text;
+  private statusOverlay!: Phaser.GameObjects.Container;
+  private statusTitle!: Phaser.GameObjects.Text;
+  private statusSubtitle!: Phaser.GameObjects.Text;
+  private statusStats!: Phaser.GameObjects.Text;
   private gameDirector!: GameDirector;
   private gameState: GameState = 'RUNNING';
   private currentWave = 1;
@@ -73,7 +76,7 @@ export class ArenaScene extends Phaser.Scene {
     this.handleCollisions();
 
     this.hud = new HUDSystem(this);
-    this.statusText = this.createStatusOverlay();
+    this.createStatusOverlay();
   }
 
   update(time: number): void {
@@ -95,18 +98,45 @@ export class ArenaScene extends Phaser.Scene {
     });
   }
 
-  private createStatusOverlay(): Phaser.GameObjects.Text {
-    const text = this.add.text(GAME_WIDTH * 0.5, GAME_HEIGHT * 0.5, '', {
+  private createStatusOverlay(): void {
+    const panel = this.add.rectangle(0, 0, 430, 172, 0x06080c, 0.82);
+    panel.setStrokeStyle(2, 0x9e2f3e, 0.86);
+
+    this.statusTitle = this.add.text(0, -48, '', {
       fontSize: '44px',
       fontStyle: '700',
       color: '#f7fbff',
       stroke: '#06080c',
       strokeThickness: 5
     });
-    text.setOrigin(0.5);
-    text.setDepth(30);
-    text.setVisible(false);
-    return text;
+    this.statusTitle.setOrigin(0.5);
+
+    this.statusSubtitle = this.add.text(0, 12, 'Press R to restart', {
+      fontSize: '18px',
+      fontStyle: '700',
+      color: '#fff0c2',
+      stroke: '#06080c',
+      strokeThickness: 3
+    });
+    this.statusSubtitle.setOrigin(0.5);
+
+    this.statusStats = this.add.text(0, 50, '', {
+      fontSize: '15px',
+      fontStyle: '700',
+      color: '#9feee2',
+      stroke: '#06080c',
+      strokeThickness: 3
+    });
+    this.statusStats.setOrigin(0.5);
+
+    this.statusOverlay = this.add.container(GAME_WIDTH * 0.5, GAME_HEIGHT * 0.5, [
+      panel,
+      this.statusTitle,
+      this.statusSubtitle,
+      this.statusStats
+    ]);
+    this.statusOverlay.setDepth(30);
+    this.statusOverlay.setVisible(false);
   }
 
   private createArenaDecoration(): void {
@@ -215,8 +245,14 @@ export class ArenaScene extends Phaser.Scene {
   private setGameState(state: GameState): void {
     if (this.gameState === state) return;
     this.gameState = state;
-    this.statusText.setText(state === 'GAME_OVER' ? 'GAME OVER' : 'ROUND CLEAR');
-    this.statusText.setVisible(state !== 'RUNNING');
+    if (state === 'RUNNING') {
+      this.statusOverlay.setVisible(false);
+      return;
+    }
+
+    this.statusTitle.setText(state === 'GAME_OVER' ? 'GAME OVER' : 'ROUND CLEAR');
+    this.statusStats.setText(`Final Kills  P1: ${this.p1.kills}  P2: ${this.p2.kills}`);
+    this.statusOverlay.setVisible(true);
   }
 
   private handleShooting(player: Player, controls: PlayerControls, time: number): void {
