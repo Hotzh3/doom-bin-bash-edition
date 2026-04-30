@@ -6,6 +6,7 @@ import { GAME_HEIGHT, GAME_WIDTH } from '../config';
 import { applyDamage } from '../systems/CombatSystem';
 import { createControls, type PlayerControls } from '../systems/InputManager';
 import { HUDSystem } from '../systems/HUDSystem';
+import type { EnemyKind } from '../types/game';
 
 export class ArenaScene extends Phaser.Scene {
   private p1!: Player;
@@ -93,14 +94,16 @@ export class ArenaScene extends Phaser.Scene {
     }
   }
 
-  private spawnEnemy(x: number, y: number): void {
-    const enemy = new Enemy(this, x, y);
+  private spawnEnemy(x: number, y: number, kind: EnemyKind): void {
+    const enemy = new Enemy(this, x, y, kind);
     this.enemies.add(enemy);
   }
 
   private spawnInitialEnemies(): void {
     // GameDirector hook: future spawn plans can orchestrate this scene from here.
-    this.spawnEnemy(480, 100);
+    this.spawnEnemy(480, 100, 'GRUNT');
+    this.spawnEnemy(360, 160, 'BRUTE');
+    this.spawnEnemy(600, 160, 'STALKER');
   }
 
   private handleShooting(player: Player, controls: PlayerControls, time: number): void {
@@ -130,7 +133,7 @@ export class ArenaScene extends Phaser.Scene {
     enemy.setVelocity(0, 0);
     if (time - enemy.lastAttack <= 700) return;
     enemy.lastAttack = time;
-    this.hitPlayer(target, 7);
+    this.hitPlayer(target, enemy.damage);
   }
 
   private getClosestPlayer(enemy: Enemy): Player {
