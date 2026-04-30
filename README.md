@@ -1,4 +1,4 @@
-# doom-hell-arena-ai
+# doom-bib-bash-edition
 
 Demo universitaria de arena shooter 2D "Doom-inspired" para **2 jugadores locales** con **IA de enemigos**, oleadas y power-ups.
 
