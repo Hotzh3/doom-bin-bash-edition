@@ -4,9 +4,9 @@ import { Player } from '../entities/Player';
 import { Projectile } from '../entities/Projectile';
 import { GAME_HEIGHT, GAME_WIDTH } from '../config';
 import { applyDamage } from '../systems/CombatSystem';
+import { GameDirector, type SpawnRequest } from '../systems/GameDirector';
 import { createControls, type PlayerControls } from '../systems/InputManager';
 import { HUDSystem } from '../systems/HUDSystem';
-import type { EnemyKind } from '../types/game';
 
 export class ArenaScene extends Phaser.Scene {
   private p1!: Player;
@@ -16,6 +16,8 @@ export class ArenaScene extends Phaser.Scene {
   private projectiles!: Phaser.Physics.Arcade.Group;
   private enemies!: Phaser.Physics.Arcade.Group;
   private hud!: HUDSystem;
+  private gameDirector!: GameDirector;
+  private currentWave = 1;
   private enemiesKilled = 0;
   private lastShotByTeam: Record<string, number> = {};
 
@@ -56,6 +58,7 @@ export class ArenaScene extends Phaser.Scene {
       runChildUpdate: true
     });
     this.enemies = this.physics.add.group({ classType: Enemy, runChildUpdate: true });
+    this.gameDirector = new GameDirector();
 
     this.spawnInitialEnemies();
     this.input.keyboard?.on('keydown-R', () => this.scene.restart());
@@ -68,7 +71,7 @@ export class ArenaScene extends Phaser.Scene {
     this.updatePlayer(this.p1, this.p1Controls, time);
     this.updatePlayer(this.p2, this.p2Controls, time);
     this.updateEnemies(time);
-    // GameDirector hook: central game flow updates would be called here.
+    this.updateGameDirector(time);
 
     this.hud.update(this.p1, this.p2, this.enemiesKilled);
   }
@@ -94,16 +97,32 @@ export class ArenaScene extends Phaser.Scene {
     }
   }
 
-  private spawnEnemy(x: number, y: number, kind: EnemyKind): void {
-    const enemy = new Enemy(this, x, y, kind);
+  private spawnEnemy(spawn: SpawnRequest): void {
+    const enemy = new Enemy(this, spawn.x, spawn.y, spawn.kind);
     this.enemies.add(enemy);
   }
 
   private spawnInitialEnemies(): void {
-    // GameDirector hook: future spawn plans can orchestrate this scene from here.
-    this.spawnEnemy(480, 100, 'GRUNT');
-    this.spawnEnemy(360, 160, 'BRUTE');
-    this.spawnEnemy(600, 160, 'STALKER');
+    this.gameDirector.createOpeningSpawns().forEach((spawn) => this.spawnEnemy(spawn));
+  }
+
+  private updateGameDirector(time: number): void {
+    const decision = this.gameDirector.update({
+      elapsedTime: time,
+      totalKills: this.enemiesKilled,
+      enemiesAlive: this.countEnemiesAlive(),
+      p1Health: this.p1.health,
+      p2Health: this.p2.health,
+      p1Alive: this.p1.alive,
+      p2Alive: this.p2.alive,
+      currentWave: this.currentWave
+    });
+
+    if (decision.spawn) this.spawnEnemy(decision.spawn);
+  }
+
+  private countEnemiesAlive(): number {
+    return this.enemies.getChildren().filter((child) => (child as Enemy).alive).length;
   }
 
   private handleShooting(player: Player, controls: PlayerControls, time: number): void {
