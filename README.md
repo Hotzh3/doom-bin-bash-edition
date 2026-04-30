@@ -27,6 +27,8 @@ El foco actual está en una experiencia compacta: movimiento local, disparos, da
 - `GameDirector` / Game Master IA básico.
 - Spawn pacing adaptativo según tiempo, kills, vida y enemigos vivos.
 - Límite de enemigos vivos y presupuesto finito de spawns.
+- Estado mínimo de partida: `GAME_OVER` y `ROUND_CLEAR`.
+- Cleanup de proyectiles por bounds/lifetime.
 - HUD con vida y kills.
 - Tests de lógica crítica para combate, FSM, configuración de enemigos y GameDirector.
 
@@ -45,6 +47,7 @@ El foco actual está en una experiencia compacta: movimiento local, disparos, da
 - Vitest
 - ESLint
 - Prettier
+- GitHub Actions para CI básico
 
 ## Arquitectura
 
@@ -65,6 +68,7 @@ src/
       GameDirector.ts
       HUDSystem.ts
       InputManager.ts
+      TargetSelector.ts
     types/
       game.ts
   tests/
@@ -78,6 +82,7 @@ src/
 - `entities`: representan objetos jugables y de combate (`Player`, `Enemy`, `Projectile`).
 - `systems`: contienen lógica aislada como daño, input, HUD, FSM y dirección de spawns.
 - `GameDirector`: calcula intensidad, decide si spawnear, respeta límites y selecciona tipo de enemigo.
+- `TargetSelector`: elige el jugador vivo más cercano con lógica pura y testeable.
 - `tests`: cubren lógica pura para reducir riesgo sin depender de rendering de Phaser.
 
 ## Cómo Correr
@@ -95,29 +100,31 @@ npm run lint
 npm run build
 ```
 
-## Screenshots
+## Visual Inspiration / Moodboard
 
-### Arena Preview
+Las imágenes siguientes son material visual local para presentación e inspiración de estilo. No deben leerse como screenshots garantizados del gameplay final.
+
+### Moodboard 1
 
 <p align="center">
-  <img src="docs/assets/im1.png" width="90%" alt="Arena gameplay preview"/>
+  <img src="docs/assets/im1.png" width="90%" alt="Visual inspiration moodboard 1"/>
 </p>
 
-### Combate Local
+### Moodboard 2
 
 <p align="center">
-  <img src="docs/assets/im2.png" width="90%" alt="Local arena combat"/>
+  <img src="docs/assets/im2.png" width="90%" alt="Visual inspiration moodboard 2"/>
 </p>
 
-### Enemigos y Dinámica
+### Moodboard 3
 
 <p align="center">
-  <img src="docs/assets/im3.png" width="90%" alt="Enemy dynamics preview"/>
+  <img src="docs/assets/im3.png" width="90%" alt="Visual inspiration moodboard 3"/>
 </p>
 
 ## Estado Actual del Proyecto
 
-El proyecto está en estado de vertical slice jugable. Ya cuenta con una base funcional de gameplay, enemigos diferenciados, director básico de presión y tests de lógica crítica. No incluye todavía un sistema formal de waves, powerups, overlay de game over ni audio/efectos pulidos.
+El proyecto está en estado de vertical slice jugable. Ya cuenta con una base funcional de gameplay, enemigos diferenciados, director básico de presión, estado mínimo de partida, CI básico y tests de lógica crítica. No incluye todavía un sistema formal de waves, powerups, enemigos ranged ni audio/efectos pulidos.
 
 ## Roadmap por Fases
 
@@ -125,7 +132,7 @@ El proyecto está en estado de vertical slice jugable. Ya cuenta con una base fu
 2. **Fase 1 - Vertical Slice:** menú, arena, dos jugadores, disparos, daño, enemigos básicos, HUD y tests mínimos.
 3. **Fase 2 - Enemigos y Director:** arquetipos `GRUNT`, `BRUTE`, `STALKER`, configuración testeable y `GameDirector` básico.
 4. **Fase 3 - Hardening:** ampliar tests de lógica crítica, revisar tipos, lint, build y estabilidad.
-5. **Fase 4 - Presentación:** README profesional, screenshots y preparación para revisión académica/portafolio.
+5. **Fase 4 - Loop completo:** estado mínimo de partida, cleanup de proyectiles, target selection correcta y CI básico.
 6. **Fase 5 - Expansión futura:** contenido y sistemas nuevos marcados como próximos pasos.
 
 ## Próximos Pasos
@@ -133,5 +140,5 @@ El proyecto está en estado de vertical slice jugable. Ya cuenta con una base fu
 - Waves formales con ritmo más legible.
 - Enemigos ranged.
 - Powerups.
-- Overlay de game over.
+- Polish de overlay de game over / round clear.
 - Polish de efectos y sonido.

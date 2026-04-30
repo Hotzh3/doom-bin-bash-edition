@@ -7,6 +7,8 @@ import { applyDamage } from '../systems/CombatSystem';
 import { GameDirector, type SpawnRequest } from '../systems/GameDirector';
 import { createControls, type PlayerControls } from '../systems/InputManager';
 import { HUDSystem } from '../systems/HUDSystem';
+import { selectClosestLivingTarget } from '../systems/TargetSelector';
+import type { GameState } from '../types/game';
 
 export class ArenaScene extends Phaser.Scene {
   private p1!: Player;
@@ -16,7 +18,9 @@ export class ArenaScene extends Phaser.Scene {
   private projectiles!: Phaser.Physics.Arcade.Group;
   private enemies!: Phaser.Physics.Arcade.Group;
   private hud!: HUDSystem;
+  private statusText!: Phaser.GameObjects.Text;
   private gameDirector!: GameDirector;
+  private gameState: GameState = 'RUNNING';
   private currentWave = 1;
   private enemiesKilled = 0;
   private lastShotByTeam: Record<string, number> = {};
@@ -65,15 +69,33 @@ export class ArenaScene extends Phaser.Scene {
     this.handleCollisions();
 
     this.hud = new HUDSystem(this);
+    this.statusText = this.createStatusOverlay();
   }
 
   update(time: number): void {
     this.updatePlayer(this.p1, this.p1Controls, time);
     this.updatePlayer(this.p2, this.p2Controls, time);
-    this.updateEnemies(time);
-    this.updateGameDirector(time);
+    if (this.gameState === 'RUNNING') {
+      this.updateEnemies(time);
+      this.updateGameDirector(time);
+      this.updateGameState();
+    }
 
     this.hud.update(this.p1, this.p2, this.enemiesKilled);
+  }
+
+  private createStatusOverlay(): Phaser.GameObjects.Text {
+    const text = this.add.text(GAME_WIDTH * 0.5, GAME_HEIGHT * 0.5, '', {
+      fontSize: '44px',
+      fontStyle: '700',
+      color: '#f7fbff',
+      stroke: '#06080c',
+      strokeThickness: 5
+    });
+    text.setOrigin(0.5);
+    text.setDepth(30);
+    text.setVisible(false);
+    return text;
   }
 
   private updatePlayer(player: Player, controls: PlayerControls, time: number): void {
@@ -125,6 +147,24 @@ export class ArenaScene extends Phaser.Scene {
     return this.enemies.getChildren().filter((child) => (child as Enemy).alive).length;
   }
 
+  private updateGameState(): void {
+    if (!this.p1.alive && !this.p2.alive) {
+      this.setGameState('GAME_OVER');
+      return;
+    }
+
+    if (this.countEnemiesAlive() === 0 && this.gameDirector.hasExhaustedSpawnBudget()) {
+      this.setGameState('ROUND_CLEAR');
+    }
+  }
+
+  private setGameState(state: GameState): void {
+    if (this.gameState === state) return;
+    this.gameState = state;
+    this.statusText.setText(state === 'GAME_OVER' ? 'GAME OVER' : 'ROUND CLEAR');
+    this.statusText.setVisible(state !== 'RUNNING');
+  }
+
   private handleShooting(player: Player, controls: PlayerControls, time: number): void {
     const cooldown = this.lastShotByTeam[player.team] ?? 0;
     if (!controls.shoot.isDown || time - cooldown <= 250) return;
@@ -140,7 +180,11 @@ export class ArenaScene extends Phaser.Scene {
       const enemy = child as Enemy;
       if (!enemy.alive) return;
 
-      const target = this.getClosestPlayer(enemy);
+      const target = selectClosestLivingTarget(enemy, [this.p1, this.p2]);
+      if (!target) {
+        enemy.setVelocity(0, 0);
+        return;
+      }
       const distanceToTarget = Phaser.Math.Distance.Between(enemy.x, enemy.y, target.x, target.y);
       const state = enemy.fsm.update(distanceToTarget, enemy.alive);
       if (state === 'CHASE') this.physics.moveToObject(enemy, target, enemy.speed);
@@ -153,12 +197,6 @@ export class ArenaScene extends Phaser.Scene {
     if (time - enemy.lastAttack <= 700) return;
     enemy.lastAttack = time;
     this.hitPlayer(target, enemy.damage);
-  }
-
-  private getClosestPlayer(enemy: Enemy): Player {
-    const distanceToP1 = Phaser.Math.Distance.Between(enemy.x, enemy.y, this.p1.x, this.p1.y);
-    const distanceToP2 = Phaser.Math.Distance.Between(enemy.x, enemy.y, this.p2.x, this.p2.y);
-    return distanceToP1 < distanceToP2 ? this.p1 : this.p2;
   }
 
   private handleCollisions(): void {

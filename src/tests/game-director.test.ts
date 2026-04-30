@@ -90,6 +90,7 @@ describe('GameDirector', () => {
     expect(director.createOpeningSpawns()).toHaveLength(1);
     expect(director.update({ ...baseInput, elapsedTime: 1000 }).spawn).not.toBeNull();
     expect(director.update({ ...baseInput, elapsedTime: 2000 }).spawn).toBeNull();
+    expect(director.hasExhaustedSpawnBudget()).toBe(true);
   });
 
   it('chooses enemy types according to progression', () => {

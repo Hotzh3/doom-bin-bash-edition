@@ -81,6 +81,10 @@ export class GameDirector {
     };
   }
 
+  hasExhaustedSpawnBudget(): boolean {
+    return this.spawnedCount >= this.maxTotalSpawns;
+  }
+
   calculateIntensity(input: GameDirectorInput): number {
     if (!input.p1Alive && !input.p2Alive) return 0;
 
