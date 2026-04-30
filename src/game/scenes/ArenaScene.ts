@@ -56,31 +56,9 @@ export class ArenaScene extends Phaser.Scene {
     });
     this.enemies = this.physics.add.group({ classType: Enemy, runChildUpdate: true });
 
-    this.spawnEnemy(480, 100);
+    this.spawnInitialEnemies();
     this.input.keyboard?.on('keydown-R', () => this.scene.restart());
-
-    this.physics.add.overlap(this.projectiles, [this.p1, this.p2], (_, target) => {
-      const bullet = _ as Projectile;
-      const player = target as Player;
-      if (bullet.ownerTeam === player.team) return;
-      this.hitPlayer(player, bullet.damage);
-      bullet.destroy();
-    });
-
-    this.physics.add.overlap(this.projectiles, this.enemies, (obj, ene) => {
-      const bullet = obj as Projectile;
-      const enemy = ene as Enemy;
-      if (!enemy.alive) return;
-      const dead = applyDamage(enemy, bullet.damage);
-      if (dead) {
-        enemy.setVisible(false);
-        enemy.disableBody(true, true);
-        this.enemiesKilled += 1;
-        if (bullet.ownerTeam === 'P1') this.p1.kills += 1;
-        if (bullet.ownerTeam === 'P2') this.p2.kills += 1;
-      }
-      bullet.destroy();
-    });
+    this.handleCollisions();
 
     this.hud = new HUDSystem(this);
   }
@@ -88,26 +66,8 @@ export class ArenaScene extends Phaser.Scene {
   update(time: number): void {
     this.updatePlayer(this.p1, this.p1Controls, time);
     this.updatePlayer(this.p2, this.p2Controls, time);
-
-    this.enemies.getChildren().forEach((child) => {
-      const enemy = child as Enemy;
-      if (!enemy.alive) return;
-      const target =
-        Phaser.Math.Distance.Between(enemy.x, enemy.y, this.p1.x, this.p1.y) <
-        Phaser.Math.Distance.Between(enemy.x, enemy.y, this.p2.x, this.p2.y)
-          ? this.p1
-          : this.p2;
-      const dist = Phaser.Math.Distance.Between(enemy.x, enemy.y, target.x, target.y);
-      const state = enemy.fsm.update(dist, enemy.alive);
-      if (state === 'CHASE') this.physics.moveToObject(enemy, target, enemy.speed);
-      if (state === 'ATTACK') {
-        enemy.setVelocity(0, 0);
-        if (time - enemy.lastAttack > 700) {
-          enemy.lastAttack = time;
-          this.hitPlayer(target, 7);
-        }
-      }
-    });
+    this.updateEnemies(time);
+    // GameDirector hook: central game flow updates would be called here.
 
     this.hud.update(this.p1, this.p2, this.enemiesKilled);
   }
@@ -122,13 +82,7 @@ export class ArenaScene extends Phaser.Scene {
     if (controls.down.isDown) vy = player.speed;
     player.setVelocity(vx, vy);
 
-    const cooldown = this.lastShotByTeam[player.team] ?? 0;
-    if (controls.shoot.isDown && time - cooldown > 250) {
-      this.lastShotByTeam[player.team] = time;
-      const dirX = player === this.p1 ? 1 : -1;
-      const bullet = new Projectile(this, player.x + dirX * 18, player.y, 360 * dirX, 0, player.team);
-      this.projectiles.add(bullet);
-    }
+    this.handleShooting(player, controls, time);
   }
 
   private hitPlayer(player: Player, damage: number): void {
@@ -142,5 +96,72 @@ export class ArenaScene extends Phaser.Scene {
   private spawnEnemy(x: number, y: number): void {
     const enemy = new Enemy(this, x, y);
     this.enemies.add(enemy);
+  }
+
+  private spawnInitialEnemies(): void {
+    // GameDirector hook: future spawn plans can orchestrate this scene from here.
+    this.spawnEnemy(480, 100);
+  }
+
+  private handleShooting(player: Player, controls: PlayerControls, time: number): void {
+    const cooldown = this.lastShotByTeam[player.team] ?? 0;
+    if (!controls.shoot.isDown || time - cooldown <= 250) return;
+
+    this.lastShotByTeam[player.team] = time;
+    const directionX = player === this.p1 ? 1 : -1;
+    const bullet = new Projectile(this, player.x + directionX * 18, player.y, 360 * directionX, 0, player.team);
+    this.projectiles.add(bullet);
+  }
+
+  private updateEnemies(time: number): void {
+    this.enemies.getChildren().forEach((child) => {
+      const enemy = child as Enemy;
+      if (!enemy.alive) return;
+
+      const target = this.getClosestPlayer(enemy);
+      const distanceToTarget = Phaser.Math.Distance.Between(enemy.x, enemy.y, target.x, target.y);
+      const state = enemy.fsm.update(distanceToTarget, enemy.alive);
+      if (state === 'CHASE') this.physics.moveToObject(enemy, target, enemy.speed);
+      if (state === 'ATTACK') this.handleEnemyAttack(enemy, target, time);
+    });
+  }
+
+  private handleEnemyAttack(enemy: Enemy, target: Player, time: number): void {
+    enemy.setVelocity(0, 0);
+    if (time - enemy.lastAttack <= 700) return;
+    enemy.lastAttack = time;
+    this.hitPlayer(target, 7);
+  }
+
+  private getClosestPlayer(enemy: Enemy): Player {
+    const distanceToP1 = Phaser.Math.Distance.Between(enemy.x, enemy.y, this.p1.x, this.p1.y);
+    const distanceToP2 = Phaser.Math.Distance.Between(enemy.x, enemy.y, this.p2.x, this.p2.y);
+    return distanceToP1 < distanceToP2 ? this.p1 : this.p2;
+  }
+
+  private handleCollisions(): void {
+    this.physics.add.overlap(this.projectiles, [this.p1, this.p2], (obj, target) => {
+      const bullet = obj as Projectile;
+      const player = target as Player;
+      if (bullet.ownerTeam === player.team) return;
+      this.hitPlayer(player, bullet.damage);
+      bullet.destroy();
+    });
+
+    this.physics.add.overlap(this.projectiles, this.enemies, (obj, target) => {
+      const bullet = obj as Projectile;
+      const enemy = target as Enemy;
+      if (!enemy.alive) return;
+
+      const dead = applyDamage(enemy, bullet.damage);
+      if (dead) {
+        enemy.setVisible(false);
+        enemy.disableBody(true, true);
+        this.enemiesKilled += 1;
+        if (bullet.ownerTeam === 'P1') this.p1.kills += 1;
+        if (bullet.ownerTeam === 'P2') this.p2.kills += 1;
+      }
+      bullet.destroy();
+    });
   }
 }
