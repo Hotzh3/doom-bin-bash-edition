@@ -25,6 +25,7 @@ export class ArenaScene extends Phaser.Scene {
   private enemiesKilled = 0;
   private lastShotByTeam: Record<string, number> = {};
   private lastCombatShakeAt = 0;
+  private pendingSpawns = 0;
 
   constructor() {
     super('ArenaScene');
@@ -134,7 +135,7 @@ export class ArenaScene extends Phaser.Scene {
     const decision = this.gameDirector.update({
       elapsedTime: time,
       totalKills: this.enemiesKilled,
-      enemiesAlive: this.countEnemiesAlive(),
+      enemiesAlive: this.countEnemiesAlive() + this.pendingSpawns,
       p1Health: this.p1.health,
       p2Health: this.p2.health,
       p1Alive: this.p1.alive,
@@ -142,7 +143,7 @@ export class ArenaScene extends Phaser.Scene {
       currentWave: this.currentWave
     });
 
-    if (decision.spawn) this.spawnEnemy(decision.spawn);
+    if (decision.spawn) this.telegraphEnemySpawn(decision.spawn);
   }
 
   private countEnemiesAlive(): number {
@@ -155,7 +156,7 @@ export class ArenaScene extends Phaser.Scene {
       return;
     }
 
-    if (this.countEnemiesAlive() === 0 && this.gameDirector.hasExhaustedSpawnBudget()) {
+    if (this.countEnemiesAlive() === 0 && this.pendingSpawns === 0 && this.gameDirector.hasExhaustedSpawnBudget()) {
       this.setGameState('ROUND_CLEAR');
     }
   }
@@ -184,6 +185,30 @@ export class ArenaScene extends Phaser.Scene {
     flash.setAlpha(0.86);
     flash.setDepth(8);
     this.time.delayedCall(45, () => flash.destroy());
+  }
+
+  private telegraphEnemySpawn(spawn: SpawnRequest): void {
+    this.pendingSpawns += 1;
+
+    const marker = this.add.circle(spawn.x, spawn.y, 18, 0x9e2f3e, 0.18);
+    marker.setStrokeStyle(2, 0xff8a3d, 0.9);
+    marker.setDepth(7);
+
+    this.tweens.add({
+      targets: marker,
+      alpha: 0.62,
+      scale: 1.35,
+      yoyo: true,
+      repeat: 2,
+      duration: 120,
+      ease: 'Sine.easeInOut'
+    });
+
+    this.time.delayedCall(720, () => {
+      marker.destroy();
+      this.pendingSpawns = Math.max(0, this.pendingSpawns - 1);
+      if (this.gameState === 'RUNNING') this.spawnEnemy(spawn);
+    });
   }
 
   private triggerCombatShake(kind: 'PLAYER_HIT' | 'ENEMY_DEATH'): void {
