@@ -1,139 +1,85 @@
-# Doom-hell-arena-ai
+![Doom-inspired panoramic banner](docs/assets/doom-inspired-banner.png)
 
-Demo universitaria de arena shooter 2D **Doom-inspired** para 2 jugadores locales, con PvP + PvE, IA básica demostrable y enfoque en entrega de MVP en 4 semanas.
+# doom-bin-bash-edition
 
-## Objetivo del proyecto
-Entregar una demo jugable y profesionalmente organizada, con documentación, CI/CD, testing y flujo colaborativo por ramas.
+Proyecto universitario de arena shooter 2D **inspirado en Doom**.
+
+> Este proyecto **no es una copia, redistribución ni port de Doom**. Es una implementación original con identidad propia, inspirada en ideas históricas del género arena shooter clásico.
+
+Referencia histórica:
+- Doom (1993): https://en.wikipedia.org/wiki/Doom_(1993_video_game)
+
+## Estado actual
+- **Fase 1 en progreso**: vertical slice jugable.
 
 ## Stack técnico
-- **Juego:** Phaser 3 + TypeScript + Vite
-- **Backend (fase avanzada/opcional):** Node.js + Express + SQLite
-- **Calidad:** ESLint + Prettier + Vitest
-- **DevOps:** Docker + Docker Compose + GitHub Actions
-
-## Flujo de trabajo en ramas (propuesto)
-- `main`: rama estable (solo merges de PR aprobados).
-- `develop`: integración de features terminadas.
-- `feature/*`: trabajo por tarea específica.
-- `fix/*`: correcciones puntuales.
-- `docs/*`: documentación/ADRs/README.
-
-### Convención de PRs
-- PR pequeño, claro y enfocado en una sola fase/tarea.
-- Debe incluir: resumen, evidencia de pruebas, riesgos y siguientes pasos.
-
----
+- Phaser 3
+- TypeScript
+- Vite
+- ESLint
+- Prettier
+- Vitest
+- Docker / Docker Compose (fases posteriores)
+- GitHub Actions (fases posteriores)
 
 ## Proyecto dividido por fases
+- **Fase 0:** setup de repo y documentación base.
+- **Fase 1:** vertical slice (menú, arena, 2 jugadores, disparo, daño, enemigo FSM, HUD).
+- **Fase 2:** oleadas, power-ups, scoreboard completo y game over.
+- **Fase 3:** IA adaptativa (director simple + mejoras de target selection).
+- **Fase 4:** hardening de ingeniería (CI, coverage, Docker final, presentación).
+- **Fase 5 (opcional):** extras (boss, más enemigos, eventos, historial).
 
-## Fase 0 — Setup base del repositorio
-**Meta:** dejar el proyecto listo para colaborar sin fricción.
+## Fase 1 — Entregables obligatorios
+1. Bootstrap Phaser + TypeScript + Vite.
+2. `MenuScene`.
+3. `ArenaScene`.
+4. Player 1 (WASD + disparo + vida).
+5. Player 2 (flechas + disparo + vida).
+6. Proyectiles.
+7. Colisiones básicas.
+8. Sistema de daño.
+9. Muerte de jugadores/enemigos.
+10. Enemigo básico con FSM: SPAWN, CHASE, ATTACK, DEAD.
+11. HUD básico (vida + kills).
+12. Tests mínimos (daño + FSM).
 
-### Entregables
-- Estructura inicial de carpetas.
-- README base + docs de arquitectura/roadmap/ADR.
-- `.editorconfig`, `.gitignore`, `docker-compose.yml`.
+## Correr el proyecto
+npm install
+npm run dev
 
-### Necesitamos para cumplirla
-- Definir ramas (`main`, `develop`).
-- Configurar protección de rama en GitHub (recomendado).
-- Asegurar que todos clonan y pueden correr comandos base.
+## Scripts
+npm run dev → entorno local con Vite.
 
----
+npm run build → build de producción.
 
-## Fase 1 — Vertical Slice jugable (núcleo)
-**Meta:** primer build jugable con loop básico de combate.
+npm run test → tests con Vitest.
 
-### Entregables
-- `MenuScene` + `ArenaScene`.
-- Player 1 (WASD + disparo) y Player 2 (flechas + disparo).
-- Proyectiles, colisiones, daño y muerte.
-- 1 tipo de enemigo con FSM mínima (SPAWN, CHASE, ATTACK, DEAD).
-- HUD básico: vida y kills.
+npm run lint → lint del proyecto.
 
-### Necesitamos para cumplirla
-- Input manager para 2 jugadores.
-- Sistema de física/colisiones estable.
-- Assets temporales (placeholders) para avanzar rápido.
-- Pruebas unitarias mínimas de lógica crítica (daño/FSM).
+npm run format → formato con Prettier.
 
----
 
-## Fase 2 — Gameplay completo MVP
-**Meta:** cumplir requisitos centrales del curso en gameplay.
-
-### Entregables
-- Oleadas progresivas.
-- Power-ups: vida, velocidad y daño/doble disparo.
-- Respawn de jugadores.
-- Scoreboard por ronda y condición de victoria.
-- Pantalla de fin de partida.
-
-### Necesitamos para cumplirla
-- `WaveSystem` configurable por dificultad.
-- `PowerUpSystem` con spawn controlado.
-- `ScoreSystem` + eventos de juego desacoplados.
-- Sesión de balance (vida/daño/frecuencia de spawn).
-
----
-
-## Fase 3 — IA y dificultad adaptativa
-**Meta:** demostrar componente de IA más allá de enemigos básicos.
-
-### Entregables
-- FSM formal de enemigos (con transiciones claras).
-- `TargetSelector` (distancia y/o vida).
-- `AIDirector` básico (sube o baja presión según rendimiento).
-
-### Necesitamos para cumplirla
-- Métricas simples en runtime (tiempo de supervivencia, kills/min, daño recibido).
-- Reglas explícitas del director (thresholds y acciones).
-- Tests unitarios de IA (transiciones y selección de objetivo).
-
----
-
-## Fase 4 — Ingeniería y entrega académica
-**Meta:** tener proyecto presentable, reproducible y evaluable.
-
-### Entregables
-- CI con lint + tests.
-- Coverage report.
-- Dockerfile(s) y Docker Compose funcional.
-- ADRs y documentación final de arquitectura/eventos.
-- Guion de demo de 15 minutos.
-
-### Necesitamos para cumplirla
-- Workflow de GitHub Actions estable.
-- Comandos únicos de arranque en README.
-- Checklist de release (bugs críticos, performance mínima, UX básica).
-
----
-
-## Fase 5 — Extras (solo si MVP está sólido)
-**Meta:** agregar valor sin arriesgar entrega.
-
-### Entregables posibles
-- Boss por rondas.
-- Nuevos tipos de enemigos.
-- Eventos aleatorios.
-- Backend de historial de partidas.
-
-### Necesitamos para cumplirla
-- Confirmar CI verde y bugs críticos en cero.
-- Timebox estricto por feature (si no entra, se descarta).
-
----
-
-## Roadmap resumido (4 semanas)
-- **Semana 1:** Fase 1
-- **Semana 2:** Fase 2
-- **Semana 3:** Fase 3
-- **Semana 4:** Fase 4
-- **Extras:** solo si sobra tiempo (Fase 5)
-
-## Próximo paso inmediato
-Implementar Fase 1 en rama `feature/phase-1-vertical-slice`:
-1. bootstrap de Phaser + TypeScript + Vite,
-2. `MenuScene` y `ArenaScene`,
-3. controles de 2 jugadores,
-4. disparo y colisiones.
+## Estructura actual
+```text
+src/
+  main.ts
+  game/
+    config.ts
+    scenes/
+      MenuScene.ts
+      ArenaScene.ts
+    entities/
+      Player.ts
+      Enemy.ts
+      Projectile.ts
+    systems/
+      CombatSystem.ts
+      InputManager.ts
+      EnemyFSM.ts
+      HUDSystem.ts
+    types/
+      game.ts
+  tests/
+    combat.test.ts
+    enemy-fsm.test.ts
