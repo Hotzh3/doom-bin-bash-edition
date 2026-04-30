@@ -1,4 +1,4 @@
-![Doom-inspired panoramic banner](docs/assets/doom-inspired-banner.png)
+![Doom-inspired panoramic banner](https://upload.wikimedia.org/wikipedia/en/5/57/Doom_cover_art.jpg)
 
 # doom-bin-bash-edition
 
@@ -30,6 +30,14 @@ Referencia histórica:
 - **Fase 4:** hardening de ingeniería (CI, coverage, Docker final, presentación).
 - **Fase 5 (opcional):** extras (boss, más enemigos, eventos, historial).
 
+## Controles actuales
+- **SPACE**: solo en el menú, inicia partida.
+- **R**: reinicia la arena si un jugador murió.
+- **P1**: mover `WASD`, disparar `F`.
+- **P2**: mover flechas `← ↑ ↓ →`, disparar `L`.
+
+> Si P2 aparece con `HP: 0`, ya está muerto y no podrá moverse/disparar hasta reiniciar (`R`).
+
 ## Fase 1 — Entregables obligatorios
 1. Bootstrap Phaser + TypeScript + Vite.
 2. `MenuScene`.
@@ -43,22 +51,6 @@ Referencia histórica:
 10. Enemigo básico con FSM: SPAWN, CHASE, ATTACK, DEAD.
 11. HUD básico (vida + kills).
 12. Tests mínimos (daño + FSM).
-
-## Correr el proyecto
-npm install
-npm run dev
-
-## Scripts
-npm run dev → entorno local con Vite.
-
-npm run build → build de producción.
-
-npm run test → tests con Vitest.
-
-npm run lint → lint del proyecto.
-
-npm run format → formato con Prettier.
-
 
 ## Estructura actual
 ```text
@@ -83,3 +75,16 @@ src/
   tests/
     combat.test.ts
     enemy-fsm.test.ts
+## Correr el proyecto
+```bash
+npm install
+npm run dev
+```
+
+## Scripts
+- `npm run dev` → entorno local con Vite.
+- `npm run build` → build de producción.
+- `npm run test` → tests con Vitest.
+- `npm run lint` → lint del proyecto.
+- `npm run format` → formato con Prettier.
+
