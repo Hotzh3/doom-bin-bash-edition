@@ -1,109 +1,56 @@
 <p align="center">
-  <img src="docs/assets/doombanner.png" width="100%"/>
+  <img src="docs/assets/doombanner.png" width="100%" alt="Project banner"/>
 </p>
 
 # doom-bin-bash-edition
 
-Proyecto universitario de arena shooter 2D **inspirado en Doom**.
+Arena shooter 2D local construido con Phaser 3, TypeScript y Vite. El proyecto funciona como una vertical slice jugable: dos jugadores compiten y sobreviven en una arena responsive/fullscreen contra enemigos controlados por sistemas simples y testeables.
 
-> Este proyecto **no es una copia, redistribución ni port de Doom**. Es una implementación original con identidad propia, inspirada en ideas históricas del género arena shooter clásico.
+## Disclaimer
 
-Referencia histórica:
-- Doom (1993): https://en.wikipedia.org/wiki/Doom_(1993_video_game)
+Este es un proyecto original, creado con fines académicos y de portafolio. Está inspirado en la energía y estructura de arena shooters clásicos, pero no está afiliado a Doom, no es una copia ni un port de Doom, y no usa nombres, sprites, assets ni contenido copyrighted de Doom.
 
----
+## Descripción
 
-## Gameplay Preview
+`doom-bin-bash-edition` presenta una arena local para dos jugadores con combate PvP + PvE. La base del gameplay está separada en escenas, entidades y sistemas de lógica pura para mantener el código claro, escalable y fácil de probar.
 
-<p align="center">
-  <img src="docs/assets/im1.png" width="90%"/>
-</p>
+El foco actual está en una experiencia compacta: movimiento local, disparos, daño, enemigos con arquetipos, HUD y un `GameDirector` básico que regula la presión del combate sin introducir todavía un sistema formal de waves.
 
----
+## Features Actuales
 
-## Arena Combat
+- Arena responsive/fullscreen con presentación visual simple.
+- Dos jugadores locales en la misma pantalla.
+- Combate PvP + PvE.
+- Proyectiles, daño, muerte de jugadores/enemigos y reinicio de arena.
+- Arquetipos de enemigos: `GRUNT`, `BRUTE`, `STALKER`.
+- FSM simple de enemigos con estados `SPAWN`, `CHASE`, `ATTACK`, `DEAD`.
+- `GameDirector` / Game Master IA básico.
+- Spawn pacing adaptativo según tiempo, kills, vida y enemigos vivos.
+- Límite de enemigos vivos y presupuesto finito de spawns.
+- HUD con vida y kills.
+- Tests de lógica crítica para combate, FSM, configuración de enemigos y GameDirector.
 
-<p align="center">
-  <img src="docs/assets/im2.png" width="90%"/>
-</p>
+## Controles
 
----
+- `SPACE`: iniciar partida desde el menú.
+- `R`: reiniciar arena.
+- Player 1: mover con `WASD`, disparar con `F`.
+- Player 2: mover con flechas, disparar con `L`.
 
-## AI Enemies & Dynamics
+## Stack Técnico
 
-<p align="center">
-  <img src="docs/assets/im3.png" width="90%"/>
-</p>
+- Phaser 3
+- TypeScript
+- Vite
+- Vitest
+- ESLint
+- Prettier
 
----
-
-## Estado actual
-- **Fase 1 en progreso**: vertical slice jugable.
-
----
-
-## Stack técnico
-- Phaser 3  
-- TypeScript  
-- Vite  
-- ESLint  
-- Prettier  
-- Vitest  
-- Docker / Docker Compose (fases posteriores)  
-- GitHub Actions (fases posteriores)  
-
----
-
-## Proyecto dividido por fases
-
-- **Fase 0:** setup de repo y documentación base.  
-- **Fase 1:** vertical slice (menú, arena, 2 jugadores, disparo, daño, enemigo FSM, HUD).  
-- **Fase 2:** oleadas, power-ups, scoreboard completo y game over.  
-- **Fase 3:** IA adaptativa (director simple + mejoras de target selection).  
-- **Fase 4:** hardening de ingeniería (CI, coverage, Docker final, presentación).  
-- **Fase 5 (opcional):** extras (boss, más enemigos, eventos, historial).  
-
----
-
-## Controles actuales
-
-- **SPACE** → iniciar partida (menú)  
-- **R** → reiniciar arena  
-- **P1** → mover `WASD`, disparar `F`  
-- **P2** → mover `← ↑ ↓ →`, disparar `L`  
-
-> Si P2 aparece con `HP: 0`, ya está muerto y no podrá moverse/disparar hasta reiniciar (`R`).
-
----
-
-## Fase 1 — Entregables obligatorios
-
-1. Bootstrap Phaser + TypeScript + Vite  
-2. `MenuScene`  
-3. `ArenaScene`  
-4. Player 1 (WASD + disparo + vida)  
-5. Player 2 (flechas + disparo + vida)  
-6. Proyectiles  
-7. Colisiones básicas  
-8. Sistema de daño  
-9. Muerte de jugadores/enemigos  
-10. Enemigo básico con FSM:
-   - SPAWN
-   - CHASE
-   - ATTACK
-   - DEAD  
-11. HUD básico (vida + kills)  
-12. Tests mínimos (daño + FSM)  
-
----
-
-## Estructura actual
+## Arquitectura
 
 ```text
 src/
-  main.ts
   game/
-    config.ts
     scenes/
       MenuScene.ts
       ArenaScene.ts
@@ -111,13 +58,80 @@ src/
       Player.ts
       Enemy.ts
       Projectile.ts
+      enemyConfig.ts
     systems/
       CombatSystem.ts
-      InputManager.ts
       EnemyFSM.ts
+      GameDirector.ts
       HUDSystem.ts
+      InputManager.ts
     types/
       game.ts
   tests/
     combat.test.ts
+    enemy-config.test.ts
     enemy-fsm.test.ts
+    game-director.test.ts
+```
+
+- `scenes`: coordinan el flujo visual y de gameplay (`MenuScene`, `ArenaScene`).
+- `entities`: representan objetos jugables y de combate (`Player`, `Enemy`, `Projectile`).
+- `systems`: contienen lógica aislada como daño, input, HUD, FSM y dirección de spawns.
+- `GameDirector`: calcula intensidad, decide si spawnear, respeta límites y selecciona tipo de enemigo.
+- `tests`: cubren lógica pura para reducir riesgo sin depender de rendering de Phaser.
+
+## Cómo Correr
+
+```bash
+npm install
+npm run dev
+```
+
+Comandos de validación:
+
+```bash
+npm run test
+npm run lint
+npm run build
+```
+
+## Screenshots
+
+### Arena Preview
+
+<p align="center">
+  <img src="docs/assets/im1.png" width="90%" alt="Arena gameplay preview"/>
+</p>
+
+### Combate Local
+
+<p align="center">
+  <img src="docs/assets/im2.png" width="90%" alt="Local arena combat"/>
+</p>
+
+### Enemigos y Dinámica
+
+<p align="center">
+  <img src="docs/assets/im3.png" width="90%" alt="Enemy dynamics preview"/>
+</p>
+
+## Estado Actual del Proyecto
+
+El proyecto está en estado de vertical slice jugable. Ya cuenta con una base funcional de gameplay, enemigos diferenciados, director básico de presión y tests de lógica crítica. No incluye todavía un sistema formal de waves, powerups, overlay de game over ni audio/efectos pulidos.
+
+## Roadmap por Fases
+
+1. **Fase 0 - Setup:** estructura del proyecto, documentación inicial y tooling base.
+2. **Fase 1 - Vertical Slice:** menú, arena, dos jugadores, disparos, daño, enemigos básicos, HUD y tests mínimos.
+3. **Fase 2 - Enemigos y Director:** arquetipos `GRUNT`, `BRUTE`, `STALKER`, configuración testeable y `GameDirector` básico.
+4. **Fase 3 - Hardening:** ampliar tests de lógica crítica, revisar tipos, lint, build y estabilidad.
+5. **Fase 4 - Presentación:** README profesional, screenshots y preparación para revisión académica/portafolio.
+6. **Fase 5 - Expansión futura:** contenido y sistemas nuevos marcados como próximos pasos.
+
+## Próximos Pasos
+
+- Waves formales con ritmo más legible.
+- Enemigos ranged.
+- Powerups.
+- Overlay de game over.
+- Polish de efectos y sonido.
