@@ -225,6 +225,7 @@ export class ArenaScene extends Phaser.Scene {
       const dead = applyDamage(enemy, bullet.damage);
       if (!dead) enemy.flashHit();
       if (dead) {
+        this.createEnemyDeathBurst(enemy);
         enemy.markDefeated();
         this.enemiesKilled += 1;
         if (bullet.ownerTeam === 'P1') this.p1.kills += 1;
@@ -232,5 +233,33 @@ export class ArenaScene extends Phaser.Scene {
       }
       bullet.destroy();
     });
+  }
+
+  private createEnemyDeathBurst(enemy: Enemy): void {
+    const burstColor = this.getEnemyBurstColor(enemy);
+
+    for (let index = 0; index < 6; index += 1) {
+      const angle = (Math.PI * 2 * index) / 6;
+      const particle = this.add.circle(enemy.x, enemy.y, 3, burstColor);
+      particle.setAlpha(0.88);
+      particle.setDepth(9);
+
+      this.tweens.add({
+        targets: particle,
+        x: enemy.x + Math.cos(angle) * 22,
+        y: enemy.y + Math.sin(angle) * 22,
+        alpha: 0,
+        scale: 0.35,
+        duration: 180,
+        ease: 'Quad.easeOut',
+        onComplete: () => particle.destroy()
+      });
+    }
+  }
+
+  private getEnemyBurstColor(enemy: Enemy): number {
+    if (enemy.kind === 'BRUTE') return 0xff8a3d;
+    if (enemy.kind === 'STALKER') return 0xc17bff;
+    return 0xff4f5f;
   }
 }
