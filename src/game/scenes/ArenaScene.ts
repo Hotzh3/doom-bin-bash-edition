@@ -1,3 +1,8 @@
+
+---
+
+## `src/game/scenes/ArenaScene.ts`
+```ts
 import Phaser from 'phaser';
 import { Enemy } from '../entities/Enemy';
 import { Player } from '../entities/Player';
@@ -16,7 +21,9 @@ export class ArenaScene extends Phaser.Scene {
   private hud!: HUDSystem;
   private enemiesKilled = 0;
 
-  constructor() { super('ArenaScene'); }
+  constructor() {
+    super('ArenaScene');
+  }
 
   create(): void {
     this.physics.world.setBounds(0, 0, 960, 540);
@@ -25,7 +32,10 @@ export class ArenaScene extends Phaser.Scene {
     this.p1Controls = createControls(this, ['A', 'D', 'W', 'S', 'F']);
     this.p2Controls = createControls(this, ['LEFT', 'RIGHT', 'UP', 'DOWN', 'L']);
 
-    this.projectiles = this.physics.add.group({ classType: Projectile, runChildUpdate: true });
+    this.projectiles = this.physics.add.group({
+      classType: Projectile,
+      runChildUpdate: true
+    });
     this.enemies = this.physics.add.group({ classType: Enemy, runChildUpdate: true });
 
     this.spawnEnemy(480, 100);
@@ -64,10 +74,11 @@ export class ArenaScene extends Phaser.Scene {
     this.enemies.getChildren().forEach((child) => {
       const enemy = child as Enemy;
       if (!enemy.alive) return;
-      const target = Phaser.Math.Distance.Between(enemy.x, enemy.y, this.p1.x, this.p1.y) <
+      const target =
+        Phaser.Math.Distance.Between(enemy.x, enemy.y, this.p1.x, this.p1.y) <
         Phaser.Math.Distance.Between(enemy.x, enemy.y, this.p2.x, this.p2.y)
-        ? this.p1
-        : this.p2;
+          ? this.p1
+          : this.p2;
       const dist = Phaser.Math.Distance.Between(enemy.x, enemy.y, target.x, target.y);
       const state = enemy.fsm.update(dist, enemy.alive);
       if (state === 'CHASE') this.physics.moveToObject(enemy, target, enemy.speed);
@@ -85,7 +96,8 @@ export class ArenaScene extends Phaser.Scene {
 
   private updatePlayer(player: Player, controls: PlayerControls, time: number): void {
     if (!player.alive) return; // dead players cannot move/shoot until restart
-    let vx = 0; let vy = 0;
+    let vx = 0;
+    let vy = 0;
     if (controls.left.isDown) vx = -player.speed;
     if (controls.right.isDown) vx = player.speed;
     if (controls.up.isDown) vy = -player.speed;

@@ -1,4 +1,4 @@
-![Doom-inspired panoramic banner](docs/assets/doom-inspired-banner.png)
+![Doom-inspired panoramic banner](https://upload.wikimedia.org/wikipedia/en/5/57/Doom_cover_art.jpg)
 
 # doom-bin-bash-edition
 
@@ -30,7 +30,6 @@ Referencia histórica:
 - **Fase 4:** hardening de ingeniería (CI, coverage, Docker final, presentación).
 - **Fase 5 (opcional):** extras (boss, más enemigos, eventos, historial).
 
-
 ## Controles actuales
 - **SPACE**: solo en el menú, inicia partida.
 - **R**: reinicia la arena si un jugador murió.
@@ -54,7 +53,7 @@ Referencia histórica:
 12. Tests mínimos (daño + FSM).
 
 ## Estructura actual
-```
+```text
 src/
   main.ts
   game/
@@ -76,8 +75,6 @@ src/
   tests/
     combat.test.ts
     enemy-fsm.test.ts
-```
-
 ## Correr el proyecto
 ```bash
 npm install
@@ -90,3 +87,4 @@ npm run dev
 - `npm run test` → tests con Vitest.
 - `npm run lint` → lint del proyecto.
 - `npm run format` → formato con Prettier.
+
