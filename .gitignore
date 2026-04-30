@@ -9,3 +9,6 @@ src/**/*.js
 
 # ts build cache
 *.tsbuildinfo
+
+# generated from vitest.config.ts
+vitest.config.js
