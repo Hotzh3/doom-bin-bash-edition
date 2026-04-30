@@ -4,6 +4,7 @@ import { Player } from '../entities/Player';
 import { Projectile } from '../entities/Projectile';
 import { GAME_HEIGHT, GAME_WIDTH } from '../config';
 import { applyDamage } from '../systems/CombatSystem';
+import { AudioFeedbackSystem } from '../systems/AudioFeedbackSystem';
 import { GameDirector, type SpawnRequest } from '../systems/GameDirector';
 import { createControls, type PlayerControls } from '../systems/InputManager';
 import { HUDSystem } from '../systems/HUDSystem';
@@ -22,6 +23,7 @@ export class ArenaScene extends Phaser.Scene {
   private statusTitle!: Phaser.GameObjects.Text;
   private statusSubtitle!: Phaser.GameObjects.Text;
   private statusStats!: Phaser.GameObjects.Text;
+  private audioFeedback!: AudioFeedbackSystem;
   private gameDirector!: GameDirector;
   private gameState: GameState = 'RUNNING';
   private currentWave = 1;
@@ -69,6 +71,7 @@ export class ArenaScene extends Phaser.Scene {
       runChildUpdate: true
     });
     this.enemies = this.physics.add.group({ classType: Enemy, runChildUpdate: true });
+    this.audioFeedback = new AudioFeedbackSystem();
     this.gameDirector = new GameDirector();
 
     this.spawnInitialEnemies();
@@ -194,7 +197,9 @@ export class ArenaScene extends Phaser.Scene {
   }
 
   private hitPlayer(player: Player, damage: number): void {
+    if (!player.alive) return;
     const dead = applyDamage(player, damage);
+    this.audioFeedback.play('hit');
     this.triggerCombatShake('PLAYER_HIT');
     if (!dead) player.flashHit();
     if (dead) {
@@ -265,6 +270,7 @@ export class ArenaScene extends Phaser.Scene {
     const bullet = new Projectile(this, muzzleX, player.y, 360 * directionX, 0, player.team);
     this.projectiles.add(bullet);
     this.createMuzzleFlash(muzzleX, player.y, directionX);
+    this.audioFeedback.play('shoot');
   }
 
   private createMuzzleFlash(x: number, y: number, directionX: number): void {
@@ -294,7 +300,10 @@ export class ArenaScene extends Phaser.Scene {
     this.time.delayedCall(720, () => {
       marker.destroy();
       this.pendingSpawns = Math.max(0, this.pendingSpawns - 1);
-      if (this.gameState === 'RUNNING') this.spawnEnemy(spawn);
+      if (this.gameState === 'RUNNING') {
+        this.spawnEnemy(spawn);
+        this.audioFeedback.play('spawn');
+      }
     });
   }
 
@@ -347,8 +356,12 @@ export class ArenaScene extends Phaser.Scene {
       if (!enemy.alive) return;
 
       const dead = applyDamage(enemy, bullet.damage);
-      if (!dead) enemy.flashHit();
+      if (!dead) {
+        enemy.flashHit();
+        this.audioFeedback.play('hit');
+      }
       if (dead) {
+        this.audioFeedback.play('death');
         this.triggerCombatShake('ENEMY_DEATH');
         this.createEnemyDeathBurst(enemy);
         enemy.markDefeated();
