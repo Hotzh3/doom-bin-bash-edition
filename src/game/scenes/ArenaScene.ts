@@ -1,8 +1,3 @@
-
----
-
-## `src/game/scenes/ArenaScene.ts`
-```ts
 import Phaser from 'phaser';
 import { Enemy } from '../entities/Enemy';
 import { Player } from '../entities/Player';
@@ -20,6 +15,7 @@ export class ArenaScene extends Phaser.Scene {
   private enemies!: Phaser.Physics.Arcade.Group;
   private hud!: HUDSystem;
   private enemiesKilled = 0;
+  private lastShotByTeam: Record<string, number> = {};
 
   constructor() {
     super('ArenaScene');
@@ -104,9 +100,9 @@ export class ArenaScene extends Phaser.Scene {
     if (controls.down.isDown) vy = player.speed;
     player.setVelocity(vx, vy);
 
-    const cooldown = (player as any).lastShot ?? 0;
+    const cooldown = this.lastShotByTeam[player.team] ?? 0;
     if (controls.shoot.isDown && time - cooldown > 250) {
-      (player as any).lastShot = time;
+      this.lastShotByTeam[player.team] = time;
       const dirX = player === this.p1 ? 1 : -1;
       const bullet = new Projectile(this, player.x + dirX * 18, player.y, 360 * dirX, 0, player.team);
       this.projectiles.add(bullet);
