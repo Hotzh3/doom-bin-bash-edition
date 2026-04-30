@@ -1,4 +1,12 @@
+<<<<<<< HEAD
 ![Doom-inspired panoramic banner](https://upload.wikimedia.org/wikipedia/en/5/57/Doom_cover_art.jpg)
+=======
+<p align="center">
+
+  <img src="docs/assets/doombanner.png" width="100%"/>
+
+</p>
+>>>>>>> da3173a (docs: add README visual assets)
 
 # doom-bin-bash-edition
 
@@ -51,6 +59,7 @@ Referencia histórica:
 10. Enemigo básico con FSM: SPAWN, CHASE, ATTACK, DEAD.
 11. HUD básico (vida + kills).
 12. Tests mínimos (daño + FSM).
+
 
 ## Estructura actual
 ```text
