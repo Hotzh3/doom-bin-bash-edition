@@ -1,0 +1,8 @@
+version: '3.9'
+services:
+  game:
+    image: node:20
+    working_dir: /app/game
+    volumes:
+      - ./:/app
+    command: sh -c "echo 'Scaffold inicial listo' && tail -f /dev/null"
