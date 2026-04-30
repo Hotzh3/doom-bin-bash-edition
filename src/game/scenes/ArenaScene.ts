@@ -24,6 +24,7 @@ export class ArenaScene extends Phaser.Scene {
   private currentWave = 1;
   private enemiesKilled = 0;
   private lastShotByTeam: Record<string, number> = {};
+  private lastCombatShakeAt = 0;
 
   constructor() {
     super('ArenaScene');
@@ -113,6 +114,7 @@ export class ArenaScene extends Phaser.Scene {
 
   private hitPlayer(player: Player, damage: number): void {
     const dead = applyDamage(player, damage);
+    this.triggerCombatShake('PLAYER_HIT');
     if (!dead) player.flashHit();
     if (dead) {
       player.markDefeated();
@@ -184,6 +186,16 @@ export class ArenaScene extends Phaser.Scene {
     this.time.delayedCall(45, () => flash.destroy());
   }
 
+  private triggerCombatShake(kind: 'PLAYER_HIT' | 'ENEMY_DEATH'): void {
+    const now = this.time.now;
+    if (now - this.lastCombatShakeAt < 120) return;
+
+    this.lastCombatShakeAt = now;
+    const duration = kind === 'PLAYER_HIT' ? 90 : 70;
+    const intensity = kind === 'PLAYER_HIT' ? 0.0024 : 0.0018;
+    this.cameras.main.shake(duration, intensity);
+  }
+
   private updateEnemies(time: number): void {
     this.enemies.getChildren().forEach((child) => {
       const enemy = child as Enemy;
@@ -225,6 +237,7 @@ export class ArenaScene extends Phaser.Scene {
       const dead = applyDamage(enemy, bullet.damage);
       if (!dead) enemy.flashHit();
       if (dead) {
+        this.triggerCombatShake('ENEMY_DEATH');
         this.createEnemyDeathBurst(enemy);
         enemy.markDefeated();
         this.enemiesKilled += 1;
