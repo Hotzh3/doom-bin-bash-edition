@@ -1,24 +1,60 @@
 import Phaser from 'phaser';
 import { Player } from '../entities/Player';
+import type { GameState } from '../types/game';
+
+interface HUDUpdateData {
+  p1: Player;
+  p2: Player;
+  enemiesAlive: number;
+  enemiesKilled: number;
+  gameState: GameState;
+  directorIntensity: number;
+}
+
+const BAR_WIDTH = 150;
+const BAR_HEIGHT = 10;
 
 export class HUDSystem {
+  private p1HealthBar: Phaser.GameObjects.Rectangle;
+  private p2HealthBar: Phaser.GameObjects.Rectangle;
   private text: Phaser.GameObjects.Text;
+
   constructor(scene: Phaser.Scene) {
-    this.text = scene.add.text(14, 12, '', {
-      fontSize: '18px',
+    scene.add.rectangle(14, 16, BAR_WIDTH, BAR_HEIGHT, 0x071018, 0.92).setOrigin(0, 0).setDepth(20);
+    scene.add.rectangle(14, 43, BAR_WIDTH, BAR_HEIGHT, 0x071018, 0.92).setOrigin(0, 0).setDepth(20);
+
+    this.p1HealthBar = scene.add.rectangle(14, 16, BAR_WIDTH, BAR_HEIGHT, 0x44ddff).setOrigin(0, 0);
+    this.p2HealthBar = scene.add.rectangle(14, 43, BAR_WIDTH, BAR_HEIGHT, 0x66ff66).setOrigin(0, 0);
+    this.p1HealthBar.setDepth(21);
+    this.p2HealthBar.setDepth(21);
+
+    this.text = scene.add.text(14, 58, '', {
+      fontSize: '15px',
       fontStyle: '700',
       color: '#f7fbff',
       backgroundColor: '#09111acc',
       stroke: '#06080c',
       strokeThickness: 3,
-      padding: { x: 10, y: 6 }
+      padding: { x: 8, y: 5 }
     });
     this.text.setDepth(20);
   }
 
-  update(p1: Player, p2: Player, enemiesKilled: number): void {
+  update(data: HUDUpdateData): void {
+    this.p1HealthBar.width = this.getHealthBarWidth(data.p1.health);
+    this.p2HealthBar.width = this.getHealthBarWidth(data.p2.health);
     this.text.setText(
-      `P1 HP: ${p1.health} K: ${p1.kills} | P2 HP: ${p2.health} K: ${p2.kills} | Enemies: ${enemiesKilled}`
+      [
+        `P1 HP ${data.p1.health} K ${data.p1.kills}`,
+        `P2 HP ${data.p2.health} K ${data.p2.kills}`,
+        `Alive ${data.enemiesAlive} | Down ${data.enemiesKilled}`,
+        `State ${data.gameState} | Director ${data.directorIntensity}`
+      ].join('\n')
     );
+  }
+
+  private getHealthBarWidth(health: number): number {
+    const normalizedHealth = Phaser.Math.Clamp(health, 0, 100) / 100;
+    return BAR_WIDTH * normalizedHealth;
   }
 }

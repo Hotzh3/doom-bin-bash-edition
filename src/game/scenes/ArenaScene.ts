@@ -23,6 +23,7 @@ export class ArenaScene extends Phaser.Scene {
   private gameState: GameState = 'RUNNING';
   private currentWave = 1;
   private enemiesKilled = 0;
+  private directorIntensity = 0;
   private lastShotByTeam: Record<string, number> = {};
   private lastCombatShakeAt = 0;
   private pendingSpawns = 0;
@@ -83,7 +84,14 @@ export class ArenaScene extends Phaser.Scene {
       this.updateGameState();
     }
 
-    this.hud.update(this.p1, this.p2, this.enemiesKilled);
+    this.hud.update({
+      p1: this.p1,
+      p2: this.p2,
+      enemiesAlive: this.countEnemiesAlive() + this.pendingSpawns,
+      enemiesKilled: this.enemiesKilled,
+      gameState: this.gameState,
+      directorIntensity: this.directorIntensity
+    });
   }
 
   private createStatusOverlay(): Phaser.GameObjects.Text {
@@ -143,6 +151,7 @@ export class ArenaScene extends Phaser.Scene {
       currentWave: this.currentWave
     });
 
+    this.directorIntensity = decision.intensity;
     if (decision.spawn) this.telegraphEnemySpawn(decision.spawn);
   }
 
