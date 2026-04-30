@@ -1,4 +1,4 @@
-# doom-hell-arena-ai
+# Doom-hell-arena-ai
 
 Demo universitaria de arena shooter 2D **Doom-inspired** para 2 jugadores locales, con PvP + PvE, IA básica demostrable y enfoque en entrega de MVP en 4 semanas.
 
