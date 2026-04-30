@@ -24,6 +24,27 @@ export class ArenaScene extends Phaser.Scene {
 
   create(): void {
     this.physics.world.setBounds(0, 0, GAME_WIDTH, GAME_HEIGHT);
+    this.cameras.main.setBackgroundColor('#07090f');
+
+    const baseLayer = this.add.rectangle(GAME_WIDTH * 0.5, GAME_HEIGHT * 0.5, GAME_WIDTH, GAME_HEIGHT, 0x121722);
+    baseLayer.setDepth(-30);
+
+    const centerGlow = this.add.rectangle(GAME_WIDTH * 0.5, GAME_HEIGHT * 0.5, GAME_WIDTH * 0.8, GAME_HEIGHT * 0.72, 0x1f1320);
+    centerGlow.setAlpha(0.38);
+    centerGlow.setDepth(-29);
+
+    const topShade = this.add.rectangle(GAME_WIDTH * 0.5, 36, GAME_WIDTH, 72, 0x000000);
+    topShade.setAlpha(0.28);
+    topShade.setDepth(-28);
+
+    const frameOuter = this.add.rectangle(GAME_WIDTH * 0.5, GAME_HEIGHT * 0.5, GAME_WIDTH - 8, GAME_HEIGHT - 8);
+    frameOuter.setStrokeStyle(6, 0x5c667f, 0.82);
+    frameOuter.setDepth(-27);
+
+    const frameInner = this.add.rectangle(GAME_WIDTH * 0.5, GAME_HEIGHT * 0.5, GAME_WIDTH - 28, GAME_HEIGHT - 28);
+    frameInner.setStrokeStyle(2, 0x9e2f3e, 0.82);
+    frameInner.setDepth(-26);
+
     this.p1 = new Player(this, 180, 280, 0x44ddff, 'P1');
     this.p2 = new Player(this, 760, 280, 0x66ff66, 'P2');
     this.p1Controls = createControls(this, ['A', 'D', 'W', 'S', 'F']);

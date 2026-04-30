@@ -13,8 +13,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.team = team;
     scene.add.existing(this);
     scene.physics.add.existing(this);
-    this.setDisplaySize(26, 26);
+    this.setDisplaySize(30, 30);
     this.setTint(color);
+    this.setAlpha(0.98);
     this.setCollideWorldBounds(true);
   }
 }

@@ -4,7 +4,16 @@ import { Player } from '../entities/Player';
 export class HUDSystem {
   private text: Phaser.GameObjects.Text;
   constructor(scene: Phaser.Scene) {
-    this.text = scene.add.text(12, 8, '', { fontSize: '16px', color: '#ffffff' });
+    this.text = scene.add.text(14, 12, '', {
+      fontSize: '18px',
+      fontStyle: '700',
+      color: '#f7fbff',
+      backgroundColor: '#09111acc',
+      stroke: '#06080c',
+      strokeThickness: 3,
+      padding: { x: 10, y: 6 }
+    });
+    this.text.setDepth(20);
   }
 
   update(p1: Player, p2: Player, enemiesKilled: number): void {

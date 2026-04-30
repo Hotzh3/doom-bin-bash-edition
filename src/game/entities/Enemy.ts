@@ -12,7 +12,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     super(scene, x, y, '__WHITE');
     scene.add.existing(this);
     scene.physics.add.existing(this);
-    this.setDisplaySize(24, 24);
-    this.setTint(0xff4444);
+    this.setDisplaySize(28, 28);
+    this.setTint(0xff4f5f);
+    this.setAlpha(0.98);
   }
 }

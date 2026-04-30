@@ -9,8 +9,9 @@ export class Projectile extends Phaser.Physics.Arcade.Image {
     this.ownerTeam = ownerTeam;
     scene.add.existing(this);
     scene.physics.add.existing(this);
-    this.setDisplaySize(8, 8);
-    this.setTint(0xffee88);
+    this.setDisplaySize(10, 10);
+    this.setTint(0xfff29e);
+    this.setAlpha(0.96);
     this.setVelocity(vx, vy);
   }
 }
