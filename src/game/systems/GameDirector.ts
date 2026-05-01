@@ -1,4 +1,7 @@
 import type { EnemyKind } from '../types/game';
+import { DEFAULT_DIRECTOR_CONFIG, type DirectorConfig } from './DirectorConfig';
+import type { DirectorDebugInfo, DirectorState } from './DirectorState';
+import type { WeaponKind } from './WeaponTypes';
 
 export interface GameDirectorInput {
   elapsedTime: number;
@@ -9,6 +12,11 @@ export interface GameDirectorInput {
   p1Alive: boolean;
   p2Alive: boolean;
   currentWave: number;
+  timeSincePlayerDamagedMs?: number;
+  playerStationaryMs?: number;
+  equippedWeapons?: WeaponKind[];
+  activeZoneId?: string | null;
+  activatedTriggerCount?: number;
 }
 
 export interface SpawnPoint {
@@ -22,8 +30,10 @@ export interface SpawnRequest extends SpawnPoint {
 
 export interface GameDirectorDecision {
   intensity: number;
+  state: DirectorState;
   maxEnemiesAlive: number;
   spawn: SpawnRequest | null;
+  debug: DirectorDebugInfo;
 }
 
 interface GameDirectorOptions {
@@ -32,6 +42,7 @@ interface GameDirectorOptions {
   spawnCooldownMs?: number;
   openingSpawnCount?: number;
   spawnPoints?: SpawnPoint[];
+  debugEnabled?: boolean;
 }
 
 const DEFAULT_SPAWN_POINTS: SpawnPoint[] = [
@@ -42,47 +53,63 @@ const DEFAULT_SPAWN_POINTS: SpawnPoint[] = [
 ];
 
 export class GameDirector {
-  private readonly maxEnemiesAlive: number;
-  private readonly maxTotalSpawns: number;
-  private readonly spawnCooldownMs: number;
-  private readonly openingSpawnCount: number;
+  private readonly config: DirectorConfig;
   private readonly spawnPoints: SpawnPoint[];
   private spawnedCount = 0;
   private lastSpawnAt = Number.NEGATIVE_INFINITY;
   private nextSpawnPointIndex = 0;
+  private state: DirectorState = 'EXPLORATION';
+  private stateEnteredAt = 0;
+  private lastTotalKills = 0;
+  private lastKillAt = Number.NEGATIVE_INFINITY;
+  private pendingZoneAmbushId: string | null = null;
+  private lastDecisionReason = 'director initialized';
 
   constructor(options: GameDirectorOptions = {}) {
-    this.maxEnemiesAlive = options.maxEnemiesAlive ?? 4;
-    this.maxTotalSpawns = options.maxTotalSpawns ?? 9;
-    this.spawnCooldownMs = options.spawnCooldownMs ?? 4500;
-    this.openingSpawnCount = options.openingSpawnCount ?? 2;
+    this.config = {
+      ...DEFAULT_DIRECTOR_CONFIG,
+      maxEnemiesAlive: options.maxEnemiesAlive ?? DEFAULT_DIRECTOR_CONFIG.maxEnemiesAlive,
+      maxTotalSpawns: options.maxTotalSpawns ?? DEFAULT_DIRECTOR_CONFIG.maxTotalSpawns,
+      openingSpawnCount: options.openingSpawnCount ?? DEFAULT_DIRECTOR_CONFIG.openingSpawnCount,
+      baseSpawnCooldownMs: options.spawnCooldownMs ?? DEFAULT_DIRECTOR_CONFIG.baseSpawnCooldownMs,
+      debugEnabled: options.debugEnabled ?? DEFAULT_DIRECTOR_CONFIG.debugEnabled
+    };
     this.spawnPoints = options.spawnPoints ?? DEFAULT_SPAWN_POINTS;
   }
 
   createOpeningSpawns(): SpawnRequest[] {
-    const spawnCount = Math.min(this.openingSpawnCount, this.maxTotalSpawns);
+    const spawnCount = Math.min(this.config.openingSpawnCount, this.config.maxTotalSpawns);
     const spawns = Array.from({ length: spawnCount }, () => this.createSpawnRequest('GRUNT'));
     this.lastSpawnAt = 0;
     return spawns;
   }
 
   update(input: GameDirectorInput): GameDirectorDecision {
+    this.observeKills(input);
     const intensity = this.calculateIntensity(input);
+    this.updateState(input, intensity);
+
     if (!this.canSpawn(input)) {
-      return { intensity, maxEnemiesAlive: this.maxEnemiesAlive, spawn: null };
+      return this.createDecision(input, intensity, null);
     }
 
     const kind = this.selectEnemyKind(input, intensity);
     this.lastSpawnAt = input.elapsedTime;
-    return {
-      intensity,
-      maxEnemiesAlive: this.maxEnemiesAlive,
-      spawn: this.createSpawnRequest(kind)
-    };
+    this.lastDecisionReason = `spawn ${kind} during ${this.state}`;
+    return this.createDecision(input, intensity, this.createSpawnRequest(kind));
   }
 
   hasExhaustedSpawnBudget(): boolean {
-    return this.spawnedCount >= this.maxTotalSpawns;
+    return this.spawnedCount >= this.config.maxTotalSpawns;
+  }
+
+  notifyZoneTrigger(triggerId: string, time: number): void {
+    this.pendingZoneAmbushId = triggerId;
+    this.enterState('AMBUSH', time, `trigger ${triggerId}`);
+  }
+
+  getState(): DirectorState {
+    return this.state;
   }
 
   calculateIntensity(input: GameDirectorInput): number {
@@ -99,6 +126,16 @@ export class GameDirector {
       intensity += 1;
     }
 
+    if ((input.timeSincePlayerDamagedMs ?? 0) >= this.config.dominanceNoDamageMs) intensity += 1;
+    if (
+      (input.equippedWeapons?.includes('SHOTGUN') || input.equippedWeapons?.includes('LAUNCHER')) &&
+      (input.timeSincePlayerDamagedMs ?? 0) >= this.config.dominanceNoDamageMs
+    ) {
+      intensity += 1;
+    }
+    if ((input.playerStationaryMs ?? 0) >= this.config.idlePressureMs) intensity += 1;
+    if (input.activeZoneId) intensity += 1;
+
     if (!input.p1Alive || !input.p2Alive) intensity -= 2;
 
     const livingHealth = [input.p1Alive ? input.p1Health : null, input.p2Alive ? input.p2Health : null].filter(
@@ -107,7 +144,7 @@ export class GameDirector {
     const averageHealth =
       livingHealth.length > 0 ? livingHealth.reduce((total, health) => total + health, 0) / livingHealth.length : 0;
 
-    if (averageHealth <= 35) intensity -= 2;
+    if (averageHealth <= this.config.lowHealthThreshold) intensity -= 2;
     else if (averageHealth <= 55) intensity -= 1;
 
     return this.clampIntensity(intensity);
@@ -115,17 +152,37 @@ export class GameDirector {
 
   selectEnemyKind(input: GameDirectorInput, intensity = this.calculateIntensity(input)): EnemyKind {
     const progressScore = Math.floor(input.elapsedTime / 20_000) + input.totalKills + input.currentWave;
+    if ((input.playerStationaryMs ?? 0) >= this.config.idlePressureMs) return 'STALKER';
+    if (this.state === 'AMBUSH') return input.totalKills % 2 === 0 ? 'STALKER' : 'RANGED';
+    if (this.state === 'HIGH_INTENSITY' && input.equippedWeapons?.includes('SHOTGUN')) return 'RANGED';
+    if (this.state === 'BUILD_UP') return input.totalKills % 2 === 0 ? 'GRUNT' : 'RANGED';
     if (intensity <= 1 || progressScore < 4) return 'GRUNT';
+    if (intensity >= 3 && progressScore >= 7 && input.totalKills % 3 === 1) return 'RANGED';
     if (intensity >= 4 && progressScore >= 8) return input.totalKills % 2 === 0 ? 'BRUTE' : 'STALKER';
     if (progressScore >= 6) return 'BRUTE';
     return 'STALKER';
   }
 
   private canSpawn(input: GameDirectorInput): boolean {
+    const cooldown = this.getCurrentSpawnCooldownMs();
     if (!input.p1Alive && !input.p2Alive) return false;
-    if (input.enemiesAlive >= this.maxEnemiesAlive) return false;
-    if (this.spawnedCount >= this.maxTotalSpawns) return false;
-    return input.elapsedTime - this.lastSpawnAt >= this.spawnCooldownMs;
+    if (this.state === 'EXPLORATION' || this.state === 'RECOVERY') {
+      this.lastDecisionReason = `${this.state.toLowerCase()} pause`;
+      return false;
+    }
+    if (input.enemiesAlive >= this.config.maxEnemiesAlive) {
+      this.lastDecisionReason = 'enemy cap reached';
+      return false;
+    }
+    if (this.spawnedCount >= this.config.maxTotalSpawns) {
+      this.lastDecisionReason = 'spawn budget exhausted';
+      return false;
+    }
+    if (input.elapsedTime - this.lastSpawnAt < cooldown) {
+      this.lastDecisionReason = 'spawn cooldown';
+      return false;
+    }
+    return true;
   }
 
   private createSpawnRequest(kind: EnemyKind): SpawnRequest {
@@ -142,5 +199,102 @@ export class GameDirector {
 
   private clampIntensity(value: number): number {
     return Math.max(0, Math.min(5, value));
+  }
+
+  private observeKills(input: GameDirectorInput): void {
+    if (input.totalKills > this.lastTotalKills) {
+      this.lastKillAt = input.elapsedTime;
+      this.lastTotalKills = input.totalKills;
+    }
+  }
+
+  private updateState(input: GameDirectorInput, intensity: number): void {
+    const averageHealth = this.getAverageLivingHealth(input);
+    if (averageHealth > 0 && averageHealth <= this.config.lowHealthThreshold) {
+      this.enterState('RECOVERY', input.elapsedTime, 'players low health');
+      return;
+    }
+
+    if (this.state === 'AMBUSH' && input.elapsedTime - this.stateEnteredAt >= this.config.ambushDurationMs) {
+      this.enterState('HIGH_INTENSITY', input.elapsedTime, 'ambush matured');
+      return;
+    }
+
+    if (this.state === 'HIGH_INTENSITY' && input.enemiesAlive === 0 && input.elapsedTime - this.lastKillAt < 2500) {
+      this.enterState('RECOVERY', input.elapsedTime, 'combat cleared');
+      return;
+    }
+
+    if (this.state === 'RECOVERY') {
+      if (input.elapsedTime - this.stateEnteredAt < this.config.recoveryDurationMs) return;
+      this.enterState('EXPLORATION', input.elapsedTime, 'recovery complete');
+    }
+
+    if (this.pendingZoneAmbushId) {
+      this.pendingZoneAmbushId = null;
+      this.enterState('AMBUSH', input.elapsedTime, 'zone trigger');
+      return;
+    }
+
+    if ((input.playerStationaryMs ?? 0) >= this.config.idlePressureMs) {
+      this.enterState('BUILD_UP', input.elapsedTime, 'player stationary');
+      return;
+    }
+
+    if (intensity >= 4 && input.enemiesAlive <= 2) {
+      this.enterState('HIGH_INTENSITY', input.elapsedTime, 'player dominating');
+      return;
+    }
+
+    if (this.state === 'EXPLORATION' && input.elapsedTime - this.stateEnteredAt >= this.config.buildUpAfterMs) {
+      this.enterState('BUILD_UP', input.elapsedTime, 'exploration timer');
+      return;
+    }
+
+    if (this.state === 'BUILD_UP' && intensity >= 3 && input.enemiesAlive <= 2) {
+      this.enterState('HIGH_INTENSITY', input.elapsedTime, 'pressure escalated');
+    }
+  }
+
+  private enterState(nextState: DirectorState, time: number, reason: string): void {
+    if (this.state === nextState) {
+      this.lastDecisionReason = reason;
+      return;
+    }
+
+    this.state = nextState;
+    this.stateEnteredAt = time;
+    this.lastDecisionReason = reason;
+  }
+
+  private getCurrentSpawnCooldownMs(): number {
+    if (this.state === 'AMBUSH') return this.config.ambushSpawnCooldownMs;
+    if (this.state === 'HIGH_INTENSITY') return this.config.highIntensitySpawnCooldownMs;
+    if (this.state === 'BUILD_UP') return this.config.buildUpSpawnCooldownMs;
+    return this.config.baseSpawnCooldownMs;
+  }
+
+  private getAverageLivingHealth(input: GameDirectorInput): number {
+    const livingHealth = [input.p1Alive ? input.p1Health : null, input.p2Alive ? input.p2Health : null].filter(
+      (health): health is number => health !== null
+    );
+    return livingHealth.length > 0 ? livingHealth.reduce((total, health) => total + health, 0) / livingHealth.length : 0;
+  }
+
+  private createDecision(input: GameDirectorInput, intensity: number, spawn: SpawnRequest | null): GameDirectorDecision {
+    return {
+      intensity,
+      state: this.state,
+      maxEnemiesAlive: this.config.maxEnemiesAlive,
+      spawn,
+      debug: {
+        enabled: this.config.debugEnabled,
+        state: this.state,
+        intensity,
+        enemiesAlive: input.enemiesAlive,
+        spawnCooldownRemainingMs: Math.max(0, this.getCurrentSpawnCooldownMs() - (input.elapsedTime - this.lastSpawnAt)),
+        lastDecisionReason: this.config.debugEnabled ? this.lastDecisionReason : 'debug disabled'
+      }
+    };
   }
 }

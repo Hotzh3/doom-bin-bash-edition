@@ -4,16 +4,55 @@ import type { SpawnRequest } from './GameDirector';
 
 type CombatShakeKind = 'PLAYER_HIT' | 'ENEMY_DEATH';
 
+interface MuzzleFlashOptions {
+  color?: number;
+  width?: number;
+  height?: number;
+}
+
 export class VisualEffectsSystem {
   private lastCombatShakeAt = 0;
 
   constructor(private readonly scene: Phaser.Scene) {}
 
-  createMuzzleFlash(x: number, y: number, directionX: number): void {
-    const flash = this.scene.add.rectangle(x + directionX * 8, y, 14, 8, palette.accent.projectile);
+  createMuzzleFlash(x: number, y: number, directionX: number, options: MuzzleFlashOptions = {}): void {
+    const flash = this.scene.add.rectangle(
+      x + directionX * 8,
+      y,
+      options.width ?? 14,
+      options.height ?? 8,
+      options.color ?? palette.accent.projectile
+    );
     flash.setAlpha(0.86);
     flash.setDepth(8);
     this.scene.time.delayedCall(45, () => flash.destroy());
+  }
+
+  createImpactSpark(x: number, y: number, color: number = palette.accent.projectile): void {
+    const spark = this.scene.add.circle(x, y, 6, color, 0.82);
+    spark.setDepth(9);
+    this.scene.tweens.add({
+      targets: spark,
+      alpha: 0,
+      scale: 0.35,
+      duration: 90,
+      ease: 'Quad.easeOut',
+      onComplete: () => spark.destroy()
+    });
+  }
+
+  createExplosion(x: number, y: number, radius: number): void {
+    const blast = this.scene.add.circle(x, y, radius, palette.accent.ember, 0.18);
+    blast.setStrokeStyle(2, palette.accent.projectile, 0.75);
+    blast.setDepth(9);
+    this.scene.tweens.add({
+      targets: blast,
+      alpha: 0,
+      scale: 1.35,
+      duration: 150,
+      ease: 'Quad.easeOut',
+      onComplete: () => blast.destroy()
+    });
   }
 
   telegraphEnemySpawn(spawn: SpawnRequest, onComplete: () => void): void {

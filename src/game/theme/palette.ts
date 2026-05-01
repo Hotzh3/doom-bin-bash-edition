@@ -34,6 +34,7 @@ export const palette = {
   enemy: {
     grunt: 0xff4f5f,
     brute: 0xff8a3d,
-    stalker: 0xc17bff
+    stalker: 0xc17bff,
+    ranged: 0x48d6c9
   }
 } as const;

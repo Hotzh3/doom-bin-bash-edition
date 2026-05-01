@@ -6,7 +6,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   alive = true;
   kills = 0;
   team: Team;
-  speed = 180;
+  speed = 225;
   private readonly baseTint: number;
   private hitFlashEvent?: Phaser.Time.TimerEvent;
 

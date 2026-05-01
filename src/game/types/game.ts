@@ -1,5 +1,5 @@
 export type Team = 'P1' | 'P2' | 'ENEMY';
-export type EnemyKind = 'GRUNT' | 'BRUTE' | 'STALKER';
+export type EnemyKind = 'GRUNT' | 'BRUTE' | 'STALKER' | 'RANGED';
 export type GameState = 'RUNNING' | 'GAME_OVER' | 'ROUND_CLEAR';
 
 export interface HealthLike {
