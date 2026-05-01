@@ -335,7 +335,9 @@ export class ArenaScene extends Phaser.Scene {
   private updateLevelObjectives(): void {
     const livingPlayers = [this.p1, this.p2].filter((player) => player.alive);
     DARK_FOUNDRY_LAYOUT.triggers.forEach((trigger) => {
-      const activated = this.triggerSystem.activateIfEntered(trigger, livingPlayers);
+      const activated = this.triggerSystem.activateIfEntered(trigger, livingPlayers, {
+        isDoorOpen: (doorId) => this.doorSystem.isOpen(doorId)
+      });
       if (!activated) return;
 
       this.triggerGlyphs.get(trigger.id)?.setFillStyle(palette.accent.infernal, 0.34);

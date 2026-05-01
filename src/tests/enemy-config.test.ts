@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ENEMY_CONFIG, ENEMY_KINDS, getEnemyConfig } from '../game/entities/enemyConfig';
+import { ARENA_ENEMY_CONFIG, ENEMY_CONFIG, ENEMY_KINDS, getEnemyConfig, RAYCAST_ENEMY_CONFIG } from '../game/entities/enemyConfig';
 
 describe('enemy config', () => {
   it('defines stats for every enemy kind', () => {
@@ -49,5 +49,13 @@ describe('enemy config', () => {
     expect(ENEMY_CONFIG.RANGED.projectileSpeed).toBeLessThan(ENEMY_CONFIG.STALKER.speed * 1.5);
     expect(ENEMY_CONFIG.BRUTE.attackCooldownMs).toBeGreaterThan(ENEMY_CONFIG.GRUNT.attackCooldownMs);
     expect(ENEMY_CONFIG.BRUTE.health).toBeGreaterThan(ENEMY_CONFIG.GRUNT.health * 3);
+  });
+
+  it('isolates arena and raycast enemy config records', () => {
+    expect(ENEMY_CONFIG).toBe(ARENA_ENEMY_CONFIG);
+    expect(getEnemyConfig('STALKER', 'arena')).toBe(ARENA_ENEMY_CONFIG.STALKER);
+    expect(getEnemyConfig('STALKER', 'raycast')).toBe(RAYCAST_ENEMY_CONFIG.STALKER);
+    expect(RAYCAST_ENEMY_CONFIG.STALKER).not.toBe(ARENA_ENEMY_CONFIG.STALKER);
+    expect(RAYCAST_ENEMY_CONFIG.STALKER).toEqual(ARENA_ENEMY_CONFIG.STALKER);
   });
 });

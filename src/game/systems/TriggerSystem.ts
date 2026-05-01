@@ -4,8 +4,13 @@ import { isPointInsideRect } from '../level/arenaLayout';
 export class TriggerSystem {
   private readonly activatedTriggers = new Set<string>();
 
-  activateIfEntered(trigger: LevelTrigger, points: PlayerSpawn[]): boolean {
+  activateIfEntered(
+    trigger: LevelTrigger,
+    points: PlayerSpawn[],
+    options?: { isDoorOpen?: (doorId: string) => boolean }
+  ): boolean {
     if (trigger.once && this.activatedTriggers.has(trigger.id)) return false;
+    if (trigger.doorId && !options?.isDoorOpen?.(trigger.doorId)) return false;
 
     const entered = points.some((point) => isPointInsideRect(point, trigger));
     if (!entered) return false;

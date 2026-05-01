@@ -1,3 +1,4 @@
+import type { BalanceProfile } from '../types/BalanceProfile';
 import type { EnemyKind } from '../types/game';
 
 export interface EnemyConfig {
@@ -18,7 +19,7 @@ export interface EnemyConfig {
 
 export const ENEMY_KINDS: EnemyKind[] = ['GRUNT', 'BRUTE', 'STALKER', 'RANGED'];
 
-export const ENEMY_CONFIG: Record<EnemyKind, EnemyConfig> = {
+const BASE_ENEMY_CONFIG: Record<EnemyKind, EnemyConfig> = {
   GRUNT: {
     kind: 'GRUNT',
     health: 52,
@@ -75,6 +76,25 @@ export const ENEMY_CONFIG: Record<EnemyKind, EnemyConfig> = {
   }
 };
 
-export function getEnemyConfig(kind: EnemyKind): EnemyConfig {
-  return ENEMY_CONFIG[kind];
+function cloneEnemyConfigRecord(config: Record<EnemyKind, EnemyConfig>): Record<EnemyKind, EnemyConfig> {
+  return {
+    GRUNT: Object.freeze({ ...config.GRUNT }),
+    BRUTE: Object.freeze({ ...config.BRUTE }),
+    STALKER: Object.freeze({ ...config.STALKER }),
+    RANGED: Object.freeze({ ...config.RANGED })
+  };
+}
+
+export const ARENA_ENEMY_CONFIG = cloneEnemyConfigRecord(BASE_ENEMY_CONFIG);
+export const RAYCAST_ENEMY_CONFIG = cloneEnemyConfigRecord(BASE_ENEMY_CONFIG);
+
+export const ENEMY_CONFIG = ARENA_ENEMY_CONFIG;
+
+const ENEMY_CONFIG_BY_PROFILE: Record<BalanceProfile, Record<EnemyKind, EnemyConfig>> = {
+  arena: ARENA_ENEMY_CONFIG,
+  raycast: RAYCAST_ENEMY_CONFIG
+};
+
+export function getEnemyConfig(kind: EnemyKind, profile: BalanceProfile = 'arena'): EnemyConfig {
+  return ENEMY_CONFIG_BY_PROFILE[profile][kind];
 }

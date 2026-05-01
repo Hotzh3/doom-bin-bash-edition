@@ -26,13 +26,15 @@ describe('raycast enemy system', () => {
     expect(collides(RAYCAST_MAP, enemy.x, enemy.y, enemy.radius)).toBe(false);
   });
 
-  it('applies melee damage with cooldown', () => {
+  it('applies melee damage only after windup completes and then respects cooldown', () => {
     const enemy = createRaycastEnemy({ id: 'stalker', kind: 'STALKER', x: 2.5, y: 10.08 });
 
-    const first = updateRaycastEnemies(RAYCAST_MAP, [enemy], { x: 2.5, y: 10.4, alive: true }, 1000, 16);
+    const windup = updateRaycastEnemies(RAYCAST_MAP, [enemy], { x: 2.5, y: 10.4, alive: true }, 1000, 16);
+    const hit = updateRaycastEnemies(RAYCAST_MAP, [enemy], { x: 2.5, y: 10.4, alive: true }, 1081, 16);
     const second = updateRaycastEnemies(RAYCAST_MAP, [enemy], { x: 2.5, y: 10.4, alive: true }, 1100, 16);
 
-    expect(first.meleeDamage).toBeGreaterThan(0);
+    expect(windup.meleeDamage).toBe(0);
+    expect(hit.meleeDamage).toBeGreaterThan(0);
     expect(second.meleeDamage).toBe(0);
   });
 
@@ -40,6 +42,15 @@ describe('raycast enemy system', () => {
     const enemy = createRaycastEnemy({ id: 'spawn-stalker', kind: 'STALKER', x: 2.5, y: 10.08 });
 
     const result = updateRaycastEnemies(RAYCAST_MAP, [enemy], { x: 2.5, y: 10.4, alive: true }, 100, 16);
+
+    expect(result.meleeDamage).toBe(0);
+  });
+
+  it('cancels melee damage when the player dodges out of range before windup completes', () => {
+    const enemy = createRaycastEnemy({ id: 'dodge-stalker', kind: 'STALKER', x: 2.5, y: 10.08 });
+
+    updateRaycastEnemies(RAYCAST_MAP, [enemy], { x: 2.5, y: 10.4, alive: true }, 1000, 16);
+    const result = updateRaycastEnemies(RAYCAST_MAP, [enemy], { x: 3.5, y: 10.4, alive: true }, 1081, 16);
 
     expect(result.meleeDamage).toBe(0);
   });

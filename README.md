@@ -119,6 +119,10 @@ src/
 - `AudioFeedbackSystem`: genera cues cortos con WebAudio y falla de forma segura si el navegador bloquea audio.
 - `tests`: cubren lógica pura para reducir riesgo sin depender de rendering de Phaser.
 
+## Playtest
+
+- Checklist rápida de feel y regresiones del vertical slice FPS: [docs/playtest/raycast-feel-checklist.md](docs/playtest/raycast-feel-checklist.md)
+
 ## Technical Highlights
 
 - **Phaser 3 + TypeScript:** vertical slice raycast/FPS con escenas, módulos raycast y sistemas separados.

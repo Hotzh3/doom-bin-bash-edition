@@ -1,3 +1,4 @@
+import type { BalanceProfile } from '../types/BalanceProfile';
 import { getWeaponConfig, WEAPON_ORDER } from './WeaponConfig';
 import { normalizeMovementInput, type MovementVector } from './MovementSystem';
 import type { WeaponFireInput, WeaponFireResult, WeaponKind, ProjectileSpawn } from './WeaponTypes';
@@ -8,12 +9,14 @@ export class WeaponSystem {
   private currentWeapon: WeaponKind = 'PISTOL';
   private readonly lastFireAt = new Map<WeaponKind, number>();
 
+  constructor(private readonly profile: BalanceProfile = 'arena') {}
+
   getCurrentWeapon(): WeaponKind {
     return this.currentWeapon;
   }
 
   getCurrentWeaponLabel(): string {
-    return getWeaponConfig(this.currentWeapon).label;
+    return getWeaponConfig(this.currentWeapon, this.profile).label;
   }
 
   switchWeapon(kind: WeaponKind): void {
@@ -26,7 +29,7 @@ export class WeaponSystem {
   }
 
   canFire(time: number): boolean {
-    const config = getWeaponConfig(this.currentWeapon);
+    const config = getWeaponConfig(this.currentWeapon, this.profile);
     const lastFire = this.lastFireAt.get(this.currentWeapon) ?? Number.NEGATIVE_INFINITY;
     return time - lastFire >= config.cooldownMs;
   }
@@ -34,14 +37,14 @@ export class WeaponSystem {
   fire(input: WeaponFireInput): WeaponFireResult | null {
     if (!this.canFire(input.time)) return null;
 
-    const weapon = getWeaponConfig(this.currentWeapon);
+    const weapon = getWeaponConfig(this.currentWeapon, this.profile);
     const direction = normalizeMovementInput(input.direction);
     const projectiles = createProjectileSpawns({
       ownerTeam: input.ownerTeam,
       origin: input.origin,
       direction,
       weaponKind: this.currentWeapon
-    });
+    }, this.profile);
 
     this.lastFireAt.set(this.currentWeapon, input.time);
     return { weapon, projectiles };
@@ -55,8 +58,8 @@ interface ProjectileSpawnInput {
   weaponKind: WeaponKind;
 }
 
-export function createProjectileSpawns(input: ProjectileSpawnInput): ProjectileSpawn[] {
-  const weapon = getWeaponConfig(input.weaponKind);
+export function createProjectileSpawns(input: ProjectileSpawnInput, profile: BalanceProfile = 'arena'): ProjectileSpawn[] {
+  const weapon = getWeaponConfig(input.weaponKind, profile);
   const spreadStart = weapon.pelletCount > 1 ? -weapon.spreadRadians * 0.5 : 0;
   const spreadStep = weapon.pelletCount > 1 ? weapon.spreadRadians / (weapon.pelletCount - 1) : 0;
 

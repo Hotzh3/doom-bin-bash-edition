@@ -22,6 +22,7 @@ export interface RaycastBillboard {
   color: number;
   radius: number;
   label?: string;
+  style?: 'token' | 'gate' | 'secret' | 'exit';
 }
 
 export class RaycastRenderer {
@@ -100,12 +101,7 @@ export class RaycastRenderer {
         projection.size * 1.22
       );
       this.graphics.fillStyle(color, 0.95 * visibility);
-      this.graphics.fillRect(
-        projection.screenX - projection.size * 0.5,
-        height * 0.5 - projection.size * 0.55,
-        projection.size,
-        projection.size * 1.1
-      );
+      this.drawEnemySilhouette(projection, height, color, visibility);
       if (isWindingUp) {
         this.graphics.lineStyle(3, 0xfff29e, 0.82 * visibility);
         this.graphics.strokeRect(
@@ -169,6 +165,7 @@ export class RaycastRenderer {
           this.graphics.fillStyle(projection.billboard.color, 0.95);
           this.graphics.fillRect(projection.screenX - 18, height * 0.5 - projection.size - 12, 36, 2);
         }
+        this.drawBillboardGlyph(projection, height);
       });
   }
 
@@ -183,18 +180,27 @@ export class RaycastRenderer {
 
     this.graphics.fillStyle(0x020408, 0.72);
     this.graphics.fillRect(centerX - bodyWidth * 0.62, baseY - bodyHeight - 6, bodyWidth * 1.24, bodyHeight + 12);
+    this.graphics.lineStyle(2, trimColor, 0.52);
+    this.graphics.strokeRect(centerX - bodyWidth * 0.62, baseY - bodyHeight - 6, bodyWidth * 1.24, bodyHeight + 12);
     this.graphics.fillStyle(weaponColor, 0.96);
     this.graphics.fillRect(centerX - bodyWidth * 0.5, baseY - bodyHeight, bodyWidth, bodyHeight);
     this.graphics.fillStyle(trimColor, 0.82);
     this.graphics.fillRect(centerX - barrelWidth * 0.5, baseY - bodyHeight - 16, barrelWidth, 24);
+    this.graphics.fillStyle(trimColor, 0.35);
+    this.graphics.fillRect(centerX - barrelWidth * 0.16, baseY - bodyHeight - 28, barrelWidth * 0.32, 12);
     this.graphics.fillStyle(0x0b0d12, 0.9);
     this.graphics.fillRect(centerX - bodyWidth * 0.38, baseY - 18, bodyWidth * 0.76, 8);
+    this.graphics.fillStyle(0xffffff, 0.12);
+    this.graphics.fillRect(centerX - bodyWidth * 0.42, baseY - bodyHeight + 6, bodyWidth * 0.84, 4);
 
     if (muzzleAlpha <= 0) return;
     this.graphics.fillStyle(trimColor, Phaser.Math.Clamp(muzzleAlpha, 0, 1));
     this.graphics.fillTriangle(centerX - 42, baseY - bodyHeight - 18, centerX + 42, baseY - bodyHeight - 18, centerX, baseY - bodyHeight - 72);
     this.graphics.fillStyle(0xffffff, Phaser.Math.Clamp(muzzleAlpha * 0.55, 0, 1));
     this.graphics.fillCircle(centerX, baseY - bodyHeight - 30, weapon === 'SHOTGUN' ? 34 : weapon === 'LAUNCHER' ? 42 : 24);
+    this.graphics.lineStyle(2, trimColor, Phaser.Math.Clamp(muzzleAlpha * 0.85, 0, 1));
+    this.graphics.lineBetween(centerX, baseY - bodyHeight - 16, centerX, baseY - bodyHeight - 86);
+    this.graphics.lineBetween(centerX - 18, baseY - bodyHeight - 28, centerX + 18, baseY - bodyHeight - 28);
   }
 
   private drawBackground(width: number, height: number, atmosphere: RaycastAtmosphereRenderOptions): void {
@@ -274,6 +280,91 @@ export class RaycastRenderer {
     this.graphics.lineStyle(2, projection.enemy.color, alpha * 0.85 * visibility);
     this.graphics.lineBetween(projection.screenX - burstSize * 0.5, height * 0.5, projection.screenX + burstSize * 0.5, height * 0.5);
     this.graphics.lineBetween(projection.screenX, height * 0.5 - burstSize * 0.42, projection.screenX, height * 0.5 + burstSize * 0.42);
+  }
+
+  private drawEnemySilhouette(projection: EnemyProjection, height: number, color: number, visibility: number): void {
+    const bodyTop = height * 0.5 - projection.size * 0.55;
+    const bodyLeft = projection.screenX - projection.size * 0.5;
+
+    this.graphics.fillStyle(color, 0.95 * visibility);
+
+    if (projection.enemy.kind === 'BRUTE') {
+      this.graphics.fillRect(bodyLeft, bodyTop, projection.size, projection.size * 1.08);
+      this.graphics.fillRect(bodyLeft - projection.size * 0.12, bodyTop + projection.size * 0.12, projection.size * 0.18, projection.size * 0.66);
+      this.graphics.fillRect(bodyLeft + projection.size * 0.94, bodyTop + projection.size * 0.12, projection.size * 0.18, projection.size * 0.66);
+      this.graphics.fillStyle(0xffffff, 0.08 * visibility);
+      this.graphics.fillRect(bodyLeft + projection.size * 0.18, bodyTop + projection.size * 0.12, projection.size * 0.64, projection.size * 0.08);
+      return;
+    }
+
+    if (projection.enemy.kind === 'STALKER') {
+      this.graphics.fillTriangle(
+        projection.screenX,
+        bodyTop - projection.size * 0.08,
+        bodyLeft,
+        bodyTop + projection.size * 0.98,
+        bodyLeft + projection.size,
+        bodyTop + projection.size * 0.98
+      );
+      this.graphics.fillRect(projection.screenX - projection.size * 0.12, bodyTop + projection.size * 0.12, projection.size * 0.24, projection.size * 0.76);
+      return;
+    }
+
+    if (projection.enemy.kind === 'RANGED') {
+      this.graphics.fillRect(bodyLeft + projection.size * 0.08, bodyTop + projection.size * 0.18, projection.size * 0.84, projection.size * 0.82);
+      this.graphics.fillRect(bodyLeft - projection.size * 0.1, bodyTop + projection.size * 0.42, projection.size * 1.2, projection.size * 0.12);
+      this.graphics.fillCircle(projection.screenX, bodyTop + projection.size * 0.14, projection.size * 0.14);
+      return;
+    }
+
+    this.graphics.fillRect(bodyLeft, bodyTop, projection.size, projection.size * 1.1);
+  }
+
+  private drawBillboardGlyph(projection: BillboardProjection, height: number): void {
+    const y = height * 0.5;
+
+    if (projection.billboard.style === 'token') {
+      this.graphics.lineStyle(2, 0xffffff, 0.52);
+      this.graphics.strokePoints(
+        [
+          new Phaser.Geom.Point(projection.screenX, y - projection.size - 1),
+          new Phaser.Geom.Point(projection.screenX + projection.size * 0.58, y),
+          new Phaser.Geom.Point(projection.screenX, y + projection.size + 1),
+          new Phaser.Geom.Point(projection.screenX - projection.size * 0.58, y)
+        ],
+        true
+      );
+      return;
+    }
+
+    if (projection.billboard.style === 'gate') {
+      this.graphics.lineStyle(2, 0xffffff, 0.42);
+      this.graphics.lineBetween(projection.screenX - projection.size * 0.52, y - projection.size * 0.74, projection.screenX - projection.size * 0.52, y + projection.size * 0.74);
+      this.graphics.lineBetween(projection.screenX + projection.size * 0.52, y - projection.size * 0.74, projection.screenX + projection.size * 0.52, y + projection.size * 0.74);
+      this.graphics.lineBetween(projection.screenX - projection.size * 0.22, y - projection.size * 0.74, projection.screenX - projection.size * 0.22, y + projection.size * 0.74);
+      this.graphics.lineBetween(projection.screenX + projection.size * 0.22, y - projection.size * 0.74, projection.screenX + projection.size * 0.22, y + projection.size * 0.74);
+      return;
+    }
+
+    if (projection.billboard.style === 'secret') {
+      this.graphics.lineStyle(2, 0xffffff, 0.52);
+      this.graphics.strokeCircle(projection.screenX, y, projection.size * 0.48);
+      this.graphics.lineBetween(projection.screenX - projection.size * 0.38, y, projection.screenX + projection.size * 0.38, y);
+      this.graphics.lineBetween(projection.screenX, y - projection.size * 0.38, projection.screenX, y + projection.size * 0.38);
+      return;
+    }
+
+    if (projection.billboard.style === 'exit') {
+      this.graphics.lineStyle(2, 0xffffff, 0.58);
+      this.graphics.strokeTriangle(
+        projection.screenX,
+        y - projection.size,
+        projection.screenX + projection.size * 0.8,
+        y + projection.size * 0.82,
+        projection.screenX - projection.size * 0.8,
+        y + projection.size * 0.82
+      );
+    }
   }
 
   private applyShade(color: number, shade: number): number {
