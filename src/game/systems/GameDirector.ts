@@ -1,5 +1,6 @@
 import type { EnemyKind } from '../types/game';
 import { DEFAULT_DIRECTOR_CONFIG, type DirectorConfig } from './DirectorConfig';
+import type { DirectorEvent } from './DirectorEvents';
 import type { DirectorDebugInfo, DirectorState } from './DirectorState';
 import type { WeaponKind } from './WeaponTypes';
 
@@ -36,6 +37,7 @@ export interface GameDirectorDecision {
   state: DirectorState;
   maxEnemiesAlive: number;
   spawn: SpawnRequest | null;
+  events: DirectorEvent[];
   debug: DirectorDebugInfo;
 }
 
@@ -68,6 +70,10 @@ export class GameDirector {
   private lastKillAt = Number.NEGATIVE_INFINITY;
   private pendingZoneAmbushId: string | null = null;
   private lastDecisionReason = 'director initialized';
+  private readonly queuedEvents: DirectorEvent[] = [];
+  private lastAmbientPulseAt = Number.NEGATIVE_INFINITY;
+  private lastWarningMessageAt = Number.NEGATIVE_INFINITY;
+  private lastStationaryPunishAt = Number.NEGATIVE_INFINITY;
 
   constructor(options: GameDirectorOptions = {}) {
     this.config = {
@@ -92,16 +98,17 @@ export class GameDirector {
   update(input: GameDirectorInput): GameDirectorDecision {
     this.observeKills(input);
     const intensity = this.calculateIntensity(input);
+    const previousState = this.state;
     this.updateState(input, intensity);
 
     if (!this.canSpawn(input)) {
-      return this.createDecision(input, intensity, null);
+      return this.createDecision(input, intensity, null, previousState);
     }
 
     const kind = this.selectEnemyKind(input, intensity);
     this.lastSpawnAt = input.elapsedTime;
     this.lastDecisionReason = `spawn ${kind} during ${this.state}`;
-    return this.createDecision(input, intensity, this.createSpawnRequest(kind, input.spawnPoints));
+    return this.createDecision(input, intensity, this.createSpawnRequest(kind, input.spawnPoints), previousState);
   }
 
   hasExhaustedSpawnBudget(): boolean {
@@ -111,6 +118,12 @@ export class GameDirector {
   notifyZoneTrigger(triggerId: string, time: number): void {
     this.pendingZoneAmbushId = triggerId;
     this.enterState('AMBUSH', time, `trigger ${triggerId}`);
+    this.queuedEvents.push({
+      type: 'PREPARE_AMBUSH',
+      state: 'AMBUSH',
+      message: `Ambush protocol primed: ${triggerId}`,
+      time
+    });
   }
 
   getState(): DirectorState {
@@ -127,7 +140,7 @@ export class GameDirector {
     if (input.totalKills >= 6) intensity += 1;
     intensity += Math.max(0, input.currentWave - 1);
 
-    if (input.p1Alive && input.p2Alive && input.p1Health >= 70 && input.p2Health >= 70) {
+    if (input.p1Alive && input.p2Alive && input.p1Health >= this.config.comfortableHealthThreshold && input.p2Health >= this.config.comfortableHealthThreshold) {
       intensity += 1;
     }
 
@@ -151,7 +164,7 @@ export class GameDirector {
       livingHealth.length > 0 ? livingHealth.reduce((total, health) => total + health, 0) / livingHealth.length : 0;
 
     if (averageHealth <= this.config.lowHealthThreshold) intensity -= 2;
-    else if (averageHealth <= 55) intensity -= 1;
+    else if (averageHealth <= this.config.comfortableHealthThreshold) intensity -= 1;
 
     return this.clampIntensity(intensity);
   }
@@ -233,6 +246,11 @@ export class GameDirector {
       return;
     }
 
+    if (this.state === 'HIGH_INTENSITY' && input.elapsedTime - this.stateEnteredAt >= this.config.highIntensityDurationMs) {
+      this.enterState('RECOVERY', input.elapsedTime, 'surge spent');
+      return;
+    }
+
     if (this.state === 'RECOVERY') {
       if (input.elapsedTime - this.stateEnteredAt < this.config.recoveryDurationMs) return;
       this.enterState('EXPLORATION', input.elapsedTime, 'recovery complete');
@@ -289,12 +307,19 @@ export class GameDirector {
     return livingHealth.length > 0 ? livingHealth.reduce((total, health) => total + health, 0) / livingHealth.length : 0;
   }
 
-  private createDecision(input: GameDirectorInput, intensity: number, spawn: SpawnRequest | null): GameDirectorDecision {
+  private createDecision(
+    input: GameDirectorInput,
+    intensity: number,
+    spawn: SpawnRequest | null,
+    previousState: DirectorState
+  ): GameDirectorDecision {
+    const events = this.collectEvents(input, intensity, spawn, previousState);
     return {
       intensity,
       state: this.state,
       maxEnemiesAlive: this.config.maxEnemiesAlive,
       spawn,
+      events,
       debug: {
         enabled: this.config.debugEnabled,
         state: this.state,
@@ -306,5 +331,73 @@ export class GameDirector {
         spawnBudgetRemaining: Math.max(0, this.config.maxTotalSpawns - this.spawnedCount)
       }
     };
+  }
+
+  private collectEvents(
+    input: GameDirectorInput,
+    intensity: number,
+    spawn: SpawnRequest | null,
+    previousState: DirectorState
+  ): DirectorEvent[] {
+    const events = this.queuedEvents.splice(0);
+    const time = input.elapsedTime;
+
+    if (this.state === 'EXPLORATION' && time - this.lastAmbientPulseAt >= this.config.ambientPulseCooldownMs) {
+      this.lastAmbientPulseAt = time;
+      events.push({
+        type: 'AMBIENT_PULSE',
+        state: this.state,
+        message: 'Quiet systems breathing',
+        time
+      });
+    }
+
+    if (previousState !== this.state && this.state === 'RECOVERY') {
+      events.push({
+        type: 'RECOVERY_SIGNAL',
+        state: this.state,
+        message: 'Pressure receding',
+        time
+      });
+    }
+
+    if (
+      (this.state === 'BUILD_UP' || this.state === 'HIGH_INTENSITY') &&
+      time - this.lastWarningMessageAt >= this.config.warningMessageCooldownMs
+    ) {
+      this.lastWarningMessageAt = time;
+      events.push({
+        type: 'WARNING_MESSAGE',
+        state: this.state,
+        message: intensity >= 4 ? 'Pressure spike rising' : 'Tension building',
+        time
+      });
+    }
+
+    if (
+      (input.playerStationaryMs ?? 0) >= this.config.idlePressureMs &&
+      time - this.lastStationaryPunishAt >= this.config.stationaryPunishCooldownMs
+    ) {
+      this.lastStationaryPunishAt = time;
+      events.push({
+        type: 'PUNISH_STATIONARY',
+        state: this.state,
+        message: 'Motion required',
+        time,
+        spawnKind: 'STALKER'
+      });
+    }
+
+    if (spawn) {
+      events.push({
+        type: 'SPAWN_PRESSURE',
+        state: this.state,
+        message: `Pressure spawn: ${spawn.kind}`,
+        time,
+        spawnKind: spawn.kind
+      });
+    }
+
+    return events;
   }
 }

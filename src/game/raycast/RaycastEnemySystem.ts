@@ -8,6 +8,7 @@ import type { RaycastEnemy } from './RaycastEnemy';
 const GRID_SCALE = 100;
 const PROJECTILE_RADIUS = 0.08;
 const PROJECTILE_LIFETIME_MS = 1800;
+const RANGED_MUZZLE_OFFSET = 0.16;
 
 export interface RaycastEnemyProjectile {
   x: number;
@@ -55,22 +56,43 @@ export function updateRaycastEnemies(
       config
     });
 
+    if (decision.action === 'IDLE') {
+      enemy.attackWindupUntil = 0;
+      return;
+    }
+
     if (decision.action === 'CHASE') {
+      enemy.attackWindupUntil = 0;
       moveEnemy(map, enemy, getDirection(enemy, player), (config.speed / GRID_SCALE) * decision.speedMultiplier, deltaMs);
     }
 
     if (decision.action === 'RETREAT') {
+      enemy.attackWindupUntil = 0;
       moveEnemy(map, enemy, getDirection(player, enemy), (config.speed / GRID_SCALE) * decision.speedMultiplier, deltaMs);
     }
 
     if (decision.action === 'MELEE_ATTACK' && canAttack(enemy, time)) {
       enemy.lastAttack = time;
+      enemy.attackWindupUntil = time + config.attackWindupMs;
       meleeDamage += config.damage;
     }
 
-    if (decision.action === 'RANGED_ATTACK' && canAttack(enemy, time)) {
-      enemy.lastAttack = time;
-      spawnedProjectiles.push(createRaycastEnemyProjectile(enemy, player, time));
+    if (decision.action === 'RANGED_ATTACK') {
+      if (!canAttack(enemy, time)) {
+        enemy.attackWindupUntil = 0;
+        return;
+      }
+
+      if (enemy.attackWindupUntil === 0) {
+        enemy.attackWindupUntil = time + config.attackWindupMs;
+        return;
+      }
+
+      if (time >= enemy.attackWindupUntil) {
+        enemy.lastAttack = time;
+        enemy.attackWindupUntil = 0;
+        spawnedProjectiles.push(createRaycastEnemyProjectile(enemy, player, time));
+      }
     }
   });
 
@@ -133,8 +155,8 @@ function createRaycastEnemyProjectile(enemy: RaycastEnemy, player: RaycastPlayer
   const speed = (config.projectileSpeed ?? 320) / GRID_SCALE;
 
   return {
-    x: enemy.x + direction.x * (enemy.radius + 0.12),
-    y: enemy.y + direction.y * (enemy.radius + 0.12),
+    x: enemy.x + direction.x * (enemy.radius + RANGED_MUZZLE_OFFSET),
+    y: enemy.y + direction.y * (enemy.radius + RANGED_MUZZLE_OFFSET),
     vx: direction.x * speed,
     vy: direction.y * speed,
     damage: config.damage,

@@ -11,9 +11,23 @@ export interface RaycastEnemySpawn {
   y: number;
 }
 
+export interface RaycastKey extends KeyPickup {
+  pickupObjectiveText: string;
+  billboardLabel: string;
+}
+
 export interface RaycastDoor extends LockedDoor {
   tileX: number;
   tileY: number;
+  billboardLabel: string;
+}
+
+export interface RaycastTrigger extends LevelTrigger {
+  activationText: string;
+}
+
+export interface RaycastSecret extends SecretPickup {
+  billboardLabel: string;
 }
 
 export interface RaycastExit {
@@ -22,6 +36,7 @@ export interface RaycastExit {
   y: number;
   radius: number;
   objectiveText: string;
+  billboardLabel: string;
 }
 
 export interface RaycastDirectorSpawnPoint extends SpawnPoint {
@@ -33,10 +48,10 @@ export interface RaycastDirectorSpawnPoint extends SpawnPoint {
 export interface RaycastLevel {
   name: string;
   zones: RectArea[];
-  keys: KeyPickup[];
+  keys: RaycastKey[];
   doors: RaycastDoor[];
-  triggers: LevelTrigger[];
-  secrets: SecretPickup[];
+  triggers: RaycastTrigger[];
+  secrets: RaycastSecret[];
   exits: RaycastExit[];
   initialSpawns: RaycastEnemySpawn[];
   director: {
@@ -47,53 +62,93 @@ export interface RaycastLevel {
 }
 
 export const RAYCAST_LEVEL: RaycastLevel = {
-  name: 'Foundry Gate FPS',
+  name: 'Corrupt Access Node',
   zones: [
-    { id: 'start', x: 2.7, y: 9.6, width: 3.4, height: 3.2 },
-    { id: 'key-room', x: 2.6, y: 7.4, width: 3.2, height: 2.4 },
-    { id: 'spine', x: 5.4, y: 5.2, width: 2.6, height: 7.2 },
-    { id: 'north-hall', x: 8.5, y: 2.4, width: 5.0, height: 3.0 },
-    { id: 'gate-hall', x: 8.5, y: 10.1, width: 5.0, height: 2.0 }
+    { id: 'start', x: 2.5, y: 12.3, width: 3.2, height: 1.4 },
+    { id: 'narrow-hall', x: 3.0, y: 9.2, width: 4.8, height: 4.8 },
+    { id: 'first-contact', x: 3.8, y: 7.5, width: 3.8, height: 1.8 },
+    { id: 'key-area', x: 4.5, y: 3.8, width: 3.4, height: 2.8 },
+    { id: 'locked-door', x: 8.0, y: 7.5, width: 2.0, height: 1.8 },
+    { id: 'ambush', x: 10.4, y: 7.8, width: 3.2, height: 2.0 },
+    { id: 'combat-arena', x: 14.8, y: 9.6, width: 4.2, height: 5.2 },
+    { id: 'side-pressure', x: 11.8, y: 10.5, width: 5.2, height: 3.0 },
+    { id: 'secret', x: 6.1, y: 12.3, width: 2.6, height: 1.4 },
+    { id: 'exit', x: 16.2, y: 2.2, width: 1.8, height: 2.4 }
   ],
   keys: [
     {
       id: 'rust-key',
-      label: 'Rust Key',
-      x: 2.45,
-      y: 8.45,
+      label: 'Access Token',
+      x: 4.5,
+      y: 3.5,
       radius: 0.28,
-      unlocksDoorId: 'rust-gate'
+      unlocksDoorId: 'rust-gate',
+      pickupObjectiveText: 'Token routed: return to gateway',
+      billboardLabel: 'TOKEN'
     }
   ],
   doors: [
     {
       id: 'rust-gate',
-      tileX: 5,
-      tileY: 10,
-      x: 5.5,
-      y: 10.5,
+      tileX: 8,
+      tileY: 7,
+      x: 8.5,
+      y: 7.5,
       width: 1,
       height: 1,
       keyId: 'rust-key',
       killsRequired: 0,
-      openObjectiveText: 'Rust gate open: push through and survive the ambush',
-      lockedObjectiveText: 'Rust gate locked: find the key in the west room'
+      openObjectiveText: 'Gateway open: combat node exposed',
+      lockedObjectiveText: 'Firewall sealed: access token required',
+      billboardLabel: 'SEALED'
     }
   ],
   triggers: [
     {
       id: 'gate-ambush',
-      x: 6.65,
-      y: 10.5,
-      width: 1.4,
-      height: 1.1,
+      x: 10.4,
+      y: 7.9,
+      width: 2.6,
+      height: 1.6,
       once: true,
       doorId: 'rust-gate',
-      objectiveText: 'Ambush triggered: clear the gate hall',
+      objectiveText: 'Ambush protocol: clear the node',
+      activationText: 'Corruption spike: ambush active',
       spawns: [
-        { x: 7.45, y: 10.45, kind: 'STALKER' },
-        { x: 8.45, y: 9.45, kind: 'GRUNT' },
-        { x: 10.45, y: 10.45, kind: 'RANGED' }
+        { x: 10.5, y: 7.5, kind: 'STALKER' },
+        { x: 13.5, y: 9.5, kind: 'GRUNT' },
+        { x: 16.5, y: 7.5, kind: 'RANGED' }
+      ]
+    },
+    {
+      id: 'lateral-pressure',
+      x: 14.8,
+      y: 9.8,
+      width: 3.2,
+      height: 2.4,
+      once: true,
+      doorId: 'rust-gate',
+      objectiveText: 'Side pressure: keep moving',
+      activationText: 'Side channel breach: lateral pressure',
+      spawns: [
+        { x: 9.5, y: 11.5, kind: 'GRUNT' },
+        { x: 14.5, y: 11.5, kind: 'STALKER' },
+        { x: 16.5, y: 11.5, kind: 'GRUNT' }
+      ]
+    },
+    {
+      id: 'secret-cache-pressure',
+      x: 6.1,
+      y: 12.3,
+      width: 2.0,
+      height: 1.0,
+      once: true,
+      doorId: 'rust-gate',
+      objectiveText: 'Hidden node disturbed',
+      activationText: 'Hidden cache ping: response inbound',
+      spawns: [
+        { x: 3.5, y: 9.5, kind: 'STALKER' },
+        { x: 7.5, y: 11.5, kind: 'GRUNT' }
       ]
     }
   ],
@@ -101,52 +156,59 @@ export const RAYCAST_LEVEL: RaycastLevel = {
     {
       id: 'west-cache',
       label: 'Hidden Cache',
-      x: 1.45,
-      y: 10.45,
+      x: 5.5,
+      y: 12.5,
       radius: 0.24,
-      objectiveText: 'Secret found: cache restored 25 HP'
+      objectiveText: 'Hidden node: 25 HP restored',
+      billboardLabel: 'HIDDEN'
     }
   ],
   exits: [
     {
       id: 'foundry-exit',
-      x: 8.45,
-      y: 10.45,
+      x: 16.5,
+      y: 1.5,
       radius: 0.35,
-      objectiveText: 'Level complete: Foundry Gate cleared'
+      objectiveText: 'Access node purged',
+      billboardLabel: 'EXIT'
     }
   ],
   initialSpawns: [
-    { id: 'entry-grunt', kind: 'GRUNT', x: 4.45, y: 9.45 },
-    { id: 'key-guard', kind: 'STALKER', x: 2.45, y: 7.45 },
-    { id: 'hall-brute', kind: 'BRUTE', x: 6.55, y: 5.45 },
-    { id: 'north-ranged', kind: 'RANGED', x: 8.6, y: 1.55 }
+    { id: 'first-contact-grunt', kind: 'GRUNT', x: 3.5, y: 7.5 },
+    { id: 'key-guard-stalker', kind: 'STALKER', x: 5.5, y: 3.5 },
+    { id: 'arena-sleeper-brute', kind: 'BRUTE', x: 14.5, y: 9.5 },
+    { id: 'exit-ranged-lookout', kind: 'RANGED', x: 16.5, y: 5.5 }
   ],
   director: {
     enabled: true,
     config: {
-      maxEnemiesAlive: 5,
-      maxTotalSpawns: 10,
+      maxEnemiesAlive: 4,
+      maxTotalSpawns: 9,
       openingSpawnCount: 0,
-      baseSpawnCooldownMs: 5200,
-      buildUpSpawnCooldownMs: 4200,
-      ambushSpawnCooldownMs: 1800,
-      highIntensitySpawnCooldownMs: 3200,
-      recoveryDurationMs: 6000,
-      ambushDurationMs: 7000,
-      buildUpAfterMs: 6500,
-      idlePressureMs: 1800,
-      dominanceNoDamageMs: 8500,
-      lowHealthThreshold: 30,
+      baseSpawnCooldownMs: 5600,
+      buildUpSpawnCooldownMs: 4600,
+      ambushSpawnCooldownMs: 2200,
+      highIntensitySpawnCooldownMs: 3800,
+      recoveryDurationMs: 5200,
+      ambushDurationMs: 6000,
+      highIntensityDurationMs: 9000,
+      buildUpAfterMs: 7200,
+      idlePressureMs: 2000,
+      dominanceNoDamageMs: 9500,
+      lowHealthThreshold: 35,
+      comfortableHealthThreshold: 65,
       debugEnabled: true
     },
     spawnPoints: [
-      { id: 'start-pressure', zoneId: 'start', x: 4.45, y: 9.45, minPlayerDistance: 1.6 },
-      { id: 'key-room-rear', zoneId: 'key-room', x: 1.45, y: 7.45, minPlayerDistance: 1.4 },
-      { id: 'spine-corner', zoneId: 'spine', x: 6.55, y: 5.45, minPlayerDistance: 1.8 },
-      { id: 'north-hall-ranged', zoneId: 'north-hall', x: 8.6, y: 1.55, minPlayerDistance: 2.0 },
-      { id: 'gate-left', zoneId: 'gate-hall', x: 7.45, y: 10.45, minPlayerDistance: 1.7 },
-      { id: 'gate-right', zoneId: 'gate-hall', x: 10.45, y: 10.45, minPlayerDistance: 2.0 }
+      { id: 'first-contact-rear', zoneId: 'first-contact', x: 3.5, y: 7.5, minPlayerDistance: 1.6 },
+      { id: 'key-area-terminal', zoneId: 'key-area', x: 5.5, y: 3.5, minPlayerDistance: 1.8 },
+      { id: 'locked-door-pressure', zoneId: 'locked-door', x: 7.5, y: 7.5, minPlayerDistance: 1.8 },
+      { id: 'ambush-threshold', zoneId: 'ambush', x: 10.5, y: 7.5, minPlayerDistance: 1.8 },
+      { id: 'arena-left', zoneId: 'combat-arena', x: 13.5, y: 9.5, minPlayerDistance: 1.8 },
+      { id: 'arena-lower', zoneId: 'combat-arena', x: 14.5, y: 11.5, minPlayerDistance: 1.8 },
+      { id: 'arena-ranged-perch', zoneId: 'combat-arena', x: 16.5, y: 7.5, minPlayerDistance: 2.2 },
+      { id: 'side-loop-pressure', zoneId: 'side-pressure', x: 9.5, y: 11.5, minPlayerDistance: 2.0 },
+      { id: 'exit-pressure', zoneId: 'exit', x: 16.5, y: 3.5, minPlayerDistance: 2.0 }
     ]
   }
 };
@@ -164,6 +226,12 @@ export function openRaycastDoor(map: RaycastMap, door: RaycastDoor): void {
 
 export function isNearPoint(x: number, y: number, point: { x: number; y: number; radius: number }): boolean {
   return Math.hypot(point.x - x, point.y - y) <= point.radius;
+}
+
+export function registerRaycastSecret(collectedSecrets: Set<string>, secret: Pick<RaycastSecret, 'id'>): boolean {
+  if (collectedSecrets.has(secret.id)) return false;
+  collectedSecrets.add(secret.id);
+  return true;
 }
 
 export function findRaycastZoneId(level: RaycastLevel, x: number, y: number): string | null {

@@ -3,7 +3,21 @@ import { AUDIO_FEEDBACK_CONFIG, type AudioFeedbackCue } from '../game/systems/Au
 
 describe('AudioFeedbackSystem config', () => {
   it('defines short, low-volume cues for core combat events', () => {
-    const cues: AudioFeedbackCue[] = ['shoot', 'hit', 'death', 'spawn', 'door', 'pickup', 'damage', 'ambient'];
+    const cues: AudioFeedbackCue[] = [
+      'shoot',
+      'shootPistol',
+      'shootShotgun',
+      'shootLauncher',
+      'hit',
+      'kill',
+      'death',
+      'wallImpact',
+      'spawn',
+      'door',
+      'pickup',
+      'damage',
+      'ambient'
+    ];
 
     cues.forEach((cue) => {
       const config = AUDIO_FEEDBACK_CONFIG[cue];
@@ -11,7 +25,7 @@ describe('AudioFeedbackSystem config', () => {
       expect(config.duration).toBeGreaterThan(0);
       expect(config.duration).toBeLessThanOrEqual(0.25);
       expect(config.volume).toBeGreaterThan(0);
-      expect(config.volume).toBeLessThanOrEqual(0.05);
+      expect(config.volume).toBeLessThanOrEqual(0.08);
     });
   });
 });

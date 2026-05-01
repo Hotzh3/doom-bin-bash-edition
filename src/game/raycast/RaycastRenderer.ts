@@ -3,24 +3,16 @@ import { castRay, type RaycastMap } from './RaycastMap';
 import type { RaycastEnemy } from './RaycastEnemy';
 import type { RaycastEnemyProjectile } from './RaycastEnemySystem';
 import type { RaycastPlayerState } from './RaycastPlayerController';
+import type { WeaponKind } from '../systems/WeaponTypes';
 import {
   RAYCAST_ATMOSPHERE,
+  calculateEnemyVisibility,
   calculateFogShade,
   getAtmosphereForDirector,
   type RaycastAtmosphereRenderOptions
 } from './RaycastAtmosphere';
-
-export interface RaycastRendererConfig {
-  fovRadians: number;
-  rayCount: number;
-  maxWallHeight: number;
-}
-
-export const RAYCAST_RENDERER_CONFIG: RaycastRendererConfig = {
-  fovRadians: Math.PI / 3,
-  rayCount: 160,
-  maxWallHeight: 620
-};
+import { RAYCAST_RENDERER_CONFIG } from './RaycastRendererConfig';
+export { RAYCAST_RENDERER_CONFIG, type RaycastRendererConfig } from './RaycastRendererConfig';
 
 const WALL_COLORS: Record<number, number> = RAYCAST_ATMOSPHERE.wallColors;
 
@@ -70,12 +62,20 @@ export class RaycastRenderer {
 
       this.graphics.fillStyle(color, 1);
       this.graphics.fillRect(x, y, Math.ceil(columnWidth) + 1, wallHeight);
+      this.drawWallPattern(hit.wallType, column, x, y, Math.ceil(columnWidth) + 1, wallHeight, shade, atmosphere);
     }
   }
 
-  renderEnemies(player: RaycastPlayerState, enemies: RaycastEnemy[], width: number, height: number, time: number): void {
+  renderEnemies(
+    player: RaycastPlayerState,
+    enemies: RaycastEnemy[],
+    width: number,
+    height: number,
+    time: number,
+    atmosphere: RaycastAtmosphereRenderOptions = getAtmosphereForDirector(null, 0)
+  ): void {
     const visibleEnemies = enemies
-      .filter((enemy) => enemy.alive)
+      .filter((enemy) => enemy.alive || enemy.deathBurstUntil > time)
       .map((enemy) => this.projectEnemy(player, enemy, width, height))
       .filter((projection): projection is EnemyProjection => projection !== null)
       .sort((a, b) => b.distance - a.distance);
@@ -84,8 +84,21 @@ export class RaycastRenderer {
       const column = Phaser.Math.Clamp(Math.floor(projection.screenX / (width / this.config.rayCount)), 0, this.config.rayCount - 1);
       if (projection.distance > (this.depthBuffer[column] ?? Number.POSITIVE_INFINITY) + 0.05) return;
 
+      if (!projection.enemy.alive) {
+        this.drawEnemyDeathBurst(projection, height, time, atmosphere);
+        return;
+      }
+
       const color = projection.enemy.hitFlashUntil > time ? 0xffffff : projection.enemy.color;
-      const visibility = Phaser.Math.Clamp(calculateFogShade(projection.distance, getAtmosphereForDirector(null, 0)) + 0.25, 0.45, 1);
+      const visibility = calculateEnemyVisibility(projection.distance, atmosphere);
+      const isWindingUp = projection.enemy.attackWindupUntil > time;
+      this.graphics.fillStyle(RAYCAST_ATMOSPHERE.enemyOutline, 0.72 * visibility);
+      this.graphics.fillRect(
+        projection.screenX - projection.size * 0.56,
+        height * 0.5 - projection.size * 0.61,
+        projection.size * 1.12,
+        projection.size * 1.22
+      );
       this.graphics.fillStyle(color, 0.95 * visibility);
       this.graphics.fillRect(
         projection.screenX - projection.size * 0.5,
@@ -93,6 +106,17 @@ export class RaycastRenderer {
         projection.size,
         projection.size * 1.1
       );
+      if (isWindingUp) {
+        this.graphics.lineStyle(3, 0xfff29e, 0.82 * visibility);
+        this.graphics.strokeRect(
+          projection.screenX - projection.size * 0.62,
+          height * 0.5 - projection.size * 0.67,
+          projection.size * 1.24,
+          projection.size * 1.34
+        );
+        this.graphics.fillStyle(0xfff29e, 0.52 * visibility);
+        this.graphics.fillRect(projection.screenX - projection.size * 0.34, height * 0.5 - projection.size * 0.82, projection.size * 0.68, 4);
+      }
       this.graphics.fillStyle(0x0b0d12, 1);
       this.graphics.fillRect(projection.screenX - projection.size * 0.22, height * 0.5 - projection.size * 0.24, projection.size * 0.12, projection.size * 0.12);
       this.graphics.fillRect(projection.screenX + projection.size * 0.1, height * 0.5 - projection.size * 0.24, projection.size * 0.12, projection.size * 0.12);
@@ -114,9 +138,11 @@ export class RaycastRenderer {
         const column = Phaser.Math.Clamp(Math.floor(projection.screenX / (width / this.config.rayCount)), 0, this.config.rayCount - 1);
         if (projection.distance > (this.depthBuffer[column] ?? Number.POSITIVE_INFINITY) + 0.05) return;
 
-        this.graphics.fillStyle(projection.projectile.color, 0.95);
+        this.graphics.fillStyle(RAYCAST_ATMOSPHERE.projectileHalo, 0.24);
+        this.graphics.fillCircle(projection.screenX, height * 0.5, projection.size + 5);
+        this.graphics.fillStyle(projection.projectile.color, 0.98);
         this.graphics.fillCircle(projection.screenX, height * 0.5, projection.size);
-        this.graphics.lineStyle(2, 0xffffff, 0.22);
+        this.graphics.lineStyle(2, 0xffffff, 0.38);
         this.graphics.strokeCircle(projection.screenX, height * 0.5, projection.size + 2);
       });
   }
@@ -130,11 +156,45 @@ export class RaycastRenderer {
         const column = Phaser.Math.Clamp(Math.floor(projection.screenX / (width / this.config.rayCount)), 0, this.config.rayCount - 1);
         if (projection.distance > (this.depthBuffer[column] ?? Number.POSITIVE_INFINITY) + 0.05) return;
 
-        this.graphics.fillStyle(projection.billboard.color, 0.92);
+        this.graphics.fillStyle(RAYCAST_ATMOSPHERE.pickupHalo, 0.18);
+        this.graphics.fillCircle(projection.screenX, height * 0.5, projection.size + 6);
+        this.graphics.fillStyle(projection.billboard.color, 0.94);
         this.graphics.fillCircle(projection.screenX, height * 0.5, projection.size);
         this.graphics.lineStyle(2, 0xffffff, 0.45);
         this.graphics.strokeCircle(projection.screenX, height * 0.5, projection.size);
+
+        if (projection.billboard.label) {
+          this.graphics.fillStyle(0x020408, 0.8);
+          this.graphics.fillRect(projection.screenX - 24, height * 0.5 - projection.size - 18, 48, 12);
+          this.graphics.fillStyle(projection.billboard.color, 0.95);
+          this.graphics.fillRect(projection.screenX - 18, height * 0.5 - projection.size - 12, 36, 2);
+        }
       });
+  }
+
+  renderWeaponOverlay(weapon: WeaponKind, width: number, height: number, muzzleAlpha: number): void {
+    const baseY = height - 18;
+    const centerX = width * 0.5;
+    const weaponColor = weapon === 'SHOTGUN' ? 0x6f3b25 : weapon === 'LAUNCHER' ? 0x33535f : 0x3d4654;
+    const trimColor = weapon === 'SHOTGUN' ? 0xff8a3d : weapon === 'LAUNCHER' ? 0x9feee2 : 0xfff29e;
+    const bodyWidth = weapon === 'SHOTGUN' ? 168 : weapon === 'LAUNCHER' ? 142 : 96;
+    const bodyHeight = weapon === 'SHOTGUN' ? 46 : weapon === 'LAUNCHER' ? 58 : 38;
+    const barrelWidth = weapon === 'SHOTGUN' ? 56 : weapon === 'LAUNCHER' ? 76 : 34;
+
+    this.graphics.fillStyle(0x020408, 0.72);
+    this.graphics.fillRect(centerX - bodyWidth * 0.62, baseY - bodyHeight - 6, bodyWidth * 1.24, bodyHeight + 12);
+    this.graphics.fillStyle(weaponColor, 0.96);
+    this.graphics.fillRect(centerX - bodyWidth * 0.5, baseY - bodyHeight, bodyWidth, bodyHeight);
+    this.graphics.fillStyle(trimColor, 0.82);
+    this.graphics.fillRect(centerX - barrelWidth * 0.5, baseY - bodyHeight - 16, barrelWidth, 24);
+    this.graphics.fillStyle(0x0b0d12, 0.9);
+    this.graphics.fillRect(centerX - bodyWidth * 0.38, baseY - 18, bodyWidth * 0.76, 8);
+
+    if (muzzleAlpha <= 0) return;
+    this.graphics.fillStyle(trimColor, Phaser.Math.Clamp(muzzleAlpha, 0, 1));
+    this.graphics.fillTriangle(centerX - 42, baseY - bodyHeight - 18, centerX + 42, baseY - bodyHeight - 18, centerX, baseY - bodyHeight - 72);
+    this.graphics.fillStyle(0xffffff, Phaser.Math.Clamp(muzzleAlpha * 0.55, 0, 1));
+    this.graphics.fillCircle(centerX, baseY - bodyHeight - 30, weapon === 'SHOTGUN' ? 34 : weapon === 'LAUNCHER' ? 42 : 24);
   }
 
   private drawBackground(width: number, height: number, atmosphere: RaycastAtmosphereRenderOptions): void {
@@ -144,10 +204,76 @@ export class RaycastRenderer {
     this.graphics.fillRect(0, height * 0.5, width, height * 0.5);
     this.graphics.fillStyle(atmosphere.corruptionTint, atmosphere.corruptionAlpha);
     this.graphics.fillRect(0, 0, width, height);
+    this.graphics.fillStyle(atmosphere.corruptionTint, atmosphere.pulseAlpha);
+    this.graphics.fillRect(0, height * 0.47, width, height * 0.06);
     this.graphics.lineStyle(1, 0x12382f, 0.08);
     for (let y = 18; y < height; y += 36) {
       this.graphics.lineBetween(0, y, width, y);
     }
+  }
+
+  private drawWallPattern(
+    wallType: number,
+    column: number,
+    x: number,
+    y: number,
+    width: number,
+    wallHeight: number,
+    shade: number,
+    atmosphere: RaycastAtmosphereRenderOptions
+  ): void {
+    const patternColor = this.blendColors(
+      this.applyShade(RAYCAST_ATMOSPHERE.wallPatternColors[wallType as keyof typeof RAYCAST_ATMOSPHERE.wallPatternColors] ?? 0x5f7190, shade),
+      atmosphere.fogColor,
+      1 - shade
+    );
+    const alpha = Phaser.Math.Clamp((shade - atmosphere.ambientDarkness) * 0.5, 0.05, 0.28);
+
+    if (wallType === 1 && column % 13 === 0) {
+      this.graphics.fillStyle(patternColor, alpha);
+      this.graphics.fillRect(x, y + wallHeight * 0.24, width, 2);
+      this.graphics.fillRect(x, y + wallHeight * 0.68, width, 2);
+      return;
+    }
+
+    if (wallType === 2 && column % 17 === 0) {
+      this.graphics.lineStyle(1, patternColor, alpha + 0.08);
+      this.graphics.lineBetween(x, y + wallHeight * 0.2, x + width, y + wallHeight * 0.42);
+      this.graphics.lineBetween(x + width, y + wallHeight * 0.42, x, y + wallHeight * 0.7);
+      return;
+    }
+
+    if (wallType === 3 && column % 9 === 0) {
+      this.graphics.fillStyle(patternColor, alpha + atmosphere.pulseAlpha);
+      this.graphics.fillRect(x, y + wallHeight * 0.16, width, wallHeight * 0.1);
+      this.graphics.fillRect(x, y + wallHeight * 0.54, width, wallHeight * 0.08);
+      return;
+    }
+
+    if (wallType === 4 && column % 11 === 0) {
+      this.graphics.lineStyle(1, patternColor, alpha + 0.1);
+      this.graphics.strokeRect(x, y + wallHeight * 0.32, Math.max(2, width), Math.max(5, wallHeight * 0.2));
+    }
+  }
+
+  private drawEnemyDeathBurst(
+    projection: EnemyProjection,
+    height: number,
+    time: number,
+    atmosphere: RaycastAtmosphereRenderOptions
+  ): void {
+    const remaining = Math.max(0, projection.enemy.deathBurstUntil - time);
+    const alpha = Phaser.Math.Clamp(remaining / 260, 0, 1);
+    const visibility = calculateEnemyVisibility(projection.distance, atmosphere);
+    const burstSize = projection.size * (1.15 + (1 - alpha) * 0.75);
+
+    this.graphics.fillStyle(projection.enemy.color, alpha * 0.48 * visibility);
+    this.graphics.fillCircle(projection.screenX, height * 0.5, burstSize * 0.42);
+    this.graphics.lineStyle(3, 0xffffff, alpha * 0.7 * visibility);
+    this.graphics.strokeCircle(projection.screenX, height * 0.5, burstSize * 0.34);
+    this.graphics.lineStyle(2, projection.enemy.color, alpha * 0.85 * visibility);
+    this.graphics.lineBetween(projection.screenX - burstSize * 0.5, height * 0.5, projection.screenX + burstSize * 0.5, height * 0.5);
+    this.graphics.lineBetween(projection.screenX, height * 0.5 - burstSize * 0.42, projection.screenX, height * 0.5 + burstSize * 0.42);
   }
 
   private applyShade(color: number, shade: number): number {

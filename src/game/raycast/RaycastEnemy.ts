@@ -12,7 +12,9 @@ export interface RaycastEnemy {
   radius: number;
   color: number;
   lastAttack: number;
+  attackWindupUntil: number;
   hitFlashUntil: number;
+  deathBurstUntil: number;
 }
 
 export function cloneRaycastEnemies(): RaycastEnemy[] {
@@ -30,7 +32,9 @@ export function createRaycastEnemy(spawn: RaycastEnemySpawn): RaycastEnemy {
     alive: true,
     radius: config.size / 100,
     color: config.color,
-    lastAttack: Number.NEGATIVE_INFINITY,
-    hitFlashUntil: 0
+    lastAttack: 0,
+    attackWindupUntil: 0,
+    hitFlashUntil: 0,
+    deathBurstUntil: 0
   };
 }
