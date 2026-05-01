@@ -17,6 +17,7 @@ export interface WeaponConfig {
   projectileTint: number;
   pelletCount: number;
   spreadRadians: number;
+  aimToleranceRadians: number;
   explosionRadius: number;
 }
 

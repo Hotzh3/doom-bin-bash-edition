@@ -16,13 +16,14 @@ describe('enemy config', () => {
       expect(config.attackRange).toBeGreaterThan(0);
       expect(config.detectionRange).toBeGreaterThan(0);
       expect(config.attackCooldownMs).toBeGreaterThan(0);
+      expect(config.attackWindupMs).toBeGreaterThanOrEqual(0);
     });
   });
 
-  it('keeps GRUNT aligned with the original enemy profile', () => {
+  it('keeps GRUNT aligned with the basic pressure profile', () => {
     expect(ENEMY_CONFIG.GRUNT).toMatchObject({
-      health: 60,
-      speed: 112,
+      health: 52,
+      speed: 142,
       damage: 8,
       color: 0xff4f5f,
       size: 28
@@ -39,5 +40,14 @@ describe('enemy config', () => {
 
     expect(ENEMY_CONFIG.RANGED.attackRange).toBeGreaterThan(ENEMY_CONFIG.GRUNT.attackRange);
     expect(ENEMY_CONFIG.RANGED.projectileSpeed).toBeGreaterThan(0);
+    expect(ENEMY_CONFIG.RANGED.attackWindupMs).toBeGreaterThan(ENEMY_CONFIG.GRUNT.attackWindupMs);
+  });
+
+  it('keeps ranged pressure dodgeable and stalkers fragile', () => {
+    expect(ENEMY_CONFIG.STALKER.health).toBeLessThan(ENEMY_CONFIG.RANGED.health);
+    expect(ENEMY_CONFIG.STALKER.attackCooldownMs).toBeLessThan(ENEMY_CONFIG.GRUNT.attackCooldownMs);
+    expect(ENEMY_CONFIG.RANGED.projectileSpeed).toBeLessThan(ENEMY_CONFIG.STALKER.speed * 1.5);
+    expect(ENEMY_CONFIG.BRUTE.attackCooldownMs).toBeGreaterThan(ENEMY_CONFIG.GRUNT.attackCooldownMs);
+    expect(ENEMY_CONFIG.BRUTE.health).toBeGreaterThan(ENEMY_CONFIG.GRUNT.health * 3);
   });
 });
