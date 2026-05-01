@@ -10,6 +10,7 @@ import { createControls, type PlayerControls } from '../systems/InputManager';
 import { HUDSystem } from '../systems/HUDSystem';
 import { selectClosestLivingTarget } from '../systems/TargetSelector';
 import { VisualEffectsSystem } from '../systems/VisualEffectsSystem';
+import { palette } from '../theme/palette';
 import type { GameState } from '../types/game';
 
 export class ArenaScene extends Phaser.Scene {
@@ -40,30 +41,42 @@ export class ArenaScene extends Phaser.Scene {
 
   create(): void {
     this.physics.world.setBounds(0, 0, GAME_WIDTH, GAME_HEIGHT);
-    this.cameras.main.setBackgroundColor('#07090f');
+    this.cameras.main.setBackgroundColor(palette.background.void);
 
-    const baseLayer = this.add.rectangle(GAME_WIDTH * 0.5, GAME_HEIGHT * 0.5, GAME_WIDTH, GAME_HEIGHT, 0x121722);
+    const baseLayer = this.add.rectangle(
+      GAME_WIDTH * 0.5,
+      GAME_HEIGHT * 0.5,
+      GAME_WIDTH,
+      GAME_HEIGHT,
+      palette.background.base
+    );
     baseLayer.setDepth(-30);
 
-    const centerGlow = this.add.rectangle(GAME_WIDTH * 0.5, GAME_HEIGHT * 0.5, GAME_WIDTH * 0.8, GAME_HEIGHT * 0.72, 0x1f1320);
+    const centerGlow = this.add.rectangle(
+      GAME_WIDTH * 0.5,
+      GAME_HEIGHT * 0.5,
+      GAME_WIDTH * 0.8,
+      GAME_HEIGHT * 0.72,
+      palette.background.glow
+    );
     centerGlow.setAlpha(0.38);
     centerGlow.setDepth(-29);
 
-    const topShade = this.add.rectangle(GAME_WIDTH * 0.5, 36, GAME_WIDTH, 72, 0x000000);
+    const topShade = this.add.rectangle(GAME_WIDTH * 0.5, 36, GAME_WIDTH, 72, palette.background.shade);
     topShade.setAlpha(0.28);
     topShade.setDepth(-28);
 
     const frameOuter = this.add.rectangle(GAME_WIDTH * 0.5, GAME_HEIGHT * 0.5, GAME_WIDTH - 8, GAME_HEIGHT - 8);
-    frameOuter.setStrokeStyle(6, 0x5c667f, 0.82);
+    frameOuter.setStrokeStyle(6, palette.accent.steel, 0.82);
     frameOuter.setDepth(-27);
 
     const frameInner = this.add.rectangle(GAME_WIDTH * 0.5, GAME_HEIGHT * 0.5, GAME_WIDTH - 28, GAME_HEIGHT - 28);
-    frameInner.setStrokeStyle(2, 0x9e2f3e, 0.82);
+    frameInner.setStrokeStyle(2, palette.accent.infernal, 0.82);
     frameInner.setDepth(-26);
     this.createArenaDecoration();
 
-    this.p1 = new Player(this, 180, 280, 0x44ddff, 'P1');
-    this.p2 = new Player(this, 760, 280, 0x66ff66, 'P2');
+    this.p1 = new Player(this, 180, 280, palette.player.p1, 'P1');
+    this.p2 = new Player(this, 760, 280, palette.player.p2, 'P2');
     this.p1Controls = createControls(this, ['A', 'D', 'W', 'S', 'F']);
     this.p2Controls = createControls(this, ['LEFT', 'RIGHT', 'UP', 'DOWN', 'L']);
 
@@ -104,14 +117,14 @@ export class ArenaScene extends Phaser.Scene {
   }
 
   private createStatusOverlay(): void {
-    const panel = this.add.rectangle(0, 0, 430, 172, 0x06080c, 0.82);
-    panel.setStrokeStyle(2, 0x9e2f3e, 0.86);
+    const panel = this.add.rectangle(0, 0, 430, 172, palette.background.panel, 0.82);
+    panel.setStrokeStyle(2, palette.accent.infernal, 0.86);
 
     this.statusTitle = this.add.text(0, -48, '', {
       fontSize: '44px',
       fontStyle: '700',
-      color: '#f7fbff',
-      stroke: '#06080c',
+      color: palette.background.panelText,
+      stroke: palette.background.panelStroke,
       strokeThickness: 5
     });
     this.statusTitle.setOrigin(0.5);
@@ -119,8 +132,8 @@ export class ArenaScene extends Phaser.Scene {
     this.statusSubtitle = this.add.text(0, 12, 'Press R to restart', {
       fontSize: '18px',
       fontStyle: '700',
-      color: '#fff0c2',
-      stroke: '#06080c',
+      color: palette.accent.warmText,
+      stroke: palette.background.panelStroke,
       strokeThickness: 3
     });
     this.statusSubtitle.setOrigin(0.5);
@@ -128,8 +141,8 @@ export class ArenaScene extends Phaser.Scene {
     this.statusStats = this.add.text(0, 50, '', {
       fontSize: '15px',
       fontStyle: '700',
-      color: '#9feee2',
-      stroke: '#06080c',
+      color: palette.accent.terminalText,
+      stroke: palette.background.panelStroke,
       strokeThickness: 3
     });
     this.statusStats.setOrigin(0.5);
@@ -146,14 +159,14 @@ export class ArenaScene extends Phaser.Scene {
 
   private createArenaDecoration(): void {
     const circuitLines: Array<[number, number, number, number, number]> = [
-      [80, 118, 210, 118, 0x263145],
-      [210, 118, 210, 178, 0x263145],
-      [710, 420, 860, 420, 0x263145],
-      [710, 360, 710, 420, 0x263145],
-      [96, 420, 250, 420, 0x2f1b2d],
-      [250, 360, 250, 420, 0x2f1b2d],
-      [720, 120, 860, 120, 0x12382f],
-      [720, 120, 720, 176, 0x12382f]
+      [80, 118, 210, 118, palette.arena.circuitBlue],
+      [210, 118, 210, 178, palette.arena.circuitBlue],
+      [710, 420, 860, 420, palette.arena.circuitBlue],
+      [710, 360, 710, 420, palette.arena.circuitBlue],
+      [96, 420, 250, 420, palette.arena.circuitRed],
+      [250, 360, 250, 420, palette.arena.circuitRed],
+      [720, 120, 860, 120, palette.arena.terminalGreen],
+      [720, 120, 720, 176, palette.arena.terminalGreen]
     ];
 
     circuitLines.forEach(([x1, y1, x2, y2, color]) => {
@@ -168,15 +181,15 @@ export class ArenaScene extends Phaser.Scene {
       { x: 118, y: 422 },
       { x: 842, y: 422 }
     ].forEach(({ x, y }) => {
-      const column = this.add.rectangle(x, y, 28, 42, 0x05070d, 0.55);
-      column.setStrokeStyle(1, 0x5c2636, 0.38);
+      const column = this.add.rectangle(x, y, 28, 42, palette.arena.columnFill, 0.55);
+      column.setStrokeStyle(1, palette.arena.columnStroke, 0.38);
       column.setDepth(-24);
     });
 
     [
-      { x: 480, y: 270, color: 0x3a1833 },
-      { x: 480, y: 100, color: 0x113a32 },
-      { x: 480, y: 440, color: 0x113a32 }
+      { x: 480, y: 270, color: palette.arena.runeRed },
+      { x: 480, y: 100, color: palette.arena.runeGreen },
+      { x: 480, y: 440, color: palette.arena.runeGreen }
     ].forEach(({ x, y, color }) => {
       const mark = this.add.rectangle(x, y, 74, 2, color, 0.34);
       const cross = this.add.rectangle(x, y, 2, 34, color, 0.28);

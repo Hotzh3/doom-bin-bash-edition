@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { Player } from '../entities/Player';
+import { palette } from '../theme/palette';
 import type { GameState } from '../types/game';
 
 interface HUDUpdateData {
@@ -20,20 +21,20 @@ export class HUDSystem {
   private text: Phaser.GameObjects.Text;
 
   constructor(scene: Phaser.Scene) {
-    scene.add.rectangle(14, 16, BAR_WIDTH, BAR_HEIGHT, 0x071018, 0.92).setOrigin(0, 0).setDepth(20);
-    scene.add.rectangle(14, 43, BAR_WIDTH, BAR_HEIGHT, 0x071018, 0.92).setOrigin(0, 0).setDepth(20);
+    scene.add.rectangle(14, 16, BAR_WIDTH, BAR_HEIGHT, palette.background.hudBarBack, 0.92).setOrigin(0, 0).setDepth(20);
+    scene.add.rectangle(14, 43, BAR_WIDTH, BAR_HEIGHT, palette.background.hudBarBack, 0.92).setOrigin(0, 0).setDepth(20);
 
-    this.p1HealthBar = scene.add.rectangle(14, 16, BAR_WIDTH, BAR_HEIGHT, 0x44ddff).setOrigin(0, 0);
-    this.p2HealthBar = scene.add.rectangle(14, 43, BAR_WIDTH, BAR_HEIGHT, 0x66ff66).setOrigin(0, 0);
+    this.p1HealthBar = scene.add.rectangle(14, 16, BAR_WIDTH, BAR_HEIGHT, palette.player.p1).setOrigin(0, 0);
+    this.p2HealthBar = scene.add.rectangle(14, 43, BAR_WIDTH, BAR_HEIGHT, palette.player.p2).setOrigin(0, 0);
     this.p1HealthBar.setDepth(21);
     this.p2HealthBar.setDepth(21);
 
     this.text = scene.add.text(14, 58, '', {
       fontSize: '15px',
       fontStyle: '700',
-      color: '#f7fbff',
-      backgroundColor: '#09111acc',
-      stroke: '#06080c',
+      color: palette.background.panelText,
+      backgroundColor: palette.background.hudPanel,
+      stroke: palette.background.panelStroke,
       strokeThickness: 3,
       padding: { x: 8, y: 5 }
     });

@@ -1,4 +1,5 @@
 import { Enemy } from '../entities/Enemy';
+import { palette } from '../theme/palette';
 import type { SpawnRequest } from './GameDirector';
 
 type CombatShakeKind = 'PLAYER_HIT' | 'ENEMY_DEATH';
@@ -9,15 +10,15 @@ export class VisualEffectsSystem {
   constructor(private readonly scene: Phaser.Scene) {}
 
   createMuzzleFlash(x: number, y: number, directionX: number): void {
-    const flash = this.scene.add.rectangle(x + directionX * 8, y, 14, 8, 0xfff29e);
+    const flash = this.scene.add.rectangle(x + directionX * 8, y, 14, 8, palette.accent.projectile);
     flash.setAlpha(0.86);
     flash.setDepth(8);
     this.scene.time.delayedCall(45, () => flash.destroy());
   }
 
   telegraphEnemySpawn(spawn: SpawnRequest, onComplete: () => void): void {
-    const marker = this.scene.add.circle(spawn.x, spawn.y, 18, 0x9e2f3e, 0.18);
-    marker.setStrokeStyle(2, 0xff8a3d, 0.9);
+    const marker = this.scene.add.circle(spawn.x, spawn.y, 18, palette.accent.infernal, 0.18);
+    marker.setStrokeStyle(2, palette.accent.ember, 0.9);
     marker.setDepth(7);
 
     this.scene.tweens.add({
@@ -69,8 +70,8 @@ export class VisualEffectsSystem {
   }
 
   private getEnemyBurstColor(enemy: Enemy): number {
-    if (enemy.kind === 'BRUTE') return 0xff8a3d;
-    if (enemy.kind === 'STALKER') return 0xc17bff;
-    return 0xff4f5f;
+    if (enemy.kind === 'BRUTE') return palette.enemy.brute;
+    if (enemy.kind === 'STALKER') return palette.enemy.stalker;
+    return palette.enemy.grunt;
   }
 }
