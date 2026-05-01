@@ -2,7 +2,7 @@ import { isPointInsideRect, type KeyPickup, type LevelTrigger, type LockedDoor, 
 import type { DirectorConfig } from '../systems/DirectorConfig';
 import type { SpawnPoint } from '../systems/GameDirector';
 import type { EnemyKind } from '../types/game';
-import { RAYCAST_TILE, type RaycastMap } from './RaycastMap';
+import { castRay, RAYCAST_TILE, type RaycastMap } from './RaycastMap';
 
 export interface RaycastEnemySpawn {
   id: string;
@@ -54,6 +54,12 @@ export interface RaycastLevel {
   secrets: RaycastSecret[];
   exits: RaycastExit[];
   initialSpawns: RaycastEnemySpawn[];
+  progression: {
+    requiredExitKeyIds: string[];
+    requiredExitDoorIds: string[];
+    requiredExitTriggerIds: string[];
+    blockedExitMessage: string;
+  };
   director: {
     enabled: boolean;
     config: Partial<DirectorConfig>;
@@ -179,6 +185,12 @@ export const RAYCAST_LEVEL: RaycastLevel = {
     { id: 'arena-sleeper-brute', kind: 'BRUTE', x: 14.5, y: 9.5 },
     { id: 'exit-ranged-lookout', kind: 'RANGED', x: 16.5, y: 5.5 }
   ],
+  progression: {
+    requiredExitKeyIds: ['rust-key'],
+    requiredExitDoorIds: ['rust-gate'],
+    requiredExitTriggerIds: ['gate-ambush'],
+    blockedExitMessage: 'ACCESS DENIED: NODE INCOMPLETE'
+  },
   director: {
     enabled: true,
     config: {
@@ -238,16 +250,69 @@ export function findRaycastZoneId(level: RaycastLevel, x: number, y: number): st
   return level.zones.find((zone) => isPointInsideRect({ x, y }, zone))?.id ?? null;
 }
 
+export interface RaycastProgressSnapshot {
+  collectedKeyIds: Iterable<string>;
+  openDoorIds: Iterable<string>;
+  activatedTriggerIds: Iterable<string>;
+}
+
+export interface RaycastExitAccessResult {
+  allowed: boolean;
+  message?: string;
+}
+
+export function getRaycastExitAccess(level: RaycastLevel, progress: RaycastProgressSnapshot): RaycastExitAccessResult {
+  const keyIds = new Set(progress.collectedKeyIds);
+  const doorIds = new Set(progress.openDoorIds);
+  const triggerIds = new Set(progress.activatedTriggerIds);
+  const requirements = level.progression;
+  const hasRequiredKeys = requirements.requiredExitKeyIds.every((id) => keyIds.has(id));
+  const hasRequiredDoors = requirements.requiredExitDoorIds.every((id) => doorIds.has(id));
+  const hasRequiredTriggers = requirements.requiredExitTriggerIds.every((id) => triggerIds.has(id));
+
+  if (hasRequiredKeys && hasRequiredDoors && hasRequiredTriggers) {
+    return { allowed: true };
+  }
+
+  return {
+    allowed: false,
+    message: requirements.blockedExitMessage
+  };
+}
+
 export function getSafeDirectorSpawnPoints(
   level: RaycastLevel,
-  player: { x: number; y: number },
-  activeZoneId: string | null
+  player: { x: number; y: number; angle?: number },
+  activeZoneId: string | null,
+  options?: {
+    map?: RaycastMap;
+    enemies?: Array<{ x: number; y: number; radius: number; alive: boolean }>;
+    allowVisibleFrontSpawns?: boolean;
+  }
 ): SpawnPoint[] {
   const zoneMatches = level.director.spawnPoints.filter((point) => !activeZoneId || point.zoneId === activeZoneId);
   const candidates = zoneMatches.length > 0 ? zoneMatches : level.director.spawnPoints;
-  const safeCandidates = candidates.filter(
-    (point) => Math.hypot(point.x - player.x, point.y - player.y) >= point.minPlayerDistance
-  );
+  return candidates.filter((point) => {
+    if (Math.hypot(point.x - player.x, point.y - player.y) < point.minPlayerDistance) return false;
+    if (options?.map && options.map.grid[Math.floor(point.y)]?.[Math.floor(point.x)] !== RAYCAST_TILE.EMPTY) return false;
+    if (options?.enemies?.some((enemy) => enemy.alive && Math.hypot(point.x - enemy.x, point.y - enemy.y) <= enemy.radius + 0.45)) {
+      return false;
+    }
+    if (options?.allowVisibleFrontSpawns) return true;
+    if (player.angle === undefined || !options?.map) return true;
+    const distance = Math.hypot(point.x - player.x, point.y - player.y);
+    const forwardX = Math.cos(player.angle);
+    const forwardY = Math.sin(player.angle);
+    const dot = ((point.x - player.x) * forwardX + (point.y - player.y) * forwardY) / Math.max(distance, 0.001);
+    if (dot >= 0.75 && distance <= Math.max(3.5, point.minPlayerDistance + 0.8)) return false;
+    if (!hasLineOfSightToPoint(options.map, player, point)) return true;
+    return dot < 0.35;
+  });
+}
 
-  return safeCandidates.length > 0 ? safeCandidates : level.director.spawnPoints;
+function hasLineOfSightToPoint(map: RaycastMap, from: { x: number; y: number }, to: { x: number; y: number }): boolean {
+  const angle = Math.atan2(to.y - from.y, to.x - from.x);
+  const distance = Math.hypot(to.x - from.x, to.y - from.y);
+  const hit = castRay(map, from.x, from.y, angle, angle);
+  return hit.distance + 0.08 >= distance;
 }

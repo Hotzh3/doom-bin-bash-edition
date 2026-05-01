@@ -22,7 +22,7 @@ export function cloneRaycastEnemies(): RaycastEnemy[] {
 }
 
 export function createRaycastEnemy(spawn: RaycastEnemySpawn): RaycastEnemy {
-  const config = getEnemyConfig(spawn.kind);
+  const config = getEnemyConfig(spawn.kind, 'raycast');
   return {
     id: spawn.id,
     kind: spawn.kind,

@@ -90,8 +90,10 @@ export class GameDirector {
 
   createOpeningSpawns(): SpawnRequest[] {
     const spawnCount = Math.min(this.config.openingSpawnCount, this.config.maxTotalSpawns);
-    const spawns = Array.from({ length: spawnCount }, () => this.createSpawnRequest('GRUNT'));
-    this.lastSpawnAt = 0;
+    const spawns = Array.from({ length: spawnCount }, () => this.createSpawnRequest('GRUNT')).filter(
+      (spawn): spawn is SpawnRequest => spawn !== null
+    );
+    if (spawns.length > 0) this.lastSpawnAt = 0;
     return spawns;
   }
 
@@ -106,9 +108,14 @@ export class GameDirector {
     }
 
     const kind = this.selectEnemyKind(input, intensity);
+    const spawn = this.createSpawnRequest(kind, input.spawnPoints);
+    if (!spawn) {
+      this.lastDecisionReason = 'no safe spawn points';
+      return this.createDecision(input, intensity, null, previousState);
+    }
     this.lastSpawnAt = input.elapsedTime;
     this.lastDecisionReason = `spawn ${kind} during ${this.state}`;
-    return this.createDecision(input, intensity, this.createSpawnRequest(kind, input.spawnPoints), previousState);
+    return this.createDecision(input, intensity, spawn, previousState);
   }
 
   hasExhaustedSpawnBudget(): boolean {
@@ -205,14 +212,17 @@ export class GameDirector {
     return true;
   }
 
-  private createSpawnRequest(kind: EnemyKind, spawnPoints?: SpawnPoint[]): SpawnRequest {
+  private createSpawnRequest(kind: EnemyKind, spawnPoints?: SpawnPoint[]): SpawnRequest | null {
+    if (spawnPoints && spawnPoints.length === 0) return null;
     const point = this.getNextSpawnPoint(spawnPoints);
+    if (!point) return null;
     this.spawnedCount += 1;
     return { kind, x: point.x, y: point.y };
   }
 
-  private getNextSpawnPoint(spawnPoints = this.spawnPoints): SpawnPoint {
+  private getNextSpawnPoint(spawnPoints = this.spawnPoints): SpawnPoint | null {
     const points = spawnPoints.length > 0 ? spawnPoints : this.spawnPoints;
+    if (points.length === 0) return null;
     const point = points[this.nextSpawnPointIndex % points.length];
     this.nextSpawnPointIndex += 1;
     return point;

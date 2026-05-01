@@ -25,7 +25,7 @@ const DEATH_BURST_MS = 260;
 const GRID_SCALE = 100;
 
 export class RaycastCombatSystem {
-  private readonly weapons = new WeaponSystem();
+  private readonly weapons = new WeaponSystem('raycast');
 
   getWeaponLabel(): string {
     return this.weapons.getCurrentWeaponLabel();
@@ -102,7 +102,7 @@ export class RaycastCombatSystem {
   ): RaycastProjectileImpact | null {
     const projectileAngle = Math.atan2(projectile.vy, projectile.vx);
     const wallDistance = castRay(map, player.x, player.y, projectileAngle, player.angle).distance;
-    const weapon = getWeaponConfig(projectile.weaponKind);
+    const weapon = getWeaponConfig(projectile.weaponKind, 'raycast');
     const target = findEnemyAlongAim(player, projectileAngle, enemies, wallDistance, weapon.aimToleranceRadians);
     if (!target) return null;
 

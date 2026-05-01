@@ -25,9 +25,32 @@ describe('level systems', () => {
     const trigger = DARK_FOUNDRY_LAYOUT.combatTrigger;
 
     expect(triggers.activateIfEntered(trigger, [{ x: 0, y: 0 }])).toBe(false);
-    expect(triggers.activateIfEntered(trigger, [{ x: trigger.x, y: trigger.y }])).toBe(true);
-    expect(triggers.activateIfEntered(trigger, [{ x: trigger.x, y: trigger.y }])).toBe(false);
+    expect(triggers.activateIfEntered(trigger, [{ x: trigger.x, y: trigger.y }], { isDoorOpen: () => true })).toBe(true);
+    expect(triggers.activateIfEntered(trigger, [{ x: trigger.x, y: trigger.y }], { isDoorOpen: () => true })).toBe(false);
     expect(triggers.hasActivated(trigger.id)).toBe(true);
+  });
+
+  it('requires ArenaScene to pass door state for foundry triggers', () => {
+    const keys = new KeySystem();
+    const doors = new DoorSystem(keys);
+    const triggers = new TriggerSystem();
+    const trigger = DARK_FOUNDRY_LAYOUT.combatTrigger;
+    const triggerPoint = [{ x: trigger.x, y: trigger.y }];
+
+    expect(triggers.activateIfEntered(trigger, triggerPoint)).toBe(false);
+    expect(
+      triggers.activateIfEntered(trigger, triggerPoint, {
+        isDoorOpen: (doorId) => doors.isOpen(doorId)
+      })
+    ).toBe(false);
+
+    keys.collect(DARK_FOUNDRY_LAYOUT.key);
+    expect(doors.attemptOpen(DARK_FOUNDRY_LAYOUT.exitDoor, 0).reason).toBe('OPENED');
+    expect(
+      triggers.activateIfEntered(trigger, triggerPoint, {
+        isDoorOpen: (doorId) => doors.isOpen(doorId)
+      })
+    ).toBe(true);
   });
 
   it('exposes level data for the director and door lookups', () => {

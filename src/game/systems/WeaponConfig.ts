@@ -1,8 +1,9 @@
+import type { BalanceProfile } from '../types/BalanceProfile';
 import type { WeaponConfig, WeaponKind } from './WeaponTypes';
 
 export const WEAPON_ORDER: WeaponKind[] = ['PISTOL', 'SHOTGUN', 'LAUNCHER'];
 
-export const WEAPON_CONFIG: Record<WeaponKind, WeaponConfig> = {
+const BASE_WEAPON_CONFIG: Record<WeaponKind, WeaponConfig> = {
   PISTOL: {
     kind: 'PISTOL',
     label: 'Pistol',
@@ -47,6 +48,31 @@ export const WEAPON_CONFIG: Record<WeaponKind, WeaponConfig> = {
   }
 };
 
-export function getWeaponConfig(kind: WeaponKind): WeaponConfig {
-  return WEAPON_CONFIG[kind];
+function cloneWeaponConfigRecord(config: Record<WeaponKind, WeaponConfig>): Record<WeaponKind, WeaponConfig> {
+  return {
+    PISTOL: freezeWeaponConfig(config.PISTOL),
+    SHOTGUN: freezeWeaponConfig(config.SHOTGUN),
+    LAUNCHER: freezeWeaponConfig(config.LAUNCHER)
+  };
+}
+
+function freezeWeaponConfig(config: WeaponConfig): WeaponConfig {
+  return Object.freeze({
+    ...config,
+    projectileSize: Object.freeze({ ...config.projectileSize })
+  });
+}
+
+export const ARENA_WEAPON_CONFIG = cloneWeaponConfigRecord(BASE_WEAPON_CONFIG);
+export const RAYCAST_WEAPON_CONFIG = cloneWeaponConfigRecord(BASE_WEAPON_CONFIG);
+
+export const WEAPON_CONFIG = ARENA_WEAPON_CONFIG;
+
+const WEAPON_CONFIG_BY_PROFILE: Record<BalanceProfile, Record<WeaponKind, WeaponConfig>> = {
+  arena: ARENA_WEAPON_CONFIG,
+  raycast: RAYCAST_WEAPON_CONFIG
+};
+
+export function getWeaponConfig(kind: WeaponKind, profile: BalanceProfile = 'arena'): WeaponConfig {
+  return WEAPON_CONFIG_BY_PROFILE[profile][kind];
 }

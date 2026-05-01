@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { WEAPON_CONFIG, WEAPON_ORDER } from '../game/systems/WeaponConfig';
+import { ARENA_WEAPON_CONFIG, getWeaponConfig, RAYCAST_WEAPON_CONFIG, WEAPON_CONFIG, WEAPON_ORDER } from '../game/systems/WeaponConfig';
 import { createProjectileSpawns, WeaponSystem } from '../game/systems/WeaponSystem';
 
 describe('WeaponSystem', () => {
@@ -90,5 +90,14 @@ describe('WeaponSystem', () => {
     expect(pistol).toHaveLength(1);
     expect(pistol[0].vy).toBe(0);
     expect(launcher[0].explosionRadius).toBe(WEAPON_CONFIG.LAUNCHER.explosionRadius);
+  });
+
+  it('isolates arena and raycast weapon config records', () => {
+    expect(WEAPON_CONFIG).toBe(ARENA_WEAPON_CONFIG);
+    expect(getWeaponConfig('SHOTGUN', 'arena')).toBe(ARENA_WEAPON_CONFIG.SHOTGUN);
+    expect(getWeaponConfig('SHOTGUN', 'raycast')).toBe(RAYCAST_WEAPON_CONFIG.SHOTGUN);
+    expect(RAYCAST_WEAPON_CONFIG.SHOTGUN).not.toBe(ARENA_WEAPON_CONFIG.SHOTGUN);
+    expect(RAYCAST_WEAPON_CONFIG.SHOTGUN).toEqual(ARENA_WEAPON_CONFIG.SHOTGUN);
+    expect(RAYCAST_WEAPON_CONFIG.SHOTGUN.projectileSize).not.toBe(ARENA_WEAPON_CONFIG.SHOTGUN.projectileSize);
   });
 });

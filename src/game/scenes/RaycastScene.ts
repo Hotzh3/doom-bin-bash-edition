@@ -18,6 +18,7 @@ import {
 import {
   cloneRaycastMap,
   findRaycastZoneId,
+  getRaycastExitAccess,
   getSafeDirectorSpawnPoints,
   isNearPoint,
   openRaycastDoor,
@@ -547,7 +548,9 @@ export class RaycastScene extends Phaser.Scene {
     });
 
     RAYCAST_LEVEL.triggers.forEach((trigger) => {
-      const activated = this.triggerSystem.activateIfEntered(trigger, [{ x: this.player.x, y: this.player.y }]);
+      const activated = this.triggerSystem.activateIfEntered(trigger, [{ x: this.player.x, y: this.player.y }], {
+        isDoorOpen: (doorId) => this.doorSystem.isOpen(doorId)
+      });
       if (!activated) return;
 
       this.gameDirector.notifyZoneTrigger(trigger.id, this.time.now);
@@ -573,6 +576,16 @@ export class RaycastScene extends Phaser.Scene {
     RAYCAST_LEVEL.exits.forEach((exit) => {
       if (this.levelComplete) return;
       if (!isNearPoint(this.player.x, this.player.y, exit)) return;
+      const exitAccess = getRaycastExitAccess(RAYCAST_LEVEL, {
+        collectedKeyIds: RAYCAST_LEVEL.keys.filter((key) => this.keySystem.hasKey(key.id)).map((key) => key.id),
+        openDoorIds: RAYCAST_LEVEL.doors.filter((door) => this.doorSystem.isOpen(door.id)).map((door) => door.id),
+        activatedTriggerIds: RAYCAST_LEVEL.triggers.filter((trigger) => this.triggerSystem.hasActivated(trigger.id)).map((trigger) => trigger.id)
+      });
+      if (!exitAccess.allowed) {
+        this.audioFeedback.play('hit');
+        this.setCombatMessage(exitAccess.message ?? RAYCAST_ATMOSPHERE.messages.locked);
+        return;
+      }
       this.levelComplete = true;
       this.audioFeedback.play('pickup');
       this.setCombatMessage(`${RAYCAST_ATMOSPHERE.messages.exit}: ${exit.objectiveText}`);
@@ -616,19 +629,20 @@ export class RaycastScene extends Phaser.Scene {
   private createLevelBillboards(): RaycastBillboard[] {
     const keyBillboards = RAYCAST_LEVEL.keys
       .filter((key) => !this.keySystem.hasKey(key.id))
-      .map((key) => ({ x: key.x, y: key.y, color: 0x9feee2, radius: key.radius, label: key.billboardLabel }));
+      .map((key) => ({ x: key.x, y: key.y, color: 0x9feee2, radius: key.radius, label: key.billboardLabel, style: 'token' as const }));
     const doorBillboards = RAYCAST_LEVEL.doors
       .filter((door) => !this.doorSystem.isOpen(door.id))
-      .map((door) => ({ x: door.x, y: door.y, color: 0xff5b6f, radius: 0.18, label: door.billboardLabel }));
+      .map((door) => ({ x: door.x, y: door.y, color: 0xff5b6f, radius: 0.18, label: door.billboardLabel, style: 'gate' as const }));
     const secretBillboards = RAYCAST_LEVEL.secrets
       .filter((secret) => !this.collectedSecrets.has(secret.id))
-      .map((secret) => ({ x: secret.x, y: secret.y, color: 0xff8a3d, radius: secret.radius, label: secret.billboardLabel }));
+      .map((secret) => ({ x: secret.x, y: secret.y, color: 0xff8a3d, radius: secret.radius, label: secret.billboardLabel, style: 'secret' as const }));
     const exitBillboards = RAYCAST_LEVEL.exits.map((exit) => ({
       x: exit.x,
       y: exit.y,
       color: this.levelComplete ? 0x9feee2 : 0x66ff66,
       radius: exit.radius,
-      label: exit.billboardLabel
+      label: exit.billboardLabel,
+      style: 'exit' as const
     }));
 
     return [...keyBillboards, ...doorBillboards, ...secretBillboards, ...exitBillboards];
@@ -658,7 +672,11 @@ export class RaycastScene extends Phaser.Scene {
       activeZoneId: this.activeZoneId,
       activatedTriggerCount: this.getActivatedTriggerCount(),
       distanceToImportantPickup: this.getDistanceToImportantPickup(),
-      spawnPoints: getSafeDirectorSpawnPoints(RAYCAST_LEVEL, this.player, this.activeZoneId)
+      spawnPoints: getSafeDirectorSpawnPoints(RAYCAST_LEVEL, this.player, this.activeZoneId, {
+        map: this.map,
+        enemies: this.enemies,
+        allowVisibleFrontSpawns: false
+      })
     });
 
     const previousState = this.lastDirectorState;

@@ -31,7 +31,7 @@ export interface LockedDoor extends RectArea {
 
 export interface LevelTrigger extends RectArea {
   once: boolean;
-  doorId: string;
+  doorId?: string;
   spawns: SpawnRequest[];
   objectiveText: string;
 }

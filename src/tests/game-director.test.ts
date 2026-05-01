@@ -193,6 +193,20 @@ describe('GameDirector', () => {
     expect(decision.spawn).toMatchObject({ x: 9, y: 10 });
   });
 
+  it('does not spend budget when no safe spawn points are available', () => {
+    const director = new GameDirector({ spawnCooldownMs: 0 });
+    const decision = director.update({
+      ...baseInput,
+      elapsedTime: 2000,
+      playerStationaryMs: 3000,
+      spawnPoints: []
+    });
+
+    expect(decision.spawn).toBeNull();
+    expect(decision.debug.lastDecisionReason).toBe('no safe spawn points');
+    expect(decision.debug.spawnBudgetRemaining).toBe(22);
+  });
+
   it('does not spawn over the configured enemy cap in high pressure', () => {
     const director = new GameDirector({ config: { maxEnemiesAlive: 3, highIntensitySpawnCooldownMs: 0 } });
     expect(

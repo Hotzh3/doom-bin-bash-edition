@@ -6,6 +6,7 @@ import {
   RAYCAST_LEVEL,
   cloneRaycastMap,
   findRaycastZoneId,
+  getRaycastExitAccess,
   getSafeDirectorSpawnPoints,
   isNearPoint,
   openRaycastDoor,
@@ -91,6 +92,27 @@ describe('raycast level', () => {
     expect(spawns.every((spawn) => Math.hypot(spawn.x - RAYCAST_PLAYER_START.x, spawn.y - RAYCAST_PLAYER_START.y) >= 1.6)).toBe(true);
   });
 
+  it('blocks the exit until the token, gate, and main ambush are complete enough', () => {
+    const blocked = getRaycastExitAccess(RAYCAST_LEVEL, {
+      collectedKeyIds: [],
+      openDoorIds: [],
+      activatedTriggerIds: []
+    });
+
+    expect(blocked.allowed).toBe(false);
+    expect(blocked.message).toBe('ACCESS DENIED: NODE INCOMPLETE');
+  });
+
+  it('allows the exit after the token, gate, and main ambush requirements are met', () => {
+    const allowed = getRaycastExitAccess(RAYCAST_LEVEL, {
+      collectedKeyIds: ['rust-key'],
+      openDoorIds: ['rust-gate'],
+      activatedTriggerIds: ['gate-ambush']
+    });
+
+    expect(allowed.allowed).toBe(true);
+  });
+
   it('places start, key, secret, spawns, and exit on walkable tiles', () => {
     const points = [
       RAYCAST_PLAYER_START,
@@ -161,9 +183,78 @@ describe('raycast level', () => {
     const trigger = RAYCAST_LEVEL.triggers[0];
 
     expect(triggers.activateIfEntered(trigger, [{ x: 0, y: 0 }])).toBe(false);
-    expect(triggers.activateIfEntered(trigger, [{ x: trigger.x, y: trigger.y }])).toBe(true);
-    expect(triggers.activateIfEntered(trigger, [{ x: trigger.x, y: trigger.y }])).toBe(false);
+    expect(triggers.activateIfEntered(trigger, [{ x: trigger.x, y: trigger.y }], { isDoorOpen: () => true })).toBe(true);
+    expect(triggers.activateIfEntered(trigger, [{ x: trigger.x, y: trigger.y }], { isDoorOpen: () => true })).toBe(false);
     expect(triggers.hasActivated(trigger.id)).toBe(true);
+  });
+
+  it('does not activate a door-bound trigger until its door is open', () => {
+    const triggers = new TriggerSystem();
+    const trigger = RAYCAST_LEVEL.triggers[0];
+
+    expect(
+      triggers.activateIfEntered(trigger, [{ x: trigger.x, y: trigger.y }], {
+        isDoorOpen: () => false
+      })
+    ).toBe(false);
+    expect(
+      triggers.activateIfEntered(trigger, [{ x: trigger.x, y: trigger.y }], {
+        isDoorOpen: (doorId) => doorId === trigger.doorId
+      })
+    ).toBe(true);
+  });
+
+  it('keeps doorless triggers working normally', () => {
+    const triggers = new TriggerSystem();
+
+    expect(
+      triggers.activateIfEntered(
+        {
+          id: 'free-trigger',
+          x: 2,
+          y: 2,
+          width: 1,
+          height: 1,
+          once: true,
+          objectiveText: 'Free trigger',
+          spawns: []
+        },
+        [{ x: 2, y: 2 }]
+      )
+    ).toBe(true);
+  });
+
+  it('filters unsafe director spawns that are occupied or directly in front of the player', () => {
+    const customLevel = {
+      ...RAYCAST_LEVEL,
+      director: {
+        ...RAYCAST_LEVEL.director,
+        spawnPoints: [
+          { id: 'front-visible', zoneId: 'test', x: 4.5, y: 2.5, minPlayerDistance: 1.5 },
+          { id: 'occupied-safe', zoneId: 'test', x: 1.5, y: 3.5, minPlayerDistance: 1.5 },
+          { id: 'rear-safe', zoneId: 'test', x: 1.5, y: 4.5, minPlayerDistance: 1.5 }
+        ]
+      }
+    };
+    const openMap = {
+      tileSize: 64,
+      grid: [
+        [1, 1, 1, 1, 1, 1, 1],
+        [1, 0, 0, 0, 0, 0, 1],
+        [1, 0, 0, 0, 0, 0, 1],
+        [1, 0, 0, 0, 0, 0, 1],
+        [1, 0, 0, 0, 0, 0, 1],
+        [1, 1, 1, 1, 1, 1, 1]
+      ]
+    };
+    const spawns = getSafeDirectorSpawnPoints(customLevel, { x: 1.5, y: 2.5, angle: 0 }, 'test', {
+      map: openMap,
+      enemies: [{ x: 1.5, y: 3.5, radius: 0.38, alive: true }]
+    });
+
+    expect(spawns.some((spawn) => spawn.x === 4.5 && spawn.y === 2.5)).toBe(false);
+    expect(spawns.some((spawn) => spawn.x === 1.5 && spawn.y === 3.5)).toBe(false);
+    expect(spawns).toEqual([expect.objectContaining({ x: 1.5, y: 4.5 })]);
   });
 
   it('registers raycast secrets once without blocking progress', () => {

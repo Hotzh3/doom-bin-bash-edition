@@ -46,9 +46,20 @@ export function updateRaycastEnemies(
   enemies.forEach((enemy) => {
     if (!enemy.alive || !player.alive) return;
 
-    const config = getEnemyConfig(enemy.kind);
+    const config = getEnemyConfig(enemy.kind, 'raycast');
     const distance = Math.hypot(player.x - enemy.x, player.y - enemy.y);
     const hasSight = hasLineOfSight(map, enemy, player);
+
+    if (enemy.kind !== 'RANGED' && enemy.attackWindupUntil > 0) {
+      if (time < enemy.attackWindupUntil) return;
+      enemy.attackWindupUntil = 0;
+      if (distance * GRID_SCALE <= config.attackRange && hasSight) {
+        enemy.lastAttack = time;
+        meleeDamage += config.damage;
+      }
+      return;
+    }
+
     const decision = decideEnemyBehavior({
       distanceToTarget: distance * GRID_SCALE,
       enemyAlive: enemy.alive,
@@ -72,9 +83,8 @@ export function updateRaycastEnemies(
     }
 
     if (decision.action === 'MELEE_ATTACK' && canAttack(enemy, time)) {
-      enemy.lastAttack = time;
       enemy.attackWindupUntil = time + config.attackWindupMs;
-      meleeDamage += config.damage;
+      return;
     }
 
     if (decision.action === 'RANGED_ATTACK') {
@@ -137,7 +147,7 @@ export function hasLineOfSight(map: RaycastMap, from: MovementVector, to: Moveme
 }
 
 function canAttack(enemy: RaycastEnemy, time: number): boolean {
-  return time - enemy.lastAttack >= getEnemyConfig(enemy.kind).attackCooldownMs;
+  return time - enemy.lastAttack >= getEnemyConfig(enemy.kind, 'raycast').attackCooldownMs;
 }
 
 function moveEnemy(map: RaycastMap, enemy: RaycastEnemy, direction: MovementVector, speed: number, deltaMs: number): void {
@@ -150,7 +160,7 @@ function moveEnemy(map: RaycastMap, enemy: RaycastEnemy, direction: MovementVect
 }
 
 function createRaycastEnemyProjectile(enemy: RaycastEnemy, player: RaycastPlayerTarget, time: number): RaycastEnemyProjectile {
-  const config = getEnemyConfig(enemy.kind);
+  const config = getEnemyConfig(enemy.kind, 'raycast');
   const direction = getDirection(enemy, player);
   const speed = (config.projectileSpeed ?? 320) / GRID_SCALE;
 
