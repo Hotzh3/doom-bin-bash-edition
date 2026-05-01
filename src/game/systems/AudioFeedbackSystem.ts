@@ -1,4 +1,4 @@
-export type AudioFeedbackCue = 'shoot' | 'hit' | 'death' | 'spawn';
+export type AudioFeedbackCue = 'shoot' | 'hit' | 'death' | 'spawn' | 'door' | 'pickup' | 'damage' | 'ambient';
 
 export interface AudioFeedbackConfig {
   frequency: number;
@@ -39,6 +39,34 @@ export const AUDIO_FEEDBACK_CONFIG: Record<AudioFeedbackCue, AudioFeedbackConfig
     endFrequency: 140,
     duration: 0.12,
     volume: 0.026,
+    type: 'sine'
+  },
+  door: {
+    frequency: 120,
+    endFrequency: 70,
+    duration: 0.16,
+    volume: 0.03,
+    type: 'sawtooth'
+  },
+  pickup: {
+    frequency: 420,
+    endFrequency: 760,
+    duration: 0.1,
+    volume: 0.026,
+    type: 'triangle'
+  },
+  damage: {
+    frequency: 70,
+    endFrequency: 45,
+    duration: 0.14,
+    volume: 0.04,
+    type: 'square'
+  },
+  ambient: {
+    frequency: 52,
+    endFrequency: 58,
+    duration: 0.22,
+    volume: 0.012,
     type: 'sine'
   }
 };

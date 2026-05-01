@@ -152,6 +152,62 @@ describe('GameDirector', () => {
     expect(decision.spawn?.kind).toBe('STALKER');
   });
 
+  it('uses scene-filtered spawn points when provided', () => {
+    const director = new GameDirector({ spawnCooldownMs: 0 });
+    const decision = director.update({
+      ...baseInput,
+      elapsedTime: 2000,
+      playerStationaryMs: 3000,
+      spawnPoints: [{ x: 9, y: 10, zoneId: 'gate-hall' }]
+    });
+
+    expect(decision.spawn).toMatchObject({ x: 9, y: 10 });
+  });
+
+  it('adds pressure when the player is far from an important pickup', () => {
+    const director = new GameDirector();
+    const nearPickup = director.calculateIntensity({
+      ...baseInput,
+      elapsedTime: 10_000,
+      distanceToImportantPickup: 1
+    });
+    const farPickup = director.calculateIntensity({
+      ...baseInput,
+      elapsedTime: 10_000,
+      distanceToImportantPickup: 8
+    });
+
+    expect(farPickup).toBeGreaterThan(nearPickup);
+  });
+
+  it('allows FPS-specific director config overrides', () => {
+    const director = new GameDirector({ config: { maxEnemiesAlive: 1, maxTotalSpawns: 3 } });
+    const decision = director.update({
+      ...baseInput,
+      enemiesAlive: 1,
+      elapsedTime: 10_000
+    });
+
+    expect(decision.maxEnemiesAlive).toBe(1);
+    expect(decision.spawn).toBeNull();
+    expect(decision.debug.spawnBudgetRemaining).toBe(3);
+  });
+
+  it('allows stronger enemies when the player has the launcher', () => {
+    const director = new GameDirector({ spawnCooldownMs: 0 });
+    director.notifyZoneTrigger('test', 1000);
+    director.update({ ...baseInput, elapsedTime: 2000, activeZoneId: 'test' });
+
+    const decision = director.update({
+      ...baseInput,
+      elapsedTime: 12_000,
+      totalKills: 8,
+      equippedWeapons: ['LAUNCHER']
+    });
+
+    expect(decision.spawn?.kind).toMatch(/BRUTE|RANGED|STALKER/);
+  });
+
   it('enters recovery when living players are low health', () => {
     const director = new GameDirector({ spawnCooldownMs: 0 });
     const decision = director.update({
