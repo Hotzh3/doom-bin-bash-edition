@@ -52,6 +52,7 @@ describe('GameDirector', () => {
     });
 
     expect(decision.maxEnemiesAlive).toBe(2);
+    expect(decision.state).toBe('BUILD_UP');
     expect(decision.spawn).toBeNull();
   });
 
@@ -88,8 +89,9 @@ describe('GameDirector', () => {
     });
 
     expect(director.createOpeningSpawns()).toHaveLength(1);
-    expect(director.update({ ...baseInput, elapsedTime: 1000 }).spawn).not.toBeNull();
-    expect(director.update({ ...baseInput, elapsedTime: 2000 }).spawn).toBeNull();
+    director.notifyZoneTrigger('test-ambush', 1000);
+    expect(director.update({ ...baseInput, elapsedTime: 2000 }).spawn).not.toBeNull();
+    expect(director.update({ ...baseInput, elapsedTime: 4000 }).spawn).toBeNull();
     expect(director.hasExhaustedSpawnBudget()).toBe(true);
   });
 
@@ -112,5 +114,54 @@ describe('GameDirector', () => {
         totalKills: 6
       })
     ).toBe('BRUTE');
+
+    expect(
+      director.selectEnemyKind({
+        ...baseInput,
+        elapsedTime: 60_000,
+        totalKills: 7
+      })
+    ).toBe('RANGED');
+  });
+
+  it('enters ambush when a zone trigger notifies the director', () => {
+    const director = new GameDirector({ spawnCooldownMs: 0 });
+    director.notifyZoneTrigger('foundry-ambush', 1000);
+
+    const decision = director.update({
+      ...baseInput,
+      elapsedTime: 2000,
+      activeZoneId: 'foundry-ambush',
+      activatedTriggerCount: 1
+    });
+
+    expect(decision.state).toBe('AMBUSH');
+    expect(decision.spawn?.kind).toMatch(/STALKER|RANGED/);
+    expect(decision.debug.lastDecisionReason).toContain('spawn');
+  });
+
+  it('punishes stationary players with stalker pressure', () => {
+    const director = new GameDirector({ spawnCooldownMs: 0 });
+    const decision = director.update({
+      ...baseInput,
+      elapsedTime: 2000,
+      playerStationaryMs: 3000
+    });
+
+    expect(decision.state).toBe('BUILD_UP');
+    expect(decision.spawn?.kind).toBe('STALKER');
+  });
+
+  it('enters recovery when living players are low health', () => {
+    const director = new GameDirector({ spawnCooldownMs: 0 });
+    const decision = director.update({
+      ...baseInput,
+      elapsedTime: 20_000,
+      p1Health: 20,
+      p2Health: 25
+    });
+
+    expect(decision.state).toBe('RECOVERY');
+    expect(decision.spawn).toBeNull();
   });
 });

@@ -72,6 +72,11 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
       this.addVisualPart(this.scene.add.triangle(this.x, this.y - 17, 0, 8, 8, -7, -8, -7, this.baseTint), 0, -17);
       this.addVisualPart(this.scene.add.triangle(this.x, this.y + 17, 0, -8, 8, 7, -8, 7, this.baseTint), 0, 17);
     }
+
+    if (this.kind === 'RANGED') {
+      this.addVisualPart(this.scene.add.circle(this.x, this.y, 8, this.baseTint), 0, 0);
+      this.addVisualPart(this.scene.add.rectangle(this.x, this.y, 36, 5, this.baseTint), 0, 0);
+    }
   }
 
   private addVisualPart(shape: Phaser.GameObjects.Shape, offsetX: number, offsetY: number): void {

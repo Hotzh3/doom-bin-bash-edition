@@ -1,20 +1,327 @@
-schema: spec-driven
+project:
+  name: doom-bin-bash-edition
+  vision: >
+    Evolve from a 2D local arena shooter into a Doom 64-inspired shooter experience
+    focused on speed, tension, aggressive combat, labyrinth levels, and AI-driven pacing.
+  identity: terminal-corruption-hell-arena
+  stack:
+    game: Phaser 3
+    language: TypeScript
+    bundler: Vite
+    testing: Vitest
+    linting: ESLint
+    ci: GitHub Actions
 
-# Project context (optional)
-# This is shown to AI when creating artifacts.
-# Add your tech stack, conventions, style guides, domain knowledge, etc.
-# Example:
-#   context: |
-#     Tech stack: TypeScript, React, Node.js
-#     We use conventional commits
-#     Domain: e-commerce platform
+principles:
+  - Preserve existing stable systems.
+  - Do not rewrite working code unless necessary.
+  - Prefer small iterative phases.
+  - Prioritize gameplay feel over graphical fidelity.
+  - Keep the game original; do not use copyrighted Doom assets.
+  - Use AI/GameDirector to control pressure, rhythm, and encounter pacing.
+  - Every phase must pass test, lint, and build before continuing.
 
-# Per-artifact rules (optional)
-# Add custom rules for specific artifacts.
-# Example:
-#   rules:
-#     proposal:
-#       - Keep proposals under 500 words
-#       - Always include a "Non-goals" section
-#     tasks:
-#       - Break tasks into chunks of max 2 hours
+checks:
+  required:
+    - npm run test
+    - npm run lint
+    - npm run build
+  git_rules:
+    - do_not_use_git_add_dot
+    - use_small_commits
+    - push_only_after_checks_pass
+    - keep_main_stable
+
+current_foundation:
+  completed:
+    - vertical_slice
+    - local_two_player_controls
+    - enemy_fsm
+    - enemy_archetypes
+    - game_director_basic
+    - target_selector
+    - game_states
+    - projectile_cleanup
+    - visual_feedback
+    - audio_feedback
+    - hud
+    - ci
+    - readme
+
+phases:
+  - id: 1
+    name: repository_setup
+    status: completed
+    goal: Create base project structure, tooling, documentation, and collaboration workflow.
+
+  - id: 2
+    name: vertical_slice
+    status: completed
+    goal: Build first playable arena with two players, shooting, enemies, damage, death, and HUD.
+
+  - id: 3
+    name: ai_and_adaptive_pressure
+    status: completed
+    goal: Add basic GameDirector, enemy FSM, target selection, and adaptive spawn pacing.
+
+  - id: 4
+    name: hardening_and_presentation
+    status: completed
+    goal: Add tests, CI, clean architecture, README, and stable demo loop.
+
+  - id: 5
+    name: game_feel_and_visual_polish
+    status: completed
+    goal: Improve feedback, HUD, audio, spawn telegraph, visual effects, and atmosphere.
+
+  - id: 6
+    name: arcade_movement_2d
+    status: planned
+    goal: Make movement feel fast, light, slippery, and Doom-like in top-down mode.
+    features:
+      - acceleration
+      - friction
+      - faster_movement
+      - responsive_strafing
+      - optional_dash
+    systems:
+      - MovementSystem
+      - PlayerController
+    success_criteria:
+      - movement_feels_fast
+      - player_must_keep_moving
+      - controls_remain_simple
+
+  - id: 7
+    name: weapon_system
+    status: planned
+    goal: Add weapons with distinct roles and immediate arcade shooting.
+    weapons:
+      pistol:
+        role: fast_precise
+        reload: false
+      shotgun:
+        role: close_range_spread
+        reload: false
+      launcher:
+        role: high_damage_slow_fire
+        reload: false
+    systems:
+      - WeaponSystem
+      - WeaponConfig
+    success_criteria:
+      - each_weapon_feels_distinct
+      - no_reload
+      - strong_feedback
+
+  - id: 8
+    name: aggressive_enemy_behavior
+    status: planned
+    goal: Make enemies pressure the player instead of only following.
+    features:
+      - behavior_per_archetype
+      - ranged_enemy
+      - cooldown_attacks
+      - group_pressure
+      - stronger_targeting
+    systems:
+      - EnemyBehaviorSystem
+      - EnemyAttackSystem
+    success_criteria:
+      - enemies_force_repositioning
+      - staying_still_is_dangerous
+
+  - id: 9
+    name: advanced_game_director
+    status: planned
+    goal: Turn GameDirector into a stronger AI game master for pressure and rhythm.
+    inputs:
+      - player_health
+      - player_movement
+      - kills
+      - enemies_alive
+      - equipped_weapon
+      - current_zone
+      - time_since_damage
+    outputs:
+      - spawn_pressure
+      - enemy_composition
+      - ambush_timing
+      - breathing_room
+      - difficulty_adjustment
+    success_criteria:
+      - combat_has_peaks
+      - director_reduces_unfair_pressure
+      - player_feels_constant_threat
+
+  - id: 10
+    name: labyrinth_levels_2d
+    status: planned
+    goal: Move from single arena to Doom-like 2D maps with exploration and triggers.
+    features:
+      - corridors
+      - combat_rooms
+      - doors
+      - keys
+      - secrets
+      - level_triggers
+      - backtracking
+    systems:
+      - LevelSystem
+      - TriggerSystem
+      - DoorSystem
+      - KeySystem
+    success_criteria:
+      - map_has_exploration
+      - combat_triggered_by_zones
+      - backtracking_exists
+
+  - id: 11
+    name: raycast_scene_prototype
+    status: planned
+    goal: Add a new pseudo-FPS scene without deleting the current top-down arena.
+    new_scene: RaycastScene
+    features:
+      - raycasting_renderer
+      - first_person_camera
+      - grid_map
+      - wall_collision
+      - basic_rotation
+    preserve:
+      - ArenaScene
+      - existing_systems
+    success_criteria:
+      - player_can_walk_in_first_person
+      - walls_render_correctly
+      - top_down_mode_still_works
+
+  - id: 12
+    name: fps_arcade_movement
+    status: planned
+    goal: Make the pseudo-FPS movement fast, fluid, and arcade-like.
+    features:
+      - wasd_movement
+      - strafe
+      - camera_turning
+      - simple_collision
+      - glide_feel
+    success_criteria:
+      - movement_feels_fast
+      - strafing_is_core
+      - no_realistic_physics
+
+  - id: 13
+    name: fps_combat_basic
+    status: planned
+    goal: Add first-person shooting, hit detection, enemies, damage, and feedback.
+    features:
+      - forward_shooting
+      - raycast_hit_detection
+      - enemy_billboards
+      - basic_weapon
+      - damage
+      - death
+      - audio_visual_feedback
+    success_criteria:
+      - player_can_fight_in_fps
+      - shooting_feels_instant
+      - enemies_can_die
+
+  - id: 14
+    name: enemies_in_pseudo_3d
+    status: planned
+    goal: Adapt enemies, FSM, and Director pressure into the raycast scene.
+    features:
+      - enemy_billboards
+      - chase_player
+      - melee_attack
+      - ranged_projectiles
+      - enemy_death_feedback
+    systems_reused:
+      - EnemyFSM
+      - GameDirector
+      - TargetSelector
+      - CombatSystem
+    success_criteria:
+      - enemies_threaten_player_in_labyrinth
+      - pressure_feels_constant
+
+  - id: 15
+    name: complete_doomlike_level
+    status: planned
+    goal: Build a playable level with exploration, keys, doors, triggers, arenas, and backtracking.
+    features:
+      - starting_area
+      - locked_door
+      - key_pickup
+      - secret_area
+      - ambush_trigger
+      - final_combat_room
+    success_criteria:
+      - level_has_beginning_middle_end
+      - player_understands_objective
+      - level_supports_replayable_demo
+
+  - id: 16
+    name: ai_director_for_levels
+    status: planned
+    goal: Make the AI Director control level pacing, ambushes, pressure, and recovery windows.
+    features:
+      - zone_based_pressure
+      - ambush_control
+      - dynamic_spawn_composition
+      - breathing_room_logic
+      - anti_stall_pressure
+    success_criteria:
+      - director_shapes_player_experience
+      - combat_alternates_with_exploration
+      - difficulty_feels_adaptive
+
+  - id: 17
+    name: atmosphere_final_pass
+    status: planned
+    goal: Create the final dark, oppressive, minimal, original Doom 64-inspired atmosphere.
+    features:
+      - fake_lighting
+      - dark_palette
+      - ambient_audio
+      - tense_music
+      - corruption_messages
+      - minimal_wall_patterns
+      - heavy_doors
+      - terminal_hell_identity
+    success_criteria:
+      - game_feels_dark_and_oppressive
+      - no_copyrighted_assets
+      - identity_feels_original
+
+roadmap_order:
+  - arcade_movement_2d
+  - weapon_system
+  - aggressive_enemy_behavior
+  - advanced_game_director
+  - labyrinth_levels_2d
+  - raycast_scene_prototype
+  - fps_arcade_movement
+  - fps_combat_basic
+  - enemies_in_pseudo_3d
+  - complete_doomlike_level
+  - ai_director_for_levels
+  - atmosphere_final_pass
+
+definition_of_done:
+  every_phase:
+    - tests_pass
+    - lint_pass
+    - build_pass
+    - no_generated_files_committed
+    - git_status_clean_after_commit
+    - README_updated_if_user_facing_change
+  final_gameplay:
+    - fast_arcade_movement
+    - constant_combat_pressure
+    - aggressive_enemies
+    - weapons_with_clear_roles
+    - labyrinth_level_design
+    - adaptive_ai_director
+    - dark_original_atmosphere

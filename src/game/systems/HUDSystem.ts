@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { Player } from '../entities/Player';
 import { palette } from '../theme/palette';
+import type { DirectorDebugInfo } from './DirectorState';
 import type { GameState } from '../types/game';
 
 interface HUDUpdateData {
@@ -10,6 +11,9 @@ interface HUDUpdateData {
   enemiesKilled: number;
   gameState: GameState;
   directorIntensity: number;
+  directorDebug: DirectorDebugInfo | null;
+  p1Weapon: string;
+  p2Weapon: string;
 }
 
 const BAR_WIDTH = 150;
@@ -46,10 +50,11 @@ export class HUDSystem {
     this.p2HealthBar.width = this.getHealthBarWidth(data.p2.health);
     this.text.setText(
       [
-        `P1 HP ${data.p1.health} K ${data.p1.kills}`,
-        `P2 HP ${data.p2.health} K ${data.p2.kills}`,
+        `P1 HP ${data.p1.health} K ${data.p1.kills} | ${data.p1Weapon}`,
+        `P2 HP ${data.p2.health} K ${data.p2.kills} | ${data.p2Weapon}`,
         `Alive ${data.enemiesAlive} | Down ${data.enemiesKilled}`,
-        `State ${data.gameState} | Director ${data.directorIntensity}`
+        `State ${data.gameState} | Director ${data.directorIntensity}`,
+        this.getDirectorDebugLine(data.directorDebug)
       ].join('\n')
     );
   }
@@ -57,5 +62,11 @@ export class HUDSystem {
   private getHealthBarWidth(health: number): number {
     const normalizedHealth = Phaser.Math.Clamp(health, 0, 100) / 100;
     return BAR_WIDTH * normalizedHealth;
+  }
+
+  private getDirectorDebugLine(debug: DirectorDebugInfo | null): string {
+    if (!debug) return 'Director waiting';
+    if (!debug.enabled) return `Dir ${debug.state} | debug off`;
+    return `Dir ${debug.state} | CD ${Math.ceil(debug.spawnCooldownRemainingMs / 1000)}s | ${debug.lastDecisionReason}`;
   }
 }

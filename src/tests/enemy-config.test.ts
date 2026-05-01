@@ -3,7 +3,7 @@ import { ENEMY_CONFIG, ENEMY_KINDS, getEnemyConfig } from '../game/entities/enem
 
 describe('enemy config', () => {
   it('defines stats for every enemy kind', () => {
-    expect(ENEMY_KINDS).toEqual(['GRUNT', 'BRUTE', 'STALKER']);
+    expect(ENEMY_KINDS).toEqual(['GRUNT', 'BRUTE', 'STALKER', 'RANGED']);
     expect(Object.keys(ENEMY_CONFIG)).toEqual(ENEMY_KINDS);
 
     ENEMY_KINDS.forEach((kind) => {
@@ -13,14 +13,17 @@ describe('enemy config', () => {
       expect(config.speed).toBeGreaterThan(0);
       expect(config.damage).toBeGreaterThan(0);
       expect(config.size).toBeGreaterThan(0);
+      expect(config.attackRange).toBeGreaterThan(0);
+      expect(config.detectionRange).toBeGreaterThan(0);
+      expect(config.attackCooldownMs).toBeGreaterThan(0);
     });
   });
 
   it('keeps GRUNT aligned with the original enemy profile', () => {
     expect(ENEMY_CONFIG.GRUNT).toMatchObject({
       health: 60,
-      speed: 95,
-      damage: 7,
+      speed: 112,
+      damage: 8,
       color: 0xff4f5f,
       size: 28
     });
@@ -33,5 +36,8 @@ describe('enemy config', () => {
 
     expect(ENEMY_CONFIG.STALKER.health).toBeLessThan(ENEMY_CONFIG.GRUNT.health);
     expect(ENEMY_CONFIG.STALKER.speed).toBeGreaterThan(ENEMY_CONFIG.GRUNT.speed);
+
+    expect(ENEMY_CONFIG.RANGED.attackRange).toBeGreaterThan(ENEMY_CONFIG.GRUNT.attackRange);
+    expect(ENEMY_CONFIG.RANGED.projectileSpeed).toBeGreaterThan(0);
   });
 });
