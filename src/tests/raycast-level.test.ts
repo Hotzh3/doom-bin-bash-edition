@@ -5,6 +5,7 @@ import { TriggerSystem } from '../game/systems/TriggerSystem';
 import {
   RAYCAST_LEVEL,
   RAYCAST_LEVEL_2,
+  RAYCAST_LEVEL_3,
   RAYCAST_LEVEL_CATALOG,
   cloneRaycastMap,
   findRaycastZoneId,
@@ -22,11 +23,12 @@ import { RAYCAST_ATMOSPHERE } from '../game/raycast/RaycastAtmosphere';
 import { RAYCAST_TILE, type RaycastMap } from '../game/raycast/RaycastMap';
 
 describe('raycast level catalog', () => {
-  it('includes two levels with unique ids and stable ordering', () => {
-    expect(RAYCAST_LEVEL_CATALOG).toHaveLength(2);
-    expect(new Set(RAYCAST_LEVEL_CATALOG.map((level) => level.id)).size).toBe(2);
+  it('includes three levels with unique ids and stable ordering', () => {
+    expect(RAYCAST_LEVEL_CATALOG).toHaveLength(3);
+    expect(new Set(RAYCAST_LEVEL_CATALOG.map((level) => level.id)).size).toBe(3);
     expect(getRaycastLevelIndex(RAYCAST_LEVEL.id)).toBe(0);
     expect(getRaycastLevelIndex(RAYCAST_LEVEL_2.id)).toBe(1);
+    expect(getRaycastLevelIndex(RAYCAST_LEVEL_3.id)).toBe(2);
   });
 
   it('defines required route objects and valid map references for each level', () => {
@@ -39,6 +41,7 @@ describe('raycast level catalog', () => {
       expect(level.initialSpawns.length).toBeGreaterThanOrEqual(4);
       expect(level.director.enabled).toBe(true);
       expect(level.director.spawnPoints.length).toBeGreaterThan(0);
+      expect(level.progression.requiredExitTriggerIds.length).toBeGreaterThanOrEqual(1);
 
       level.keys.forEach((key) => {
         const door = level.doors.find((candidate) => candidate.id === key.unlocksDoorId);
@@ -114,6 +117,12 @@ describe('raycast level progression', () => {
       activatedTriggerIds: [],
       livingEnemyCount: 0
     });
+    const level3Blocked = getRaycastExitAccess(RAYCAST_LEVEL_3, {
+      collectedKeyIds: [],
+      openDoorIds: [],
+      activatedTriggerIds: [],
+      livingEnemyCount: 0
+    });
 
     expect(level1Blocked).toEqual({
       allowed: false,
@@ -127,6 +136,12 @@ describe('raycast level progression', () => {
       message: 'TOKEN REQUIRED',
       missingKeyIds: ['glass-sigil']
     });
+    expect(level3Blocked).toEqual({
+      allowed: false,
+      reason: 'TOKEN_REQUIRED',
+      message: 'TOKEN REQUIRED',
+      missingKeyIds: ['amber-core']
+    });
   });
 
   it('allows level exits after progression requirements are met', () => {
@@ -134,7 +149,7 @@ describe('raycast level progression', () => {
       getRaycastExitAccess(RAYCAST_LEVEL, {
         collectedKeyIds: ['rust-key'],
         openDoorIds: ['rust-gate'],
-        activatedTriggerIds: ['gate-ambush'],
+        activatedTriggerIds: ['gate-ambush', 'lateral-pressure'],
         livingEnemyCount: 0
       }).allowed
     ).toBe(true);
@@ -143,7 +158,16 @@ describe('raycast level progression', () => {
       getRaycastExitAccess(RAYCAST_LEVEL_2, {
         collectedKeyIds: ['glass-sigil'],
         openDoorIds: ['cistern-gate'],
-        activatedTriggerIds: ['furnace-ambush'],
+        activatedTriggerIds: ['furnace-ambush', 'exit-lockdown'],
+        livingEnemyCount: 0
+      }).allowed
+    ).toBe(true);
+
+    expect(
+      getRaycastExitAccess(RAYCAST_LEVEL_3, {
+        collectedKeyIds: ['amber-core'],
+        openDoorIds: ['relay-seal'],
+        activatedTriggerIds: ['conduit-surge', 'relay-lockdown'],
         livingEnemyCount: 0
       }).allowed
     ).toBe(true);
@@ -168,14 +192,14 @@ describe('raycast level progression', () => {
       getRaycastExitAccess(RAYCAST_LEVEL, {
         collectedKeyIds: ['rust-key'],
         openDoorIds: ['rust-gate'],
-        activatedTriggerIds: [],
+        activatedTriggerIds: ['gate-ambush'],
         livingEnemyCount: 0
       })
     ).toEqual({
       allowed: false,
       reason: 'TRIGGER_REQUIRED',
       message: 'TRIGGER REQUIRED',
-      missingTriggerIds: ['gate-ambush']
+      missingTriggerIds: ['lateral-pressure']
     });
 
     const combatLockedLevel: RaycastLevel = {
@@ -190,7 +214,7 @@ describe('raycast level progression', () => {
       getRaycastExitAccess(combatLockedLevel, {
         collectedKeyIds: ['rust-key'],
         openDoorIds: ['rust-gate'],
-        activatedTriggerIds: ['gate-ambush'],
+        activatedTriggerIds: ['gate-ambush', 'lateral-pressure'],
         livingEnemyCount: 2
       })
     ).toEqual({
@@ -263,12 +287,15 @@ describe('raycast level route safety', () => {
   it('finds the current zone and safe director spawns for both starts', () => {
     expect(findRaycastZoneId(RAYCAST_LEVEL, RAYCAST_LEVEL.playerStart.x, RAYCAST_LEVEL.playerStart.y)).toBe('start');
     expect(findRaycastZoneId(RAYCAST_LEVEL_2, RAYCAST_LEVEL_2.playerStart.x, RAYCAST_LEVEL_2.playerStart.y)).toBe('start');
+    expect(findRaycastZoneId(RAYCAST_LEVEL_3, RAYCAST_LEVEL_3.playerStart.x, RAYCAST_LEVEL_3.playerStart.y)).toBe('start');
 
     const level1Spawns = getSafeDirectorSpawnPoints(RAYCAST_LEVEL, RAYCAST_LEVEL.playerStart, 'start');
     const level2Spawns = getSafeDirectorSpawnPoints(RAYCAST_LEVEL_2, RAYCAST_LEVEL_2.playerStart, 'start');
+    const level3Spawns = getSafeDirectorSpawnPoints(RAYCAST_LEVEL_3, RAYCAST_LEVEL_3.playerStart, 'start');
 
     expect(level1Spawns.length).toBeGreaterThan(0);
     expect(level2Spawns.length).toBeGreaterThan(0);
+    expect(level3Spawns.length).toBeGreaterThan(0);
   });
 
   it('keeps level 1 critical route and arena behind the gate', () => {
@@ -294,6 +321,56 @@ describe('raycast level route safety', () => {
     expect(hasGridPath(RAYCAST_LEVEL_2.map, RAYCAST_LEVEL_2.playerStart, exit)).toBe(false);
     expect(hasGridPath(openedMap, RAYCAST_LEVEL_2.playerStart, exit)).toBe(true);
     expect(hasGridPath(RAYCAST_LEVEL_2.map, RAYCAST_LEVEL_2.playerStart, RAYCAST_LEVEL_2.secrets[0])).toBe(true);
+  });
+
+  it('keeps level 3 key reachable early and exit locked behind the relay seal', () => {
+    const key = RAYCAST_LEVEL_3.keys[0];
+    const exit = RAYCAST_LEVEL_3.exits[0];
+    const openedMap = cloneRaycastMap(RAYCAST_LEVEL_3.map);
+    openRaycastDoor(openedMap, RAYCAST_LEVEL_3.doors[0]);
+
+    expect(hasGridPath(RAYCAST_LEVEL_3.map, RAYCAST_LEVEL_3.playerStart, key)).toBe(true);
+    expect(hasGridPath(RAYCAST_LEVEL_3.map, RAYCAST_LEVEL_3.playerStart, exit)).toBe(false);
+    expect(hasGridPath(openedMap, RAYCAST_LEVEL_3.playerStart, exit)).toBe(true);
+    expect(hasGridPath(RAYCAST_LEVEL_3.map, RAYCAST_LEVEL_3.playerStart, RAYCAST_LEVEL_3.secrets[0])).toBe(true);
+  });
+
+  it('validates catalog progression metadata for exits, keys, doors, triggers, and secrets', () => {
+    RAYCAST_LEVEL_CATALOG.forEach((level) => {
+      const openedMap = cloneRaycastMap(level.map);
+      level.doors.forEach((door) => openRaycastDoor(openedMap, door));
+
+      level.exits.forEach((exit) => {
+        expect(hasGridPath(openedMap, level.playerStart, exit)).toBe(true);
+      });
+
+      level.progression.requiredExitKeyIds.forEach((keyId) => {
+        const key = level.keys.find((candidate) => candidate.id === keyId);
+        expect(key).toBeDefined();
+        expect(hasGridPath(level.map, level.playerStart, key!)).toBe(true);
+      });
+
+      level.progression.requiredExitDoorIds.forEach((doorId) => {
+        const door = level.doors.find((candidate) => candidate.id === doorId);
+        expect(door).toBeDefined();
+        const keyIds = getRaycastDoorRequiredKeyIds(door!);
+        expect(keyIds.some((keyId) => level.keys.some((key) => key.id === keyId))).toBe(true);
+        expect(hasGridPath(openedMap, level.playerStart, door!)).toBe(true);
+      });
+
+      level.progression.requiredExitTriggerIds.forEach((triggerId) => {
+        const trigger = level.triggers.find((candidate) => candidate.id === triggerId);
+        expect(trigger).toBeDefined();
+        expect(hasGridPathToTrigger(openedMap, level.playerStart, trigger!)).toBe(true);
+      });
+
+      level.secrets.forEach((secret) => {
+        expect(level.progression.requiredExitKeyIds).not.toContain(secret.id);
+        expect(level.progression.requiredExitDoorIds).not.toContain(secret.id);
+        expect(level.progression.requiredExitTriggerIds).not.toContain(secret.id);
+        expect(hasGridPath(openedMap, level.playerStart, secret)).toBe(true);
+      });
+    });
   });
 
   it('filters unsafe director spawns that are occupied or directly in front of the player', () => {
@@ -378,9 +455,10 @@ describe('raycast level route safety', () => {
     expect(RAYCAST_ATMOSPHERE.messages.secret).toBe('HIDDEN NODE DISCOVERED');
     expect(RAYCAST_LEVEL.keys[0].pickupObjectiveText).toContain('return to gateway');
     expect(RAYCAST_LEVEL_2.keys[0].pickupObjectiveText).toContain('breach the furnace gate');
+    expect(RAYCAST_LEVEL_3.keys[0].pickupObjectiveText).toContain('break the relay seal');
   });
 
-  it('keeps the original level 1 director budget and a tighter level 2 pressure profile', () => {
+  it('keeps escalating director pressure across the episode', () => {
     expect(RAYCAST_LEVEL.director.config.maxEnemiesAlive).toBe(4);
     expect(RAYCAST_LEVEL.director.config.maxTotalSpawns).toBe(9);
     expect(RAYCAST_LEVEL.director.config.highIntensityDurationMs).toBe(9000);
@@ -388,6 +466,10 @@ describe('raycast level route safety', () => {
     expect(RAYCAST_LEVEL_2.director.config.maxEnemiesAlive).toBe(5);
     expect(RAYCAST_LEVEL_2.director.config.maxTotalSpawns).toBe(10);
     expect(RAYCAST_LEVEL_2.director.config.buildUpSpawnCooldownMs).toBeLessThan(RAYCAST_LEVEL_2.director.config.baseSpawnCooldownMs ?? 0);
+
+    expect(RAYCAST_LEVEL_3.director.config.maxEnemiesAlive).toBe(5);
+    expect(RAYCAST_LEVEL_3.director.config.maxTotalSpawns).toBe(11);
+    expect(RAYCAST_LEVEL_3.director.config.buildUpSpawnCooldownMs).toBeLessThan(RAYCAST_LEVEL_3.director.config.baseSpawnCooldownMs ?? 0);
   });
 });
 
@@ -413,6 +495,24 @@ function hasGridPath(map: RaycastMap, from: { x: number; y: number }, to: { x: n
       visited.add(key);
       queue.push(key);
     });
+  }
+
+  return false;
+}
+
+function hasGridPathToTrigger(map: RaycastMap, from: { x: number; y: number }, trigger: RaycastTrigger): boolean {
+  const halfWidth = trigger.width * 0.5;
+  const halfHeight = trigger.height * 0.5;
+  const minX = Math.floor(trigger.x - halfWidth);
+  const maxX = Math.floor(trigger.x + halfWidth);
+  const minY = Math.floor(trigger.y - halfHeight);
+  const maxY = Math.floor(trigger.y + halfHeight);
+
+  for (let y = minY; y <= maxY; y += 1) {
+    for (let x = minX; x <= maxX; x += 1) {
+      if (map.grid[y]?.[x] !== RAYCAST_TILE.EMPTY) continue;
+      if (hasGridPath(map, from, { x: x + 0.5, y: y + 0.5 })) return true;
+    }
   }
 
   return false;

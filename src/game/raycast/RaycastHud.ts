@@ -23,6 +23,30 @@ export interface RaycastHealthVisualState {
   accentColor: number;
 }
 
+export interface RaycastHudLayout {
+  healthTextX: number;
+  healthTextY: number;
+  weaponTextX: number;
+  weaponTextY: number;
+  healthBarX: number;
+  healthBarY: number;
+  healthBarWidth: number;
+  healthBarTrackHeight: number;
+  healthBarFillHeight: number;
+  minimapTitleX: number;
+  minimapTitleY: number;
+  minimapTitleWidth: number;
+  minimapTitleHeight: number;
+  minimapFrameX: number;
+  minimapFrameY: number;
+  minimapFrameWidth: number;
+  minimapFrameHeight: number;
+  minimapPanelX: number;
+  minimapPanelY: number;
+  minimapPanelWidth: number;
+  minimapPanelHeight: number;
+}
+
 export interface RaycastFocusedEnemyState {
   kind?: EnemyKind;
   label?: string;
@@ -103,6 +127,98 @@ export interface RaycastDebugHudState {
   message: string;
 }
 
+export interface RaycastHudSummaryState {
+  health: number;
+  weaponLabel: string;
+  keyCount: number;
+  keyTotal: number;
+  secretCount: number;
+  secretTotal: number;
+  objective: string;
+  criticalMessage?: string;
+}
+
+export function buildRaycastHudStatusLine(health: number, weaponLabel: string): string {
+  return `${buildRaycastPlayerHealthLine({ health })}  |  WPN ${weaponLabel}`;
+}
+
+export function buildRaycastHudProgressLine(
+  keyCount: number,
+  keyTotal: number,
+  secretCount: number,
+  secretTotal: number,
+  objective: string
+): string {
+  return [
+    `TOKENS ${keyCount}/${keyTotal}`,
+    `SECRETS ${secretCount}/${secretTotal}`,
+    `OBJECTIVE ${formatRaycastObjectiveLabel(objective)}`
+  ].join('  |  ');
+}
+
+export function buildRaycastMinimapLegendLine(minimapToggleKey = 'M'): string {
+  return `MAP ${minimapToggleKey}  |  KEY token  LOCK closed gate  OPEN clear gate  EXIT exfil`;
+}
+
+export function buildRaycastHudLayout(width: number, height: number): RaycastHudLayout {
+  const compactTopRightCluster = width <= 960 || height <= 540;
+  const hudRightX = width - 16;
+  const healthBarWidth = 168;
+  const healthBarTrackHeight = 10;
+  const healthBarFillHeight = 6;
+  const minimapFrameWidth = compactTopRightCluster ? 128 : 144;
+  const minimapFrameHeight = compactTopRightCluster ? 100 : 116;
+  const minimapPanelWidth = compactTopRightCluster ? 116 : 132;
+  const minimapPanelHeight = compactTopRightCluster ? 82 : 98;
+  const minimapFrameX = width - 16 - minimapFrameWidth * 0.5;
+  const minimapFrameTop = compactTopRightCluster ? 114 : 66;
+  const minimapTitleHeight = 20;
+  const minimapTitleGap = compactTopRightCluster ? 12 : 6;
+
+  return {
+    healthTextX: hudRightX,
+    healthTextY: 14,
+    weaponTextX: hudRightX,
+    weaponTextY: 40,
+    healthBarX: hudRightX - healthBarWidth,
+    healthBarY: 74,
+    healthBarWidth,
+    healthBarTrackHeight,
+    healthBarFillHeight,
+    minimapTitleX: minimapFrameX,
+    minimapTitleY: minimapFrameTop - minimapTitleGap - minimapTitleHeight * 0.5,
+    minimapTitleWidth: compactTopRightCluster ? 88 : 96,
+    minimapTitleHeight,
+    minimapFrameX,
+    minimapFrameY: minimapFrameTop + minimapFrameHeight * 0.5,
+    minimapFrameWidth,
+    minimapFrameHeight,
+    minimapPanelX: minimapFrameX - minimapPanelWidth * 0.5,
+    minimapPanelY: minimapFrameTop + 8,
+    minimapPanelWidth,
+    minimapPanelHeight
+  };
+}
+
 export function buildRaycastDebugLine(state: RaycastDebugHudState): string {
   return [`POS ${state.position}`, state.directorLine, `MSG ${state.message}`].join(' | ');
+}
+
+export function buildRaycastHudSummary(state: RaycastHudSummaryState): string[] {
+  const lines = [
+    buildRaycastHudStatusLine(state.health, state.weaponLabel),
+    buildRaycastHudProgressLine(
+      state.keyCount,
+      state.keyTotal,
+      state.secretCount,
+      state.secretTotal,
+      state.objective
+    )
+  ];
+
+  if (state.criticalMessage) {
+    lines.push(`ALERT ${state.criticalMessage}`);
+  }
+
+  return lines;
 }

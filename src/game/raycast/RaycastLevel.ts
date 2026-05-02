@@ -6,8 +6,10 @@ import {
   castRay,
   RAYCAST_MAP_LEVEL_1,
   RAYCAST_MAP_LEVEL_2,
+  RAYCAST_MAP_LEVEL_3,
   RAYCAST_PLAYER_START_LEVEL_1,
   RAYCAST_PLAYER_START_LEVEL_2,
+  RAYCAST_PLAYER_START_LEVEL_3,
   RAYCAST_TILE,
   type RaycastMap,
   type RaycastPlayerStart
@@ -246,7 +248,7 @@ export const RAYCAST_LEVEL_1: RaycastLevel = {
   progression: {
     requiredExitKeyIds: ['rust-key'],
     requiredExitDoorIds: ['rust-gate'],
-    requiredExitTriggerIds: ['gate-ambush'],
+    requiredExitTriggerIds: ['gate-ambush', 'lateral-pressure'],
     blockedExitMessage: 'ACCESS DENIED: NODE INCOMPLETE'
   },
   director: {
@@ -417,6 +419,11 @@ export const RAYCAST_LEVEL_2: RaycastLevel = {
       message: 'Cross-lane fire: break the overlook'
     },
     {
+      id: 'overlook-lockdown',
+      triggerId: 'exit-lockdown',
+      message: 'Extraction lane jammed: clear the overlook'
+    },
+    {
       id: 'cistern-recovery',
       directorState: 'RECOVERY',
       requiresTriggerId: 'furnace-ambush',
@@ -426,7 +433,7 @@ export const RAYCAST_LEVEL_2: RaycastLevel = {
   progression: {
     requiredExitKeyIds: ['glass-sigil'],
     requiredExitDoorIds: ['cistern-gate'],
-    requiredExitTriggerIds: ['furnace-ambush'],
+    requiredExitTriggerIds: ['furnace-ambush', 'exit-lockdown'],
     blockedExitMessage: 'ROUTE UNSTABLE: BREACH INCOMPLETE'
   },
   director: {
@@ -461,7 +468,192 @@ export const RAYCAST_LEVEL_2: RaycastLevel = {
   }
 };
 
-export const RAYCAST_LEVEL_CATALOG: RaycastLevel[] = [RAYCAST_LEVEL_1, RAYCAST_LEVEL_2];
+export const RAYCAST_LEVEL_3: RaycastLevel = {
+  id: 'relay-catacomb',
+  name: 'Relay Catacomb',
+  map: RAYCAST_MAP_LEVEL_3,
+  playerStart: RAYCAST_PLAYER_START_LEVEL_3,
+  zones: [
+    { id: 'start', x: 5.0, y: 13.1, width: 7.2, height: 1.6, visualTheme: 'corrupted-metal' },
+    { id: 'lower-loop', x: 1.2, y: 9.0, width: 5.2, height: 3.4, visualTheme: 'void-stone' },
+    { id: 'archive', x: 1.1, y: 1.4, width: 5.6, height: 5.0, visualTheme: 'toxic-green', landmark: 'key' },
+    { id: 'secret', x: 1.1, y: 7.8, width: 2.2, height: 1.4, visualTheme: 'void-stone', landmark: 'secret' },
+    { id: 'seal', x: 9.1, y: 6.2, width: 2.0, height: 2.0, visualTheme: 'warning-amber', landmark: 'gate' },
+    { id: 'conduit-threshold', x: 11.0, y: 5.8, width: 2.2, height: 2.2, visualTheme: 'warning-amber', landmark: 'ambush' },
+    { id: 'conduit-loop', x: 11.0, y: 1.2, width: 7.0, height: 10.2, visualTheme: 'toxic-green' },
+    { id: 'relay-overlook', x: 13.2, y: 1.0, width: 4.2, height: 2.4, visualTheme: 'exit-portal', landmark: 'exit' }
+  ],
+  keys: [
+    {
+      id: 'amber-core',
+      label: 'Amber Core',
+      x: 5.5,
+      y: 3.5,
+      radius: 0.28,
+      unlocksDoorId: 'relay-seal',
+      pickupObjectiveText: 'Core routed: break the relay seal',
+      billboardLabel: 'CORE'
+    }
+  ],
+  doors: [
+    {
+      id: 'relay-seal',
+      tileX: 10,
+      tileY: 7,
+      x: 10.5,
+      y: 7.5,
+      width: 1,
+      height: 1,
+      keyId: 'amber-core',
+      killsRequired: 0,
+      openObjectiveText: 'Relay seal ruptured',
+      lockedObjectiveText: 'Seal intact: amber core required',
+      billboardLabel: 'SEAL'
+    }
+  ],
+  triggers: [
+    {
+      id: 'conduit-surge',
+      x: 11.2,
+      y: 6.2,
+      width: 1.6,
+      height: 1.6,
+      once: true,
+      doorId: 'relay-seal',
+      objectiveText: 'Conduit surge: break through',
+      activationText: 'Conduit surge: crossfire rising',
+      spawns: [
+        { x: 11.5, y: 3.5, kind: 'RANGED' },
+        { x: 15.5, y: 5.5, kind: 'GRUNT' },
+        { x: 17.5, y: 7.5, kind: 'STALKER' }
+      ]
+    },
+    {
+      id: 'relay-lockdown',
+      x: 14.2,
+      y: 1.2,
+      width: 2.4,
+      height: 1.8,
+      once: true,
+      doorId: 'relay-seal',
+      objectiveText: 'Relay overlook contested',
+      activationText: 'Relay spike: extraction lane jammed',
+      spawns: [
+        { x: 17.5, y: 1.5, kind: 'RANGED' },
+        { x: 15.5, y: 9.5, kind: 'BRUTE' }
+      ]
+    },
+    {
+      id: 'archive-stir',
+      x: 1.2,
+      y: 8.0,
+      width: 1.6,
+      height: 1.0,
+      once: true,
+      objectiveText: 'Archive cache stirred',
+      activationText: 'Archive echo: flankers inbound',
+      spawns: [
+        { x: 3.5, y: 9.5, kind: 'STALKER' },
+        { x: 5.5, y: 11.5, kind: 'GRUNT' }
+      ]
+    }
+  ],
+  secrets: [
+    {
+      id: 'archive-cache',
+      label: 'Archive Cache',
+      x: 1.5,
+      y: 8.5,
+      radius: 0.24,
+      objectiveText: 'Archive cache: 25 HP restored',
+      billboardLabel: 'CACHE'
+    }
+  ],
+  exits: [
+    {
+      id: 'relay-exit',
+      x: 16.5,
+      y: 1.5,
+      radius: 0.35,
+      objectiveText: 'Relay chain severed',
+      billboardLabel: 'EXIT'
+    }
+  ],
+  initialSpawns: [
+    { id: 'lower-loop-watch', kind: 'GRUNT', x: 3.5, y: 9.5 },
+    { id: 'archive-guard', kind: 'STALKER', x: 5.5, y: 4.5 },
+    { id: 'threshold-rifle', kind: 'RANGED', x: 11.5, y: 3.5 },
+    { id: 'conduit-anchor', kind: 'GRUNT', x: 15.5, y: 5.5 },
+    { id: 'relay-brute', kind: 'BRUTE', x: 15.5, y: 9.5 }
+  ],
+  encounterBeats: [
+    {
+      id: 'archive-warning',
+      zoneId: 'archive',
+      message: 'Archive noise ahead: sweep for the amber core'
+    },
+    {
+      id: 'seal-prep',
+      doorId: 'relay-seal',
+      message: 'Seal cracking: conduit signatures climbing'
+    },
+    {
+      id: 'conduit-surge-beat',
+      triggerId: 'conduit-surge',
+      message: 'Conduit breach: cut through the crossfire'
+    },
+    {
+      id: 'relay-lockdown-beat',
+      triggerId: 'relay-lockdown',
+      message: 'Relay spike: hold the overlook long enough to extract'
+    },
+    {
+      id: 'relay-recovery',
+      directorState: 'RECOVERY',
+      requiresTriggerId: 'relay-lockdown',
+      message: 'Relay stuttering: take the recovery window'
+    }
+  ],
+  progression: {
+    requiredExitKeyIds: ['amber-core'],
+    requiredExitDoorIds: ['relay-seal'],
+    requiredExitTriggerIds: ['conduit-surge', 'relay-lockdown'],
+    blockedExitMessage: 'RELAY ACTIVE: PURGE INCOMPLETE'
+  },
+  director: {
+    enabled: true,
+    config: {
+      maxEnemiesAlive: 5,
+      maxTotalSpawns: 11,
+      openingSpawnCount: 0,
+      baseSpawnCooldownMs: 5000,
+      buildUpSpawnCooldownMs: 3900,
+      ambushSpawnCooldownMs: 2000,
+      highIntensitySpawnCooldownMs: 3200,
+      recoveryDurationMs: 4400,
+      ambushDurationMs: 6200,
+      highIntensityDurationMs: 9200,
+      buildUpAfterMs: 6200,
+      idlePressureMs: 1700,
+      dominanceNoDamageMs: 8400,
+      lowHealthThreshold: 35,
+      comfortableHealthThreshold: 65,
+      debugEnabled: true
+    },
+    spawnPoints: [
+      { id: 'start-flank', zoneId: 'start', x: 5.5, y: 13.5, minPlayerDistance: 2.2 },
+      { id: 'lower-loop-left', zoneId: 'lower-loop', x: 3.5, y: 9.5, minPlayerDistance: 1.8 },
+      { id: 'archive-inner', zoneId: 'archive', x: 5.5, y: 4.5, minPlayerDistance: 1.8 },
+      { id: 'seal-anchor', zoneId: 'seal', x: 9.5, y: 7.5, minPlayerDistance: 1.8 },
+      { id: 'conduit-ranged', zoneId: 'conduit-threshold', x: 11.5, y: 3.5, minPlayerDistance: 2.0 },
+      { id: 'conduit-mid', zoneId: 'conduit-loop', x: 15.5, y: 5.5, minPlayerDistance: 2.0 },
+      { id: 'relay-lower', zoneId: 'conduit-loop', x: 15.5, y: 9.5, minPlayerDistance: 2.1 },
+      { id: 'overlook-rear', zoneId: 'relay-overlook', x: 17.5, y: 1.5, minPlayerDistance: 2.3 }
+    ]
+  }
+};
+
+export const RAYCAST_LEVEL_CATALOG: RaycastLevel[] = [RAYCAST_LEVEL_1, RAYCAST_LEVEL_2, RAYCAST_LEVEL_3];
 export const RAYCAST_LEVEL = RAYCAST_LEVEL_1;
 
 export function getRaycastLevelById(levelId: string | null | undefined): RaycastLevel {

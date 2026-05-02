@@ -122,7 +122,9 @@ describe('raycast objective helpers', () => {
 
     expect(instructions).toContain('MOVE WASD');
     expect(instructions).toContain('FIRE F/SPACE/CLICK');
-    expect(instructions).toContain('SWITCH 1/2/3');
+    expect(instructions).toContain('WEAPONS 1/2/3');
     expect(instructions).toContain('MAP M');
+    expect(instructions).toContain('INTERACT WALK INTO GATES/EXITS');
+    expect(instructions).toContain('H/? HELP');
   });
 });

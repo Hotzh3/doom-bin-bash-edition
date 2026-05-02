@@ -1,8 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import {
+  buildRaycastHudLayout,
   buildRaycastDebugLine,
   buildRaycastFocusedEnemyLine,
   buildRaycastHudLine,
+  buildRaycastHudProgressLine,
+  buildRaycastHudStatusLine,
+  buildRaycastMinimapLegendLine,
   buildRaycastPlayerHealthLine,
   formatRaycastObjectiveLabel,
   getRaycastHealthVisualState
@@ -22,6 +26,11 @@ describe('raycast HUD', () => {
 
     expect(hud).toBe('HP 82/100 | WPN Shotgun | TOK 1/1 | SEC 0/1 | OBJ EXIT');
     expect(hud.length).toBeLessThan(80);
+  });
+
+  it('splits the readable hub into status and progress lines', () => {
+    expect(buildRaycastHudStatusLine(82, 'Shotgun')).toBe('HP 82/100 STABLE  |  WPN Shotgun');
+    expect(buildRaycastHudProgressLine(1, 2, 0, 1, 'Reach Exit')).toBe('TOKENS 1/2  |  SECRETS 0/1  |  OBJECTIVE EXIT');
   });
 
   it('marks critical health without expanding the HUD too much', () => {
@@ -98,5 +107,29 @@ describe('raycast HUD', () => {
     expect(buildRaycastFocusedEnemyLine({ label: 'BRUTE', health: 96, maxHealth: 190, isWindingUp: true })).toBe(
       'TARGET BRUTE 96/190 WINDUP'
     );
+  });
+
+  it('builds a compact minimap legend line for key markers', () => {
+    expect(buildRaycastMinimapLegendLine()).toBe('MAP M  |  KEY token  LOCK closed gate  OPEN clear gate  EXIT exfil');
+  });
+
+  it('separates the top-right HUD and minimap cluster at 960x540', () => {
+    const layout = buildRaycastHudLayout(960, 540);
+    const healthBarBottom = layout.healthBarY + layout.healthBarTrackHeight * 0.5;
+    const minimapTitleTop = layout.minimapTitleY - layout.minimapTitleHeight * 0.5;
+    const minimapFrameTop = layout.minimapFrameY - layout.minimapFrameHeight * 0.5;
+
+    expect(layout.healthBarX + layout.healthBarWidth).toBe(944);
+    expect(layout.minimapTitleX).toBe(880);
+    expect(minimapTitleTop).toBeGreaterThan(healthBarBottom);
+    expect(minimapFrameTop).toBeGreaterThan(healthBarBottom);
+  });
+
+  it('keeps the larger default minimap treatment on roomier viewports', () => {
+    const layout = buildRaycastHudLayout(1280, 720);
+
+    expect(layout.minimapFrameWidth).toBe(144);
+    expect(layout.minimapPanelWidth).toBe(132);
+    expect(layout.minimapTitleY).toBe(50);
   });
 });

@@ -43,21 +43,24 @@ import { castRay, RAYCAST_PLAYER_START, type RaycastMap } from '../raycast/Rayca
 import {
   buildRaycastCurrentObjective,
   buildRaycastHintText,
-  buildRaycastInstructionText,
   type RaycastBlockedReason,
   type RaycastObjectiveState
 } from '../raycast/RaycastObjective';
 import { RAYCAST_ATMOSPHERE, getAtmosphereForDirector } from '../raycast/RaycastAtmosphere';
 import {
+  buildRaycastHudLayout,
   buildRaycastDebugLine,
   buildRaycastFocusedEnemyLine,
-  buildRaycastHudLine,
-  buildRaycastPlayerHealthLine,
+  buildRaycastHudProgressLine,
+  buildRaycastHudStatusLine,
+  buildRaycastMinimapLegendLine,
   getRaycastHealthVisualState
 } from '../raycast/RaycastHud';
 import {
   buildRaycastEpisodeBanner,
+  buildRaycastHelpOverlayText,
   buildRaycastOverlayHint,
+  buildRaycastPriorityMessage,
   buildRaycastStatusMessage
 } from '../raycast/RaycastPresentation';
 import { RaycastPlayerController, type RaycastPlayerState } from '../raycast/RaycastPlayerController';
@@ -109,6 +112,7 @@ export class RaycastScene extends Phaser.Scene {
   private directorSpawnCounter = 0;
   private debugHudVisible = false;
   private minimapVisible = true;
+  private helpOverlayVisible = false;
   private debugText!: Phaser.GameObjects.Text;
   private healthText!: Phaser.GameObjects.Text;
   private targetText!: Phaser.GameObjects.Text;
@@ -122,6 +126,9 @@ export class RaycastScene extends Phaser.Scene {
   private instructionText!: Phaser.GameObjects.Text;
   private minimapFrame!: Phaser.GameObjects.Rectangle;
   private minimapTitleText!: Phaser.GameObjects.Text;
+  private helpOverlayFrame!: Phaser.GameObjects.Rectangle;
+  private helpOverlayTitleText!: Phaser.GameObjects.Text;
+  private helpOverlayText!: Phaser.GameObjects.Text;
   private minimapGraphics!: Phaser.GameObjects.Graphics;
   private minimapMarkerLabels: Phaser.GameObjects.Text[] = [];
   private muzzleFlash!: Phaser.GameObjects.Rectangle;
@@ -194,6 +201,17 @@ export class RaycastScene extends Phaser.Scene {
     this.minimapMarkerLabels.forEach((label) => label.setVisible(false));
   };
 
+  private readonly handleToggleHelp = (): void => {
+    this.helpOverlayVisible = !this.helpOverlayVisible;
+    this.helpOverlayFrame?.setVisible(this.helpOverlayVisible);
+    this.helpOverlayTitleText?.setVisible(this.helpOverlayVisible);
+    this.helpOverlayText?.setVisible(this.helpOverlayVisible);
+  };
+
+  private readonly handleHelpShortcut = (event: KeyboardEvent): void => {
+    if (event.shiftKey) this.handleToggleHelp();
+  };
+
   constructor() {
     super('RaycastScene');
   }
@@ -220,6 +238,7 @@ export class RaycastScene extends Phaser.Scene {
       spawnPoints: this.currentLevel.director.spawnPoints
     });
     this.enemies = cloneRaycastEnemies(this.currentLevel);
+    const hudLayout = buildRaycastHudLayout(GAME_WIDTH, GAME_HEIGHT);
 
     const episodeState = getRaycastEpisodeState(this.currentLevel.id);
     this.add
@@ -253,8 +272,8 @@ export class RaycastScene extends Phaser.Scene {
       .setDepth(12);
 
     this.healthText = this.add
-      .text(GAME_WIDTH - 16, 14, '', {
-        fontSize: '15px',
+      .text(hudLayout.healthTextX, hudLayout.healthTextY, '', {
+        fontSize: '14px',
         fontStyle: '700',
         color: '#9feee2',
         backgroundColor: RAYCAST_ATMOSPHERE.hudPanel,
@@ -263,23 +282,37 @@ export class RaycastScene extends Phaser.Scene {
       .setOrigin(1, 0)
       .setDepth(12);
     this.healthBarTrack = this.add
-      .rectangle(GAME_WIDTH - 108, 46, 168, 10, 0x020408, 0.9)
+      .rectangle(
+        hudLayout.healthBarX,
+        hudLayout.healthBarY,
+        hudLayout.healthBarWidth,
+        hudLayout.healthBarTrackHeight,
+        0x020408,
+        0.9
+      )
       .setOrigin(0, 0.5)
       .setDepth(12);
     this.healthBarFill = this.add
-      .rectangle(GAME_WIDTH - 108, 46, 168, 6, 0x9feee2, 1)
+      .rectangle(
+        hudLayout.healthBarX,
+        hudLayout.healthBarY,
+        hudLayout.healthBarWidth,
+        hudLayout.healthBarFillHeight,
+        0x9feee2,
+        1
+      )
       .setOrigin(0, 0.5)
       .setDepth(13);
 
     this.weaponText = this.add
-      .text(GAME_WIDTH * 0.5, GAME_HEIGHT - 88, '', {
-        fontSize: '19px',
+      .text(hudLayout.weaponTextX, hudLayout.weaponTextY, '', {
+        fontSize: '13px',
         fontStyle: '700',
         color: palette.accent.warmText,
         backgroundColor: RAYCAST_ATMOSPHERE.hudPanel,
-        padding: { x: 10, y: 6 }
+        padding: { x: 8, y: 5 }
       })
-      .setOrigin(0.5)
+      .setOrigin(1, 0)
       .setDepth(12);
     this.targetText = this.add
       .text(GAME_WIDTH * 0.5, GAME_HEIGHT * 0.5 + 34, '', {
@@ -303,7 +336,7 @@ export class RaycastScene extends Phaser.Scene {
       .setVisible(false);
 
     this.objectiveText = this.add
-      .text(16, GAME_HEIGHT - 118, '', {
+      .text(16, GAME_HEIGHT - 108, '', {
         fontSize: '16px',
         fontStyle: '700',
         color: palette.accent.warmText,
@@ -312,18 +345,18 @@ export class RaycastScene extends Phaser.Scene {
       })
       .setDepth(12);
     this.hintText = this.add
-      .text(16, GAME_HEIGHT - 90, '', {
-        fontSize: '14px',
+      .text(16, GAME_HEIGHT - 76, '', {
+        fontSize: '13px',
         fontStyle: '700',
         color: RAYCAST_ATMOSPHERE.systemText,
         backgroundColor: '#020408cc',
         padding: { x: 8, y: 5 },
-        wordWrap: { width: 330 }
+        wordWrap: { width: 380 }
       })
       .setDepth(12);
     this.instructionText = this.add
-      .text(16, GAME_HEIGHT - 52, buildRaycastInstructionText(), {
-        fontSize: '12px',
+      .text(16, GAME_HEIGHT - 44, `${buildRaycastMinimapLegendLine()}  |  H/? HELP`, {
+        fontSize: '11px',
         color: RAYCAST_ATMOSPHERE.debugText,
         backgroundColor: '#020408c8',
         padding: { x: 8, y: 5 }
@@ -331,11 +364,18 @@ export class RaycastScene extends Phaser.Scene {
       .setAlpha(0.82)
       .setDepth(11);
     this.minimapFrame = this.add
-      .rectangle(GAME_WIDTH - 84, 124, 144, 116, 0x020408, 0.76)
+      .rectangle(
+        hudLayout.minimapFrameX,
+        hudLayout.minimapFrameY,
+        hudLayout.minimapFrameWidth,
+        hudLayout.minimapFrameHeight,
+        0x020408,
+        0.76
+      )
       .setStrokeStyle(2, 0x9feee2, 0.55)
       .setDepth(11);
     this.minimapTitleText = this.add
-      .text(GAME_WIDTH - 84, 70, 'AUTOMAP M', {
+      .text(hudLayout.minimapTitleX, hudLayout.minimapTitleY, 'AUTOMAP M', {
         fontSize: '12px',
         fontStyle: '700',
         color: '#9feee2',
@@ -344,6 +384,34 @@ export class RaycastScene extends Phaser.Scene {
       })
       .setOrigin(0.5)
       .setDepth(12);
+    this.helpOverlayFrame = this.add
+      .rectangle(GAME_WIDTH * 0.5, GAME_HEIGHT * 0.53, 428, 250, 0x020408, 0.92)
+      .setStrokeStyle(2, 0x9feee2, 0.6)
+      .setDepth(24)
+      .setVisible(false);
+    this.helpOverlayTitleText = this.add
+      .text(GAME_WIDTH * 0.5, GAME_HEIGHT * 0.34, 'RAYCAST QUICK HELP', {
+        fontSize: '18px',
+        fontStyle: '700',
+        color: '#9feee2',
+        backgroundColor: '#020408cc',
+        padding: { x: 8, y: 4 }
+      })
+      .setOrigin(0.5)
+      .setDepth(25)
+      .setVisible(false);
+    this.helpOverlayText = this.add
+      .text(GAME_WIDTH * 0.5, GAME_HEIGHT * 0.55, buildRaycastHelpOverlayText(), {
+        fontSize: '14px',
+        fontStyle: '700',
+        color: '#f4f7d0',
+        align: 'left',
+        lineSpacing: 4,
+        wordWrap: { width: 360 }
+      })
+      .setOrigin(0.5)
+      .setDepth(25)
+      .setVisible(false);
     this.minimapGraphics = this.add.graphics().setDepth(12);
     this.minimapMarkerLabels = Array.from({ length: 8 }, () =>
       this.add
@@ -475,22 +543,24 @@ export class RaycastScene extends Phaser.Scene {
     );
     this.corruptionVeil.setAlpha(atmosphere.corruptionAlpha);
     const objectiveState = this.getObjectiveState();
+    const objective = buildRaycastCurrentObjective(objectiveState);
+    const hint = buildRaycastHintText(objectiveState);
+    this.healthText.setText(buildRaycastHudStatusLine(this.playerHealth, this.combat.getWeaponLabel()));
     this.weaponText.setText(
-      buildRaycastHudLine({
-        health: this.playerHealth,
-        weaponLabel: this.combat.getWeaponLabel(),
-        keyCount: this.getKeyCount(),
-        keyTotal: this.currentLevel.keys.length,
-        secretCount: this.collectedSecrets.size,
-        secretTotal: this.currentLevel.secrets.length,
-        objective: buildRaycastCurrentObjective(objectiveState),
-        criticalMessage: this.getHudCriticalMessage()
-      })
+      buildRaycastHudProgressLine(
+        this.getKeyCount(),
+        this.currentLevel.keys.length,
+        this.collectedSecrets.size,
+        this.currentLevel.secrets.length,
+        objective
+      )
     );
-    this.objectiveText.setText(`OBJECTIVE // ${buildRaycastCurrentObjective(objectiveState)}`);
-    this.hintText.setText(`PISTA // ${buildRaycastHintText(objectiveState)}`);
+    this.objectiveText.setText(`OBJECTIVE // ${objective}`);
+    this.hintText.setText(`HINT // ${hint}`);
+    this.instructionText.setText(`${buildRaycastMinimapLegendLine()}  |  H/? HELP`);
     this.updateHealthHud();
     this.updateFocusedEnemyHud();
+    this.updatePriorityMessage(objective, hint, objectiveState.recentBlockedReason !== undefined && objectiveState.recentBlockedReason !== null);
     this.renderMinimap();
     if (this.debugHudVisible) {
       this.debugText.setText(
@@ -529,6 +599,7 @@ export class RaycastScene extends Phaser.Scene {
     this.directorSpawnCounter = 0;
     this.debugHudVisible = false;
     this.minimapVisible = true;
+    this.helpOverlayVisible = false;
     this.enemyProjectiles = [];
     this.lastCombatMessage = RAYCAST_ATMOSPHERE.messages.intro;
     this.combatMessageUntil = 0;
@@ -551,6 +622,8 @@ export class RaycastScene extends Phaser.Scene {
     keyboard?.on('keydown-TWO', this.handleWeaponSlotTwo);
     keyboard?.on('keydown-THREE', this.handleWeaponSlotThree);
     keyboard?.on('keydown-M', this.handleToggleMinimap);
+    keyboard?.on('keydown-H', this.handleToggleHelp);
+    keyboard?.on('keydown-SLASH', this.handleHelpShortcut);
     keyboard?.on('keydown-TAB', this.handleToggleDebug);
     keyboard?.on('keydown-BACKTICK', this.handleToggleDebug);
     this.input.on('pointerdown', this.handleFireInput);
@@ -577,6 +650,8 @@ export class RaycastScene extends Phaser.Scene {
     keyboard?.off('keydown-TWO', this.handleWeaponSlotTwo);
     keyboard?.off('keydown-THREE', this.handleWeaponSlotThree);
     keyboard?.off('keydown-M', this.handleToggleMinimap);
+    keyboard?.off('keydown-H', this.handleToggleHelp);
+    keyboard?.off('keydown-SLASH', this.handleHelpShortcut);
     keyboard?.off('keydown-TAB', this.handleToggleDebug);
     keyboard?.off('keydown-BACKTICK', this.handleToggleDebug);
     this.input.off('pointerdown', this.handleFireInput);
@@ -735,16 +810,7 @@ export class RaycastScene extends Phaser.Scene {
   private setCombatMessage(message: string): void {
     this.lastCombatMessage = message.toUpperCase();
     this.combatMessageUntil = this.time.now + 1100;
-    this.systemText.setText(this.lastCombatMessage);
-    this.systemText.setAlpha(1);
     this.tweens.killTweensOf(this.systemText);
-    this.tweens.add({
-      targets: this.systemText,
-      alpha: 0.14,
-      delay: 700,
-      duration: 560,
-      ease: 'Quad.easeOut'
-    });
   }
 
   private switchWeapon(slot: number): void {
@@ -1152,15 +1218,30 @@ export class RaycastScene extends Phaser.Scene {
     return uncollectedKeyDistances.length > 0 ? Math.min(...uncollectedKeyDistances) : null;
   }
 
-  private getHudCriticalMessage(): string | undefined {
-    if (this.playerHealth <= 30) return RAYCAST_ATMOSPHERE.messages.critical;
-    if (this.time.now < this.combatMessageUntil) return this.lastCombatMessage;
-    return undefined;
-  }
-
   private getCurrentStatusMessage(): string {
     if (this.time.now < this.combatMessageUntil) return this.lastCombatMessage;
     return buildRaycastStatusMessage(this.levelComplete, this.episodeComplete, this.playerAlive);
+  }
+
+  private updatePriorityMessage(objective: string, hint: string, blockedHintActive: boolean): void {
+    const message = buildRaycastPriorityMessage({
+      levelComplete: this.levelComplete,
+      episodeComplete: this.episodeComplete,
+      playerAlive: this.playerAlive,
+      playerHealth: this.playerHealth,
+      objective,
+      hint,
+      combatMessage: this.time.now < this.combatMessageUntil ? this.lastCombatMessage : undefined,
+      combatMessageActive: this.time.now < this.combatMessageUntil,
+      blockedHintActive
+    });
+    const color =
+      message.tone === 'critical'
+        ? RAYCAST_ATMOSPHERE.warningText
+        : message.tone === 'warning'
+          ? palette.accent.warmText
+          : RAYCAST_ATMOSPHERE.systemText;
+    this.systemText.setText(message.text).setColor(color).setAlpha(message.tone === 'routine' ? 0.82 : 1);
   }
 
   private getDirectorDebugLine(): string {
@@ -1220,10 +1301,11 @@ export class RaycastScene extends Phaser.Scene {
       openDoorIds: this.currentLevel.doors.filter((door) => this.doorSystem.isOpen(door.id)).map((door) => door.id),
       collectedSecretIds: this.collectedSecrets
     });
-    const panelWidth = 132;
-    const panelHeight = 98;
-    const originX = GAME_WIDTH - 150;
-    const originY = 84;
+    const hudLayout = buildRaycastHudLayout(GAME_WIDTH, GAME_HEIGHT);
+    const panelWidth = hudLayout.minimapPanelWidth;
+    const panelHeight = hudLayout.minimapPanelHeight;
+    const originX = hudLayout.minimapPanelX;
+    const originY = hudLayout.minimapPanelY;
     const tileSize = Math.max(4, Math.floor(Math.min(panelWidth / model.width, panelHeight / model.height)));
     const offsetX = originX + Math.floor((panelWidth - model.width * tileSize) / 2);
     const offsetY = originY + Math.floor((panelHeight - model.height * tileSize) / 2);
@@ -1278,13 +1360,14 @@ export class RaycastScene extends Phaser.Scene {
   private shouldRenderMinimapMarkerLabel(marker: { kind: string; label: string; active: boolean }): boolean {
     if (!marker.active) return false;
     if (marker.kind === 'door') return marker.label === 'LOCK' || marker.label === 'OPEN';
-    if (marker.kind === 'exit') return marker.label === 'EXIT';
+    if (marker.kind === 'exit') return marker.label === 'EXIT' || marker.label === 'PORTAL';
+    if (marker.kind === 'key') return marker.label === 'KEY';
     return false;
   }
 
   private updateHealthHud(): void {
     const visual = getRaycastHealthVisualState(this.playerHealth);
-    this.healthText.setText(buildRaycastPlayerHealthLine({ health: this.playerHealth })).setColor(visual.color);
+    this.healthText.setColor(visual.color);
     this.healthBarFill.setFillStyle(visual.accentColor, 1);
     this.healthBarFill.setSize(168 * visual.ratio, 6);
   }
