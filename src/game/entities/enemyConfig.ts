@@ -86,7 +86,25 @@ function cloneEnemyConfigRecord(config: Record<EnemyKind, EnemyConfig>): Record<
 }
 
 export const ARENA_ENEMY_CONFIG = cloneEnemyConfigRecord(BASE_ENEMY_CONFIG);
-export const RAYCAST_ENEMY_CONFIG = cloneEnemyConfigRecord(BASE_ENEMY_CONFIG);
+export const RAYCAST_ENEMY_CONFIG = cloneEnemyConfigRecord({
+  ...BASE_ENEMY_CONFIG,
+  GRUNT: {
+    ...BASE_ENEMY_CONFIG.GRUNT,
+    color: 0xff6c62
+  },
+  BRUTE: {
+    ...BASE_ENEMY_CONFIG.BRUTE,
+    color: 0xffb05c
+  },
+  STALKER: {
+    ...BASE_ENEMY_CONFIG.STALKER,
+    color: 0x67f0b5
+  },
+  RANGED: {
+    ...BASE_ENEMY_CONFIG.RANGED,
+    color: 0x7edbff
+  }
+});
 
 export const ENEMY_CONFIG = ARENA_ENEMY_CONFIG;
 

@@ -17,6 +17,8 @@ export interface DirectorConfig {
   comfortableHealthThreshold: number;
   ambientPulseCooldownMs: number;
   warningMessageCooldownMs: number;
+  warningLeadMs: number;
+  stationaryPressureGraceMs: number;
   stationaryPunishCooldownMs: number;
 }
 
@@ -39,5 +41,7 @@ export const DEFAULT_DIRECTOR_CONFIG: DirectorConfig = {
   comfortableHealthThreshold: 68,
   ambientPulseCooldownMs: 6200,
   warningMessageCooldownMs: 4200,
+  warningLeadMs: 900,
+  stationaryPressureGraceMs: 1800,
   stationaryPunishCooldownMs: 2600
 };

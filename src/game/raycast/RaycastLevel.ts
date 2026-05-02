@@ -2,13 +2,28 @@ import { isPointInsideRect, type KeyPickup, type LevelTrigger, type LockedDoor, 
 import type { DirectorConfig } from '../systems/DirectorConfig';
 import type { SpawnPoint } from '../systems/GameDirector';
 import type { EnemyKind } from '../types/game';
-import { castRay, RAYCAST_TILE, type RaycastMap } from './RaycastMap';
+import {
+  castRay,
+  RAYCAST_MAP_LEVEL_1,
+  RAYCAST_MAP_LEVEL_2,
+  RAYCAST_PLAYER_START_LEVEL_1,
+  RAYCAST_PLAYER_START_LEVEL_2,
+  RAYCAST_TILE,
+  type RaycastMap,
+  type RaycastPlayerStart
+} from './RaycastMap';
+import type { RaycastLandmarkId, RaycastZoneThemeId, RaycastZoneVisualDescriptor } from './RaycastVisualTheme';
 
 export interface RaycastEnemySpawn {
   id: string;
   kind: EnemyKind;
   x: number;
   y: number;
+}
+
+export interface RaycastZone extends RectArea, RaycastZoneVisualDescriptor {
+  visualTheme: RaycastZoneThemeId;
+  landmark?: RaycastLandmarkId;
 }
 
 export interface RaycastKey extends KeyPickup {
@@ -45,15 +60,29 @@ export interface RaycastDirectorSpawnPoint extends SpawnPoint {
   minPlayerDistance: number;
 }
 
+export interface RaycastEncounterBeat {
+  id: string;
+  message: string;
+  zoneId?: string;
+  doorId?: string;
+  triggerId?: string;
+  directorState?: 'RECOVERY';
+  requiresTriggerId?: string;
+}
+
 export interface RaycastLevel {
+  id: string;
   name: string;
-  zones: RectArea[];
+  map: RaycastMap;
+  playerStart: RaycastPlayerStart;
+  zones: RaycastZone[];
   keys: RaycastKey[];
   doors: RaycastDoor[];
   triggers: RaycastTrigger[];
   secrets: RaycastSecret[];
   exits: RaycastExit[];
   initialSpawns: RaycastEnemySpawn[];
+  encounterBeats: RaycastEncounterBeat[];
   progression: {
     requiredExitKeyIds: string[];
     requiredExitDoorIds: string[];
@@ -67,19 +96,22 @@ export interface RaycastLevel {
   };
 }
 
-export const RAYCAST_LEVEL: RaycastLevel = {
+export const RAYCAST_LEVEL_1: RaycastLevel = {
+  id: 'access-node',
   name: 'Corrupt Access Node',
+  map: RAYCAST_MAP_LEVEL_1,
+  playerStart: RAYCAST_PLAYER_START_LEVEL_1,
   zones: [
-    { id: 'start', x: 2.5, y: 12.3, width: 3.2, height: 1.4 },
-    { id: 'narrow-hall', x: 3.0, y: 9.2, width: 4.8, height: 4.8 },
-    { id: 'first-contact', x: 3.8, y: 7.5, width: 3.8, height: 1.8 },
-    { id: 'key-area', x: 4.5, y: 3.8, width: 3.4, height: 2.8 },
-    { id: 'locked-door', x: 8.0, y: 7.5, width: 2.0, height: 1.8 },
-    { id: 'ambush', x: 10.4, y: 7.8, width: 3.2, height: 2.0 },
-    { id: 'combat-arena', x: 14.8, y: 9.6, width: 4.2, height: 5.2 },
-    { id: 'side-pressure', x: 11.8, y: 10.5, width: 5.2, height: 3.0 },
-    { id: 'secret', x: 6.1, y: 12.3, width: 2.6, height: 1.4 },
-    { id: 'exit', x: 16.2, y: 2.2, width: 1.8, height: 2.4 }
+    { id: 'start', x: 2.5, y: 12.3, width: 3.2, height: 1.4, visualTheme: 'corrupted-metal' },
+    { id: 'narrow-hall', x: 3.0, y: 9.2, width: 4.8, height: 4.8, visualTheme: 'void-stone' },
+    { id: 'first-contact', x: 3.8, y: 7.5, width: 3.8, height: 1.8, visualTheme: 'warning-amber' },
+    { id: 'key-area', x: 4.5, y: 3.8, width: 3.4, height: 2.8, visualTheme: 'toxic-green', landmark: 'key' },
+    { id: 'locked-door', x: 8.0, y: 7.5, width: 2.0, height: 1.8, visualTheme: 'warning-amber', landmark: 'gate' },
+    { id: 'ambush', x: 10.4, y: 7.8, width: 3.2, height: 2.0, visualTheme: 'warning-amber', landmark: 'ambush' },
+    { id: 'combat-arena', x: 14.8, y: 9.6, width: 4.2, height: 5.2, visualTheme: 'toxic-green', landmark: 'ambush' },
+    { id: 'side-pressure', x: 11.8, y: 10.5, width: 5.2, height: 3.0, visualTheme: 'corrupted-metal' },
+    { id: 'secret', x: 6.1, y: 12.3, width: 2.6, height: 1.4, visualTheme: 'void-stone', landmark: 'secret' },
+    { id: 'exit', x: 16.2, y: 2.2, width: 1.8, height: 2.4, visualTheme: 'exit-portal', landmark: 'exit' }
   ],
   keys: [
     {
@@ -185,6 +217,29 @@ export const RAYCAST_LEVEL: RaycastLevel = {
     { id: 'arena-sleeper-brute', kind: 'BRUTE', x: 14.5, y: 9.5 },
     { id: 'exit-ranged-lookout', kind: 'RANGED', x: 16.5, y: 5.5 }
   ],
+  encounterBeats: [
+    {
+      id: 'first-contact-warning',
+      zoneId: 'first-contact',
+      message: 'Signal ripple ahead: keep moving'
+    },
+    {
+      id: 'gate-preparation',
+      doorId: 'rust-gate',
+      message: 'Gateway breach detected: ambush signatures rising'
+    },
+    {
+      id: 'gate-ambush-spike',
+      triggerId: 'gate-ambush',
+      message: 'Crossfire spike: push through the trap'
+    },
+    {
+      id: 'gate-recovery',
+      directorState: 'RECOVERY',
+      requiresTriggerId: 'gate-ambush',
+      message: 'Node staggered: take the recovery window'
+    }
+  ],
   progression: {
     requiredExitKeyIds: ['rust-key'],
     requiredExitDoorIds: ['rust-gate'],
@@ -224,6 +279,195 @@ export const RAYCAST_LEVEL: RaycastLevel = {
     ]
   }
 };
+
+export const RAYCAST_LEVEL_2: RaycastLevel = {
+  id: 'glass-cistern',
+  name: 'Glass Cistern Breach',
+  map: RAYCAST_MAP_LEVEL_2,
+  playerStart: RAYCAST_PLAYER_START_LEVEL_2,
+  zones: [
+    { id: 'start', x: 1.4, y: 9.8, width: 4.0, height: 1.9, visualTheme: 'corrupted-metal' },
+    { id: 'trench', x: 1.2, y: 7.8, width: 4.1, height: 2.3, visualTheme: 'void-stone' },
+    { id: 'cistern', x: 1.2, y: 1.6, width: 5.4, height: 4.6, visualTheme: 'toxic-green', landmark: 'key' },
+    { id: 'secret', x: 1.1, y: 7.1, width: 2.2, height: 1.2, visualTheme: 'void-stone', landmark: 'secret' },
+    { id: 'gate', x: 7.4, y: 4.8, width: 2.0, height: 1.8, visualTheme: 'warning-amber', landmark: 'gate' },
+    { id: 'furnace-threshold', x: 9.2, y: 4.6, width: 3.8, height: 2.0, visualTheme: 'warning-amber', landmark: 'ambush' },
+    { id: 'glass-run', x: 11.0, y: 1.2, width: 3.8, height: 7.0, visualTheme: 'toxic-green' },
+    { id: 'overlook', x: 13.0, y: 1.0, width: 1.8, height: 2.4, visualTheme: 'exit-portal', landmark: 'exit' }
+  ],
+  keys: [
+    {
+      id: 'glass-sigil',
+      label: 'Glass Sigil',
+      x: 4.5,
+      y: 3.5,
+      radius: 0.28,
+      unlocksDoorId: 'cistern-gate',
+      pickupObjectiveText: 'Sigil bound: breach the furnace gate',
+      billboardLabel: 'SIGIL'
+    }
+  ],
+  doors: [
+    {
+      id: 'cistern-gate',
+      tileX: 8,
+      tileY: 5,
+      x: 8.5,
+      y: 5.5,
+      width: 1,
+      height: 1,
+      keyId: 'glass-sigil',
+      killsRequired: 0,
+      openObjectiveText: 'Furnace gate vented',
+      lockedObjectiveText: 'Glass lock sealed: sigil required',
+      billboardLabel: 'LOCK'
+    }
+  ],
+  triggers: [
+    {
+      id: 'furnace-ambush',
+      x: 10.2,
+      y: 5.2,
+      width: 2.6,
+      height: 1.6,
+      once: true,
+      doorId: 'cistern-gate',
+      objectiveText: 'Breach the furnace lane',
+      activationText: 'Furnace breach: pressure rising',
+      spawns: [
+        { x: 9.5, y: 2.5, kind: 'RANGED' },
+        { x: 13.5, y: 6.5, kind: 'GRUNT' },
+        { x: 13.5, y: 3.5, kind: 'STALKER' }
+      ]
+    },
+    {
+      id: 'exit-lockdown',
+      x: 13.2,
+      y: 1.4,
+      width: 1.4,
+      height: 1.8,
+      once: true,
+      doorId: 'cistern-gate',
+      objectiveText: 'Exit lane contested',
+      activationText: 'Overlook compromised: hold the lane',
+      spawns: [
+        { x: 14.5, y: 6.5, kind: 'BRUTE' },
+        { x: 14.5, y: 5.5, kind: 'RANGED' }
+      ]
+    },
+    {
+      id: 'secret-stir',
+      x: 1.2,
+      y: 7.2,
+      width: 1.8,
+      height: 1.0,
+      once: true,
+      objectiveText: 'Cache disturbed',
+      activationText: 'Void trench stirred: flankers inbound',
+      spawns: [
+        { x: 3.5, y: 8.5, kind: 'STALKER' },
+        { x: 5.5, y: 10.5, kind: 'GRUNT' }
+      ]
+    }
+  ],
+  secrets: [
+    {
+      id: 'trench-cache',
+      label: 'Trench Cache',
+      x: 1.5,
+      y: 7.5,
+      radius: 0.24,
+      objectiveText: 'Trench cache: 25 HP restored',
+      billboardLabel: 'CACHE'
+    }
+  ],
+  exits: [
+    {
+      id: 'cistern-exit',
+      x: 14.5,
+      y: 1.5,
+      radius: 0.35,
+      objectiveText: 'Cistern route stabilized',
+      billboardLabel: 'EXIT'
+    }
+  ],
+  initialSpawns: [
+    { id: 'trench-watch', kind: 'GRUNT', x: 3.5, y: 8.5 },
+    { id: 'cistern-guard', kind: 'STALKER', x: 4.5, y: 4.5 },
+    { id: 'furnace-lookout', kind: 'RANGED', x: 9.5, y: 2.5 },
+    { id: 'overlook-brute', kind: 'BRUTE', x: 13.5, y: 5.5 }
+  ],
+  encounterBeats: [
+    {
+      id: 'trench-warning',
+      zoneId: 'trench',
+      message: 'Trench echo ahead: keep momentum'
+    },
+    {
+      id: 'furnace-prep',
+      doorId: 'cistern-gate',
+      message: 'Gate venting: furnace lane signatures climbing'
+    },
+    {
+      id: 'furnace-spike',
+      triggerId: 'furnace-ambush',
+      message: 'Cross-lane fire: break the overlook'
+    },
+    {
+      id: 'cistern-recovery',
+      directorState: 'RECOVERY',
+      requiresTriggerId: 'furnace-ambush',
+      message: 'Pressure dip: use the recovery window'
+    }
+  ],
+  progression: {
+    requiredExitKeyIds: ['glass-sigil'],
+    requiredExitDoorIds: ['cistern-gate'],
+    requiredExitTriggerIds: ['furnace-ambush'],
+    blockedExitMessage: 'ROUTE UNSTABLE: BREACH INCOMPLETE'
+  },
+  director: {
+    enabled: true,
+    config: {
+      maxEnemiesAlive: 5,
+      maxTotalSpawns: 10,
+      openingSpawnCount: 0,
+      baseSpawnCooldownMs: 5200,
+      buildUpSpawnCooldownMs: 4200,
+      ambushSpawnCooldownMs: 2100,
+      highIntensitySpawnCooldownMs: 3400,
+      recoveryDurationMs: 4600,
+      ambushDurationMs: 5800,
+      highIntensityDurationMs: 8600,
+      buildUpAfterMs: 6500,
+      idlePressureMs: 1800,
+      dominanceNoDamageMs: 8800,
+      lowHealthThreshold: 35,
+      comfortableHealthThreshold: 65,
+      debugEnabled: true
+    },
+    spawnPoints: [
+      { id: 'start-rear', zoneId: 'start', x: 5.5, y: 10.5, minPlayerDistance: 2.2 },
+      { id: 'trench-left', zoneId: 'trench', x: 3.5, y: 8.5, minPlayerDistance: 1.8 },
+      { id: 'cistern-inner', zoneId: 'cistern', x: 4.5, y: 4.5, minPlayerDistance: 1.8 },
+      { id: 'gate-anchor', zoneId: 'gate', x: 7.5, y: 5.5, minPlayerDistance: 1.8 },
+      { id: 'threshold-ranged', zoneId: 'furnace-threshold', x: 9.5, y: 2.5, minPlayerDistance: 2.0 },
+      { id: 'glass-run-mid', zoneId: 'glass-run', x: 13.5, y: 6.5, minPlayerDistance: 2.0 },
+      { id: 'overlook-rear', zoneId: 'overlook', x: 14.5, y: 5.5, minPlayerDistance: 2.2 }
+    ]
+  }
+};
+
+export const RAYCAST_LEVEL_CATALOG: RaycastLevel[] = [RAYCAST_LEVEL_1, RAYCAST_LEVEL_2];
+export const RAYCAST_LEVEL = RAYCAST_LEVEL_1;
+
+export function getRaycastLevelById(levelId: string | null | undefined): RaycastLevel {
+  return RAYCAST_LEVEL_CATALOG.find((level) => level.id === levelId) ?? RAYCAST_LEVEL;
+}
+
+export function getRaycastLevelIndex(levelId: string): number {
+  return RAYCAST_LEVEL_CATALOG.findIndex((level) => level.id === levelId);
+}
 
 export function cloneRaycastMap(map: RaycastMap): RaycastMap {
   return {

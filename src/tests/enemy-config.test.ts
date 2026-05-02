@@ -56,6 +56,9 @@ describe('enemy config', () => {
     expect(getEnemyConfig('STALKER', 'arena')).toBe(ARENA_ENEMY_CONFIG.STALKER);
     expect(getEnemyConfig('STALKER', 'raycast')).toBe(RAYCAST_ENEMY_CONFIG.STALKER);
     expect(RAYCAST_ENEMY_CONFIG.STALKER).not.toBe(ARENA_ENEMY_CONFIG.STALKER);
-    expect(RAYCAST_ENEMY_CONFIG.STALKER).toEqual(ARENA_ENEMY_CONFIG.STALKER);
+    expect(RAYCAST_ENEMY_CONFIG.STALKER).toMatchObject({
+      ...ARENA_ENEMY_CONFIG.STALKER,
+      color: 0x67f0b5
+    });
   });
 });

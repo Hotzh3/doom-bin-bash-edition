@@ -12,6 +12,16 @@ export interface RaycastMap {
   tileSize: number;
 }
 
+export interface RaycastPlayerStart {
+  x: number;
+  y: number;
+  angle: number;
+  velocity: {
+    x: number;
+    y: number;
+  };
+}
+
 export const RAYCAST_TILE = {
   EMPTY: 0,
   WALL: 1,
@@ -20,7 +30,7 @@ export const RAYCAST_TILE = {
   LOCKED_DOOR: 4
 } as const;
 
-export const RAYCAST_MAP: RaycastMap = {
+export const RAYCAST_MAP_LEVEL_1: RaycastMap = {
   tileSize: 1,
   grid: [
     [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
@@ -40,12 +50,41 @@ export const RAYCAST_MAP: RaycastMap = {
   ]
 };
 
-export const RAYCAST_PLAYER_START = {
+export const RAYCAST_PLAYER_START_LEVEL_1: RaycastPlayerStart = {
   x: 2.5,
   y: 12.5,
   angle: -Math.PI * 0.5,
   velocity: { x: 0, y: 0 }
-} as const;
+};
+
+export const RAYCAST_MAP_LEVEL_2: RaycastMap = {
+  tileSize: 1,
+  grid: [
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+    [1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1],
+    [1, 0, 2, 2, 0, 0, 0, 1, 1, 0, 3, 3, 3, 0, 0, 1],
+    [1, 0, 2, 0, 0, 1, 0, 0, 1, 0, 3, 0, 3, 0, 0, 1],
+    [1, 0, 2, 0, 0, 1, 1, 0, 1, 0, 3, 0, 0, 0, 1, 1],
+    [1, 0, 0, 0, 0, 0, 1, 0, 4, 0, 3, 3, 3, 0, 0, 1],
+    [1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 0, 0, 3, 0, 0, 1],
+    [1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 1, 0, 3, 0, 1, 1],
+    [1, 0, 3, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1],
+    [1, 0, 3, 3, 3, 0, 1, 1, 1, 0, 1, 1, 1, 0, 0, 1],
+    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 3, 1, 0, 0, 1],
+    [1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 3, 0, 0, 0, 1],
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+  ]
+};
+
+export const RAYCAST_PLAYER_START_LEVEL_2: RaycastPlayerStart = {
+  x: 2.5,
+  y: 10.5,
+  angle: -Math.PI * 0.5,
+  velocity: { x: 0, y: 0 }
+};
+
+export const RAYCAST_MAP = RAYCAST_MAP_LEVEL_1;
+export const RAYCAST_PLAYER_START = RAYCAST_PLAYER_START_LEVEL_1;
 
 const MAX_RAY_DISTANCE = 20;
 const RAY_STEP = 0.025;
