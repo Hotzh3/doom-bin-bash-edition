@@ -3,7 +3,7 @@ import { decideEnemyBehavior, getDirection } from '../systems/EnemyBehaviorSyste
 import type { MovementVector } from '../systems/MovementSystem';
 import { castRay, type RaycastMap } from './RaycastMap';
 import { collides } from './RaycastMovement';
-import type { RaycastEnemy } from './RaycastEnemy';
+import { isRaycastEnemyTelegraphing, type RaycastEnemy } from './RaycastEnemy';
 
 const GRID_SCALE = 100;
 const PROJECTILE_RADIUS = 0.08;
@@ -45,6 +45,11 @@ export function updateRaycastEnemies(
 
   enemies.forEach((enemy) => {
     if (!enemy.alive || !player.alive) return;
+    if (isRaycastEnemyTelegraphing(enemy, time)) return;
+    if (enemy.spawnTelegraphUntil > 0) {
+      enemy.spawnTelegraphStartedAt = 0;
+      enemy.spawnTelegraphUntil = 0;
+    }
 
     const config = getEnemyConfig(enemy.kind, 'raycast');
     const distance = Math.hypot(player.x - enemy.x, player.y - enemy.y);
@@ -52,6 +57,7 @@ export function updateRaycastEnemies(
 
     if (enemy.kind !== 'RANGED' && enemy.attackWindupUntil > 0) {
       if (time < enemy.attackWindupUntil) return;
+      enemy.attackWindupStartedAt = 0;
       enemy.attackWindupUntil = 0;
       if (distance * GRID_SCALE <= config.attackRange && hasSight) {
         enemy.lastAttack = time;
@@ -68,38 +74,45 @@ export function updateRaycastEnemies(
     });
 
     if (decision.action === 'IDLE') {
+      enemy.attackWindupStartedAt = 0;
       enemy.attackWindupUntil = 0;
       return;
     }
 
     if (decision.action === 'CHASE') {
+      enemy.attackWindupStartedAt = 0;
       enemy.attackWindupUntil = 0;
       moveEnemy(map, enemy, getDirection(enemy, player), (config.speed / GRID_SCALE) * decision.speedMultiplier, deltaMs);
     }
 
     if (decision.action === 'RETREAT') {
+      enemy.attackWindupStartedAt = 0;
       enemy.attackWindupUntil = 0;
       moveEnemy(map, enemy, getDirection(player, enemy), (config.speed / GRID_SCALE) * decision.speedMultiplier, deltaMs);
     }
 
     if (decision.action === 'MELEE_ATTACK' && canAttack(enemy, time)) {
+      enemy.attackWindupStartedAt = time;
       enemy.attackWindupUntil = time + config.attackWindupMs;
       return;
     }
 
     if (decision.action === 'RANGED_ATTACK') {
       if (!canAttack(enemy, time)) {
+        enemy.attackWindupStartedAt = 0;
         enemy.attackWindupUntil = 0;
         return;
       }
 
       if (enemy.attackWindupUntil === 0) {
+        enemy.attackWindupStartedAt = time;
         enemy.attackWindupUntil = time + config.attackWindupMs;
         return;
       }
 
       if (time >= enemy.attackWindupUntil) {
         enemy.lastAttack = time;
+        enemy.attackWindupStartedAt = 0;
         enemy.attackWindupUntil = 0;
         spawnedProjectiles.push(createRaycastEnemyProjectile(enemy, player, time));
       }

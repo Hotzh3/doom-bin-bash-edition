@@ -1,0 +1,66 @@
+import { describe, expect, it } from 'vitest';
+import { buildRaycastMinimapModel } from '../game/raycast/RaycastMinimap';
+import { RAYCAST_LEVEL, cloneRaycastMap, openRaycastDoor } from '../game/raycast/RaycastLevel';
+
+describe('raycast minimap model', () => {
+  it('includes walls, floor, doors, and player direction markers', () => {
+    const model = buildRaycastMinimapModel({
+      map: RAYCAST_LEVEL.map,
+      level: RAYCAST_LEVEL,
+      player: { x: 2.5, y: 12.5, angle: -Math.PI / 2 },
+      collectedKeyIds: [],
+      openDoorIds: [],
+      collectedSecretIds: []
+    });
+
+    expect(model.width).toBe(RAYCAST_LEVEL.map.grid[0].length);
+    expect(model.height).toBe(RAYCAST_LEVEL.map.grid.length);
+    expect(model.cells.some((cell) => cell.kind === 'wall')).toBe(true);
+    expect(model.cells.some((cell) => cell.kind === 'floor')).toBe(true);
+    expect(model.cells.some((cell) => cell.kind === 'door')).toBe(true);
+    expect(model.markers).toContainEqual(
+      expect.objectContaining({ kind: 'player', angle: -Math.PI / 2, label: 'YOU', active: true })
+    );
+  });
+
+  it('updates key and door markers from progression state without revealing secrets', () => {
+    const lockedModel = buildRaycastMinimapModel({
+      map: RAYCAST_LEVEL.map,
+      level: RAYCAST_LEVEL,
+      player: { x: 7.5, y: 7.5, angle: 0 },
+      collectedKeyIds: [],
+      openDoorIds: [],
+      collectedSecretIds: []
+    });
+
+    expect(lockedModel.markers).toContainEqual(expect.objectContaining({ kind: 'door', label: 'LOCK', active: true }));
+
+    const keyedModel = buildRaycastMinimapModel({
+      map: RAYCAST_LEVEL.map,
+      level: RAYCAST_LEVEL,
+      player: { x: 7.5, y: 7.5, angle: 0 },
+      collectedKeyIds: ['rust-key'],
+      openDoorIds: [],
+      collectedSecretIds: []
+    });
+
+    expect(keyedModel.markers).toContainEqual(expect.objectContaining({ kind: 'door', label: 'DOOR', active: true }));
+
+    const openedMap = cloneRaycastMap(RAYCAST_LEVEL.map);
+    openRaycastDoor(openedMap, RAYCAST_LEVEL.doors[0]);
+    const openModel = buildRaycastMinimapModel({
+      map: openedMap,
+      level: RAYCAST_LEVEL,
+      player: { x: 8.5, y: 7.5, angle: 0 },
+      collectedKeyIds: ['rust-key'],
+      openDoorIds: ['rust-gate'],
+      collectedSecretIds: ['west-cache']
+    });
+
+    expect(openModel.markers).toContainEqual(expect.objectContaining({ kind: 'key', label: 'TOKEN', active: false }));
+    expect(openModel.markers).toContainEqual(expect.objectContaining({ kind: 'door', label: 'OPEN', active: true }));
+    expect(openModel.markers).toContainEqual(expect.objectContaining({ kind: 'exit', label: 'EXIT', active: true }));
+    expect(openModel.markers.some((marker) => marker.label === 'HIDDEN')).toBe(false);
+    expect(openModel.cells.some((cell) => cell.kind === 'door')).toBe(false);
+  });
+});

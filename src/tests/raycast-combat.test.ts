@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { RaycastCombatSystem, findEnemyInCrosshair, normalizeAngle } from '../game/raycast/RaycastCombatSystem';
+import {
+  getRaycastCrosshairTargetInfo,
+  RaycastCombatSystem,
+  findEnemyInCrosshair,
+  normalizeAngle
+} from '../game/raycast/RaycastCombatSystem';
 import type { RaycastEnemy } from '../game/raycast/RaycastEnemy';
 import { RAYCAST_MAP, type RaycastMap } from '../game/raycast/RaycastMap';
 import type { RaycastPlayerState } from '../game/raycast/RaycastPlayerController';
@@ -10,10 +15,14 @@ const createEnemy = (overrides: Partial<RaycastEnemy> = {}): RaycastEnemy => ({
   x: 3,
   y: 2,
   health: 13,
+  maxHealth: 13,
   alive: true,
   radius: 0.3,
   color: 0xff4f5f,
   lastAttack: Number.NEGATIVE_INFINITY,
+  spawnTelegraphStartedAt: 0,
+  spawnTelegraphUntil: 0,
+  attackWindupStartedAt: 0,
   attackWindupUntil: 0,
   hitFlashUntil: 0,
   deathBurstUntil: 0,
@@ -49,6 +58,20 @@ describe('raycast combat', () => {
     const farEnemy = createEnemy({ id: 'far', x: 4, y: 9.4 });
 
     expect(findEnemyInCrosshair(player, [farEnemy, closeEnemy], 10)?.id).toBe('close');
+  });
+
+  it('builds focused target info for the enemy under the crosshair', () => {
+    const enemy = createEnemy({ id: 'close', kind: 'RANGED', x: 2.8, y: 9.4, health: 24, maxHealth: 48, attackWindupStartedAt: 980, attackWindupUntil: 1200 });
+
+    expect(getRaycastCrosshairTargetInfo(player, [enemy], 10, 1000)).toEqual({
+      id: 'close',
+      kindLabel: 'TURRET',
+      health: 24,
+      maxHealth: 48,
+      healthRatio: 0.5,
+      isTelegraphing: false,
+      isWindingUp: true
+    });
   });
 
   it('auto-aim hits a visible enemy inside forgiving center tolerance', () => {

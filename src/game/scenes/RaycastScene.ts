@@ -11,8 +11,13 @@ import {
 } from '../systems/AudioFeedbackSystem';
 import type { DirectorEvent } from '../systems/DirectorEvents';
 import { DIRECTOR_STATE_LABELS, type DirectorDebugInfo, type DirectorState } from '../systems/DirectorState';
-import { RaycastCombatSystem } from '../raycast/RaycastCombatSystem';
-import { cloneRaycastEnemies, createRaycastEnemy, type RaycastEnemy } from '../raycast/RaycastEnemy';
+import { getRaycastCrosshairTargetInfo, RaycastCombatSystem } from '../raycast/RaycastCombatSystem';
+import {
+  cloneRaycastEnemies,
+  createTelegraphedRaycastEnemy,
+  didRaycastEnemyFinishTelegraph,
+  type RaycastEnemy
+} from '../raycast/RaycastEnemy';
 import {
   updateRaycastEnemies,
   updateRaycastEnemyProjectiles,
@@ -33,9 +38,23 @@ import {
   type RaycastLevel
 } from '../raycast/RaycastLevel';
 import { getRaycastEpisodeState } from '../raycast/RaycastEpisode';
-import { RAYCAST_PLAYER_START, type RaycastMap } from '../raycast/RaycastMap';
+import { buildRaycastMinimapModel } from '../raycast/RaycastMinimap';
+import { castRay, RAYCAST_PLAYER_START, type RaycastMap } from '../raycast/RaycastMap';
+import {
+  buildRaycastCurrentObjective,
+  buildRaycastHintText,
+  buildRaycastInstructionText,
+  type RaycastBlockedReason,
+  type RaycastObjectiveState
+} from '../raycast/RaycastObjective';
 import { RAYCAST_ATMOSPHERE, getAtmosphereForDirector } from '../raycast/RaycastAtmosphere';
-import { buildRaycastDebugLine, buildRaycastHudLine } from '../raycast/RaycastHud';
+import {
+  buildRaycastDebugLine,
+  buildRaycastFocusedEnemyLine,
+  buildRaycastHudLine,
+  buildRaycastPlayerHealthLine,
+  getRaycastHealthVisualState
+} from '../raycast/RaycastHud';
 import {
   buildRaycastEpisodeBanner,
   buildRaycastOverlayHint,
@@ -50,6 +69,11 @@ import { palette } from '../theme/palette';
 interface RaycastSceneData {
   levelId?: string;
 }
+
+const DIRECTOR_SPAWN_TELEGRAPH_MS = 820;
+const ENCOUNTER_SPAWN_TELEGRAPH_MS = 980;
+const VISIBLE_SPAWN_TELEGRAPH_BONUS_MS = 260;
+const CLOSE_SPAWN_TELEGRAPH_BONUS_MS = 180;
 
 export class RaycastScene extends Phaser.Scene {
   private raycastRenderer!: RaycastRenderer;
@@ -84,11 +108,29 @@ export class RaycastScene extends Phaser.Scene {
   private directorIntensity = 0;
   private directorSpawnCounter = 0;
   private debugHudVisible = false;
+  private minimapVisible = true;
   private debugText!: Phaser.GameObjects.Text;
+  private healthText!: Phaser.GameObjects.Text;
+  private targetText!: Phaser.GameObjects.Text;
   private weaponText!: Phaser.GameObjects.Text;
+  private healthBarTrack!: Phaser.GameObjects.Rectangle;
+  private healthBarFill!: Phaser.GameObjects.Rectangle;
+  private targetBarTrack!: Phaser.GameObjects.Rectangle;
+  private targetBarFill!: Phaser.GameObjects.Rectangle;
+  private objectiveText!: Phaser.GameObjects.Text;
+  private hintText!: Phaser.GameObjects.Text;
+  private instructionText!: Phaser.GameObjects.Text;
+  private minimapFrame!: Phaser.GameObjects.Rectangle;
+  private minimapTitleText!: Phaser.GameObjects.Text;
+  private minimapGraphics!: Phaser.GameObjects.Graphics;
+  private minimapMarkerLabels: Phaser.GameObjects.Text[] = [];
   private muzzleFlash!: Phaser.GameObjects.Rectangle;
   private wallImpactFlash!: Phaser.GameObjects.Arc;
   private damageFlash!: Phaser.GameObjects.Rectangle;
+  private damageFrameTop!: Phaser.GameObjects.Rectangle;
+  private damageFrameBottom!: Phaser.GameObjects.Rectangle;
+  private damageFrameLeft!: Phaser.GameObjects.Rectangle;
+  private damageFrameRight!: Phaser.GameObjects.Rectangle;
   private feedbackPulse!: Phaser.GameObjects.Rectangle;
   private corruptionVeil!: Phaser.GameObjects.Rectangle;
   private systemText!: Phaser.GameObjects.Text;
@@ -101,6 +143,8 @@ export class RaycastScene extends Phaser.Scene {
   private weaponOverlayFlashUntil = 0;
   private lastCombatMessage: string = RAYCAST_ATMOSPHERE.messages.intro;
   private combatMessageUntil = 0;
+  private blockedHintReason: RaycastBlockedReason | null = null;
+  private blockedHintUntil = 0;
   private nextAmbientCueAt = 0;
   private sceneReady = false;
   private inputListenersRegistered = false;
@@ -140,6 +184,14 @@ export class RaycastScene extends Phaser.Scene {
   private readonly handleToggleDebug = (): void => {
     this.debugHudVisible = !this.debugHudVisible;
     this.debugText?.setVisible(this.debugHudVisible);
+  };
+
+  private readonly handleToggleMinimap = (): void => {
+    this.minimapVisible = !this.minimapVisible;
+    this.minimapFrame?.setVisible(this.minimapVisible);
+    this.minimapTitleText?.setVisible(this.minimapVisible);
+    this.minimapGraphics?.setVisible(this.minimapVisible);
+    this.minimapMarkerLabels.forEach((label) => label.setVisible(false));
   };
 
   constructor() {
@@ -200,6 +252,25 @@ export class RaycastScene extends Phaser.Scene {
       .setOrigin(0.5)
       .setDepth(12);
 
+    this.healthText = this.add
+      .text(GAME_WIDTH - 16, 14, '', {
+        fontSize: '15px',
+        fontStyle: '700',
+        color: '#9feee2',
+        backgroundColor: RAYCAST_ATMOSPHERE.hudPanel,
+        padding: { x: 8, y: 5 }
+      })
+      .setOrigin(1, 0)
+      .setDepth(12);
+    this.healthBarTrack = this.add
+      .rectangle(GAME_WIDTH - 108, 46, 168, 10, 0x020408, 0.9)
+      .setOrigin(0, 0.5)
+      .setDepth(12);
+    this.healthBarFill = this.add
+      .rectangle(GAME_WIDTH - 108, 46, 168, 6, 0x9feee2, 1)
+      .setOrigin(0, 0.5)
+      .setDepth(13);
+
     this.weaponText = this.add
       .text(GAME_WIDTH * 0.5, GAME_HEIGHT - 88, '', {
         fontSize: '19px',
@@ -210,6 +281,83 @@ export class RaycastScene extends Phaser.Scene {
       })
       .setOrigin(0.5)
       .setDepth(12);
+    this.targetText = this.add
+      .text(GAME_WIDTH * 0.5, GAME_HEIGHT * 0.5 + 34, '', {
+        fontSize: '14px',
+        fontStyle: '700',
+        color: '#fff0c2',
+        backgroundColor: '#020408cc',
+        padding: { x: 8, y: 4 }
+      })
+      .setOrigin(0.5)
+      .setDepth(14)
+      .setVisible(false);
+    this.targetBarTrack = this.add
+      .rectangle(GAME_WIDTH * 0.5, GAME_HEIGHT * 0.5 + 58, 118, 8, 0x020408, 0.88)
+      .setDepth(14)
+      .setVisible(false);
+    this.targetBarFill = this.add
+      .rectangle(GAME_WIDTH * 0.5 - 59, GAME_HEIGHT * 0.5 + 58, 118, 4, 0xfff29e, 1)
+      .setOrigin(0, 0.5)
+      .setDepth(15)
+      .setVisible(false);
+
+    this.objectiveText = this.add
+      .text(16, GAME_HEIGHT - 118, '', {
+        fontSize: '16px',
+        fontStyle: '700',
+        color: palette.accent.warmText,
+        backgroundColor: RAYCAST_ATMOSPHERE.hudPanel,
+        padding: { x: 8, y: 5 }
+      })
+      .setDepth(12);
+    this.hintText = this.add
+      .text(16, GAME_HEIGHT - 90, '', {
+        fontSize: '14px',
+        fontStyle: '700',
+        color: RAYCAST_ATMOSPHERE.systemText,
+        backgroundColor: '#020408cc',
+        padding: { x: 8, y: 5 },
+        wordWrap: { width: 330 }
+      })
+      .setDepth(12);
+    this.instructionText = this.add
+      .text(16, GAME_HEIGHT - 52, buildRaycastInstructionText(), {
+        fontSize: '12px',
+        color: RAYCAST_ATMOSPHERE.debugText,
+        backgroundColor: '#020408c8',
+        padding: { x: 8, y: 5 }
+      })
+      .setAlpha(0.82)
+      .setDepth(11);
+    this.minimapFrame = this.add
+      .rectangle(GAME_WIDTH - 84, 124, 144, 116, 0x020408, 0.76)
+      .setStrokeStyle(2, 0x9feee2, 0.55)
+      .setDepth(11);
+    this.minimapTitleText = this.add
+      .text(GAME_WIDTH - 84, 70, 'AUTOMAP M', {
+        fontSize: '12px',
+        fontStyle: '700',
+        color: '#9feee2',
+        backgroundColor: '#020408cc',
+        padding: { x: 6, y: 4 }
+      })
+      .setOrigin(0.5)
+      .setDepth(12);
+    this.minimapGraphics = this.add.graphics().setDepth(12);
+    this.minimapMarkerLabels = Array.from({ length: 8 }, () =>
+      this.add
+        .text(0, 0, '', {
+          fontFamily: 'monospace',
+          fontSize: '8px',
+          fontStyle: '700',
+          color: '#f4f7d0',
+          stroke: '#020408',
+          strokeThickness: 2
+        })
+        .setDepth(13)
+        .setVisible(false)
+    );
 
     this.muzzleFlash = this.add.rectangle(GAME_WIDTH * 0.5, GAME_HEIGHT - 54, 96, 34, palette.accent.projectile, 0);
     this.muzzleFlash.setDepth(11);
@@ -217,6 +365,14 @@ export class RaycastScene extends Phaser.Scene {
     this.wallImpactFlash.setDepth(12);
     this.damageFlash = this.add.rectangle(GAME_WIDTH * 0.5, GAME_HEIGHT * 0.5, GAME_WIDTH, GAME_HEIGHT, RAYCAST_ATMOSPHERE.damageFlash, 0);
     this.damageFlash.setDepth(13);
+    this.damageFrameTop = this.add.rectangle(GAME_WIDTH * 0.5, 10, GAME_WIDTH, 20, 0xff5b6f, 0).setDepth(14);
+    this.damageFrameBottom = this.add
+      .rectangle(GAME_WIDTH * 0.5, GAME_HEIGHT - 10, GAME_WIDTH, 20, 0xff5b6f, 0)
+      .setDepth(14);
+    this.damageFrameLeft = this.add.rectangle(10, GAME_HEIGHT * 0.5, 20, GAME_HEIGHT, 0xff5b6f, 0).setDepth(14);
+    this.damageFrameRight = this.add
+      .rectangle(GAME_WIDTH - 10, GAME_HEIGHT * 0.5, 20, GAME_HEIGHT, 0xff5b6f, 0)
+      .setDepth(14);
     this.feedbackPulse = this.add.rectangle(GAME_WIDTH * 0.5, GAME_HEIGHT * 0.5, GAME_WIDTH, GAME_HEIGHT, 0x9feee2, 0);
     this.feedbackPulse.setDepth(11);
     this.corruptionVeil = this.add.rectangle(GAME_WIDTH * 0.5, GAME_HEIGHT * 0.5, GAME_WIDTH, GAME_HEIGHT, RAYCAST_ATMOSPHERE.corruptionTint, 0);
@@ -318,6 +474,7 @@ export class RaycastScene extends Phaser.Scene {
       this.getWeaponOverlayFlashAlpha()
     );
     this.corruptionVeil.setAlpha(atmosphere.corruptionAlpha);
+    const objectiveState = this.getObjectiveState();
     this.weaponText.setText(
       buildRaycastHudLine({
         health: this.playerHealth,
@@ -326,10 +483,15 @@ export class RaycastScene extends Phaser.Scene {
         keyTotal: this.currentLevel.keys.length,
         secretCount: this.collectedSecrets.size,
         secretTotal: this.currentLevel.secrets.length,
-        objective: this.getObjectiveHint(),
+        objective: buildRaycastCurrentObjective(objectiveState),
         criticalMessage: this.getHudCriticalMessage()
       })
     );
+    this.objectiveText.setText(`OBJECTIVE // ${buildRaycastCurrentObjective(objectiveState)}`);
+    this.hintText.setText(`PISTA // ${buildRaycastHintText(objectiveState)}`);
+    this.updateHealthHud();
+    this.updateFocusedEnemyHud();
+    this.renderMinimap();
     if (this.debugHudVisible) {
       this.debugText.setText(
         buildRaycastDebugLine({
@@ -366,9 +528,12 @@ export class RaycastScene extends Phaser.Scene {
     this.directorIntensity = 0;
     this.directorSpawnCounter = 0;
     this.debugHudVisible = false;
+    this.minimapVisible = true;
     this.enemyProjectiles = [];
     this.lastCombatMessage = RAYCAST_ATMOSPHERE.messages.intro;
     this.combatMessageUntil = 0;
+    this.blockedHintReason = null;
+    this.blockedHintUntil = 0;
     this.weaponOverlayFlashUntil = 0;
     this.nextAmbientCueAt = 0;
     this.sceneReady = false;
@@ -385,6 +550,7 @@ export class RaycastScene extends Phaser.Scene {
     keyboard?.on('keydown-ONE', this.handleWeaponSlotOne);
     keyboard?.on('keydown-TWO', this.handleWeaponSlotTwo);
     keyboard?.on('keydown-THREE', this.handleWeaponSlotThree);
+    keyboard?.on('keydown-M', this.handleToggleMinimap);
     keyboard?.on('keydown-TAB', this.handleToggleDebug);
     keyboard?.on('keydown-BACKTICK', this.handleToggleDebug);
     this.input.on('pointerdown', this.handleFireInput);
@@ -410,6 +576,7 @@ export class RaycastScene extends Phaser.Scene {
     keyboard?.off('keydown-ONE', this.handleWeaponSlotOne);
     keyboard?.off('keydown-TWO', this.handleWeaponSlotTwo);
     keyboard?.off('keydown-THREE', this.handleWeaponSlotThree);
+    keyboard?.off('keydown-M', this.handleToggleMinimap);
     keyboard?.off('keydown-TAB', this.handleToggleDebug);
     keyboard?.off('keydown-BACKTICK', this.handleToggleDebug);
     this.input.off('pointerdown', this.handleFireInput);
@@ -421,6 +588,10 @@ export class RaycastScene extends Phaser.Scene {
       this.muzzleFlash,
       this.wallImpactFlash,
       this.damageFlash,
+      this.damageFrameTop,
+      this.damageFrameBottom,
+      this.damageFrameLeft,
+      this.damageFrameRight,
       this.feedbackPulse,
       this.corruptionVeil,
       this.systemText,
@@ -588,6 +759,10 @@ export class RaycastScene extends Phaser.Scene {
   }
 
   private updateEnemies(delta: number): void {
+    const previousTime = this.time.now - delta;
+    const activatedTelegraphs = this.enemies
+      .filter((enemy) => didRaycastEnemyFinishTelegraph(enemy, previousTime, this.time.now))
+      .map((enemy) => enemy.id);
     const enemyResult = updateRaycastEnemies(
       this.map,
       this.enemies,
@@ -595,6 +770,11 @@ export class RaycastScene extends Phaser.Scene {
       this.time.now,
       delta
     );
+    if (activatedTelegraphs.length > 0) {
+      this.audioFeedback.play('spawn', 0.84, this.time.now);
+      this.pulseFeedback(0xffb347, 0.04, 120);
+      this.setCombatMessage(activatedTelegraphs.length > 1 ? 'HOSTILES MATERIALIZED' : 'HOSTILE BREACH FORMED');
+    }
     if (enemyResult.spawnedProjectiles.length > 0) {
       this.enemyProjectiles.push(...enemyResult.spawnedProjectiles);
       this.setCombatMessage('INCOMING HOSTILE PACKET');
@@ -620,7 +800,7 @@ export class RaycastScene extends Phaser.Scene {
     this.damageTaken += amount;
     this.lastPlayerDamageAt = this.time.now;
     this.cameras.main.shake(95, 0.003);
-    this.flashDamage();
+    this.flashDamage(amount);
     this.audioFeedback.play('damage', 1, this.time.now);
     this.setCombatMessage(`${RAYCAST_ATMOSPHERE.messages.damage} -${amount}`);
     if (this.playerHealth === 0) {
@@ -640,6 +820,7 @@ export class RaycastScene extends Phaser.Scene {
     this.currentLevel.keys.forEach((key) => {
       if (!this.keySystem.hasKey(key.id) && isNearPoint(this.player.x, this.player.y, key)) {
         this.keySystem.collect(key);
+        this.blockedHintReason = null;
         this.audioFeedback.play('pickupKey', 1, this.time.now);
         this.pulseFeedback(0x9feee2, 0.09, 140);
         this.cameras.main.shake(55, 0.0014);
@@ -664,10 +845,13 @@ export class RaycastScene extends Phaser.Scene {
       this.audioFeedback.play('directorAmbush', 1, this.time.now);
       this.pulseCorruption();
       this.pulseFeedback(0xff5b6f, 0.06, 170);
-      this.setCombatMessage(`${RAYCAST_ATMOSPHERE.messages.trigger}: ${trigger.activationText}`);
+      this.setCombatMessage(`CORRUPTION BREACH: ${trigger.activationText}`);
       this.enemies.push(
         ...trigger.spawns.map((spawn, index) =>
-          createRaycastEnemy({ id: `${trigger.id}-${index}`, kind: spawn.kind, x: spawn.x, y: spawn.y })
+          this.createTelegraphedSpawnEnemy(
+            { id: `${trigger.id}-${index}`, kind: spawn.kind, x: spawn.x, y: spawn.y },
+            'encounter'
+          )
         )
       );
     });
@@ -688,11 +872,21 @@ export class RaycastScene extends Phaser.Scene {
       const exitAccess = getRaycastExitAccess(this.currentLevel, {
         collectedKeyIds: this.currentLevel.keys.filter((key) => this.keySystem.hasKey(key.id)).map((key) => key.id),
         openDoorIds: this.currentLevel.doors.filter((door) => this.doorSystem.isOpen(door.id)).map((door) => door.id),
-        activatedTriggerIds: this.currentLevel.triggers.filter((trigger) => this.triggerSystem.hasActivated(trigger.id)).map((trigger) => trigger.id)
+        activatedTriggerIds: this.currentLevel.triggers.filter((trigger) => this.triggerSystem.hasActivated(trigger.id)).map((trigger) => trigger.id),
+        livingEnemyCount: this.countLivingEnemies()
       });
       if (!exitAccess.allowed) {
         this.audioFeedback.play('uiDeny', 1, this.time.now);
         this.pulseFeedback(0xff5b6f, 0.06, 110);
+        this.blockedHintReason =
+          exitAccess.reason === 'TOKEN_REQUIRED'
+            ? 'exit-key'
+            : exitAccess.reason === 'TRIGGER_REQUIRED'
+              ? 'exit-trigger'
+              : exitAccess.reason === 'SIGNAL_LOCKED'
+                ? 'exit-combat'
+                : 'exit-door';
+        this.blockedHintUntil = this.time.now + 2600;
         this.setCombatMessage(exitAccess.message ?? RAYCAST_ATMOSPHERE.messages.locked);
         return;
       }
@@ -745,12 +939,15 @@ export class RaycastScene extends Phaser.Scene {
     if (result.reason === 'MISSING_KEY') {
       this.audioFeedback.play('uiDeny', 1, this.time.now);
       this.pulseFeedback(0xff5b6f, 0.05, 100);
-      this.setCombatMessage(`${RAYCAST_ATMOSPHERE.messages.locked}: ${door.lockedObjectiveText}`);
+      this.blockedHintReason = 'door-key';
+      this.blockedHintUntil = this.time.now + 2600;
+      this.setCombatMessage(`TOKEN REQUIRED: ${door.lockedObjectiveText.toUpperCase()}`);
       return;
     }
     if (!result.opened) return;
 
     openRaycastDoor(this.map, door);
+    this.blockedHintReason = null;
     this.tryTriggerEncounterBeat((beat) => beat.doorId === door.id);
     this.audioFeedback.play('door', 1, this.time.now);
     this.audioFeedback.play('uiConfirm', 0.85, this.time.now + 24);
@@ -776,7 +973,7 @@ export class RaycastScene extends Phaser.Scene {
         y: door.y,
         color: getBillboardColor(this.doorSystem.isOpen(door.id) ? 'gate-open' : 'gate', this.doorSystem.isOpen(door.id)),
         radius: this.doorSystem.isOpen(door.id) ? 0.22 : 0.18,
-        label: this.doorSystem.isOpen(door.id) ? 'OPEN' : door.billboardLabel,
+        label: this.doorSystem.isOpen(door.id) ? 'OPEN' : 'LOCK',
         style: this.doorSystem.isOpen(door.id) ? ('gate-open' as const) : ('gate' as const)
       }));
     const secretBillboards = this.currentLevel.secrets
@@ -794,7 +991,7 @@ export class RaycastScene extends Phaser.Scene {
       y: exit.y,
       color: getBillboardColor('exit', this.levelComplete),
       radius: exit.radius,
-      label: this.getObjectiveHint() === 'EXIT READY' || this.levelComplete ? 'PORTAL' : exit.billboardLabel,
+      label: this.getObjectiveHint() === 'REACH EXIT' || this.levelComplete ? 'PORTAL' : exit.billboardLabel,
       style: 'exit' as const
     }));
 
@@ -902,18 +1099,46 @@ export class RaycastScene extends Phaser.Scene {
 
   private spawnDirectorEnemy(spawn: SpawnRequest): void {
     this.enemies.push(
-      createRaycastEnemy({
-        id: `director-${this.directorSpawnCounter}`,
-        kind: spawn.kind,
-        x: spawn.x,
-        y: spawn.y
-      })
+      this.createTelegraphedSpawnEnemy(
+        {
+          id: `director-${this.directorSpawnCounter}`,
+          kind: spawn.kind,
+          x: spawn.x,
+          y: spawn.y
+        },
+        'director'
+      )
     );
     this.directorSpawnCounter += 1;
-    this.audioFeedback.play('spawn', 1, this.time.now);
+    this.audioFeedback.play('directorAmbush', 1, this.time.now);
     this.pulseCorruption();
     this.pulseFeedback(0xff5b6f, 0.06, 160);
-    this.setCombatMessage(`${RAYCAST_ATMOSPHERE.messages.spawn}: ${spawn.kind}`);
+    this.setCombatMessage(`HOSTILE SIGNAL DETECTED: ${spawn.kind}`);
+  }
+
+  private createTelegraphedSpawnEnemy(
+    spawn: { id: string; kind: SpawnRequest['kind']; x: number; y: number },
+    source: 'director' | 'encounter'
+  ): RaycastEnemy {
+    const visibleToPlayer = this.hasLineOfSightToPoint(spawn.x, spawn.y);
+    const distanceToPlayer = Math.hypot(spawn.x - this.player.x, spawn.y - this.player.y);
+    const baseDuration = source === 'director' ? DIRECTOR_SPAWN_TELEGRAPH_MS : ENCOUNTER_SPAWN_TELEGRAPH_MS;
+    const telegraphDurationMs =
+      baseDuration +
+      (visibleToPlayer ? VISIBLE_SPAWN_TELEGRAPH_BONUS_MS : 0) +
+      (distanceToPlayer <= 5.5 ? CLOSE_SPAWN_TELEGRAPH_BONUS_MS : 0);
+
+    return createTelegraphedRaycastEnemy(spawn, {
+      telegraphStartedAt: this.time.now,
+      telegraphDurationMs
+    });
+  }
+
+  private hasLineOfSightToPoint(x: number, y: number): boolean {
+    const angle = Math.atan2(y - this.player.y, x - this.player.x);
+    const distance = Math.hypot(x - this.player.x, y - this.player.y);
+    const hit = castRay(this.map, this.player.x, this.player.y, angle, angle);
+    return hit.distance + 0.08 >= distance;
   }
 
   private getActivatedTriggerCount(): number {
@@ -960,21 +1185,169 @@ export class RaycastScene extends Phaser.Scene {
     return this.currentLevel.keys.filter((key) => this.keySystem.hasKey(key.id)).length;
   }
 
-  private getObjectiveHint(): string {
-    if (this.levelComplete) return 'COMPLETE';
-    if (this.getKeyCount() < this.currentLevel.keys.length) return 'FIND TOKEN';
-    if (this.currentLevel.doors.some((door) => !this.doorSystem.isOpen(door.id))) return 'OPEN GATE';
-    if (this.getActivatedTriggerCount() === 0) return 'EXPECT AMBUSH';
-    return 'EXIT READY';
+  private getObjectiveState(): RaycastObjectiveState {
+    if (this.blockedHintReason && this.time.now >= this.blockedHintUntil) {
+      this.blockedHintReason = null;
+    }
+
+    return {
+      levelComplete: this.levelComplete,
+      keyCount: this.getKeyCount(),
+      keyTotal: this.currentLevel.keys.length,
+      closedDoorCount: this.currentLevel.doors.filter((door) => !this.doorSystem.isOpen(door.id)).length,
+      activatedTriggerCount: this.getActivatedTriggerCount(),
+      requiredTriggerCount: this.currentLevel.progression.requiredExitTriggerIds.length,
+      livingEnemyCount: this.countLivingEnemies(),
+      playerStationaryMs: this.playerStationaryMs,
+      recentBlockedReason: this.blockedHintReason
+    };
   }
 
-  private flashDamage(): void {
-    this.damageFlash.setAlpha(0.34);
-    this.tweens.killTweensOf(this.damageFlash);
+  private getObjectiveHint(): string {
+    return buildRaycastCurrentObjective(this.getObjectiveState());
+  }
+
+  private renderMinimap(): void {
+    this.minimapGraphics.clear();
+    this.minimapMarkerLabels.forEach((label) => label.setVisible(false));
+    if (!this.minimapVisible) return;
+
+    const model = buildRaycastMinimapModel({
+      map: this.map,
+      level: this.currentLevel,
+      player: this.player,
+      collectedKeyIds: this.currentLevel.keys.filter((key) => this.keySystem.hasKey(key.id)).map((key) => key.id),
+      openDoorIds: this.currentLevel.doors.filter((door) => this.doorSystem.isOpen(door.id)).map((door) => door.id),
+      collectedSecretIds: this.collectedSecrets
+    });
+    const panelWidth = 132;
+    const panelHeight = 98;
+    const originX = GAME_WIDTH - 150;
+    const originY = 84;
+    const tileSize = Math.max(4, Math.floor(Math.min(panelWidth / model.width, panelHeight / model.height)));
+    const offsetX = originX + Math.floor((panelWidth - model.width * tileSize) / 2);
+    const offsetY = originY + Math.floor((panelHeight - model.height * tileSize) / 2);
+
+    model.cells.forEach((cell) => {
+      const color = cell.kind === 'wall' ? 0x47606d : cell.kind === 'door' ? 0xffb347 : 0x142129;
+      const alpha = cell.kind === 'floor' ? 0.88 : 1;
+      this.minimapGraphics.fillStyle(color, alpha);
+      this.minimapGraphics.fillRect(offsetX + cell.x * tileSize, offsetY + cell.y * tileSize, tileSize - 1, tileSize - 1);
+    });
+
+    model.markers
+      .filter((marker) => marker.active)
+      .forEach((marker) => {
+        const px = offsetX + marker.x * tileSize;
+        const py = offsetY + marker.y * tileSize;
+        if (marker.kind === 'player') {
+          this.minimapGraphics.fillStyle(0xfff29e, 1);
+          this.minimapGraphics.fillCircle(px, py, Math.max(2, tileSize * 0.3));
+          const dirX = Math.cos(marker.angle ?? 0) * tileSize * 0.7;
+          const dirY = Math.sin(marker.angle ?? 0) * tileSize * 0.7;
+          this.minimapGraphics.lineStyle(2, 0xfff29e, 0.95);
+          this.minimapGraphics.beginPath();
+          this.minimapGraphics.moveTo(px, py);
+          this.minimapGraphics.lineTo(px + dirX, py + dirY);
+          this.minimapGraphics.strokePath();
+          return;
+        }
+
+        const color =
+          marker.kind === 'key'
+            ? 0x9feee2
+            : marker.kind === 'exit'
+              ? 0x6fd8ff
+              : 0xffb347;
+        this.minimapGraphics.fillStyle(color, 0.95);
+        this.minimapGraphics.fillRect(px - 2, py - 2, Math.max(4, tileSize - 2), Math.max(4, tileSize - 2));
+      });
+
+    const labeledMarkers = model.markers.filter((marker) => this.shouldRenderMinimapMarkerLabel(marker));
+    labeledMarkers.slice(0, this.minimapMarkerLabels.length).forEach((marker, index) => {
+      const label = this.minimapMarkerLabels[index];
+      const markerX = offsetX + marker.x * tileSize;
+      const markerY = offsetY + marker.y * tileSize;
+      label.setText(marker.label);
+      const textX = Phaser.Math.Clamp(markerX + 4, originX + 6, originX + panelWidth - label.width - 4);
+      const textY = Phaser.Math.Clamp(markerY - 6, originY + 3, originY + panelHeight - label.height - 3);
+      label.setPosition(textX, textY).setVisible(true);
+    });
+  }
+
+  private shouldRenderMinimapMarkerLabel(marker: { kind: string; label: string; active: boolean }): boolean {
+    if (!marker.active) return false;
+    if (marker.kind === 'door') return marker.label === 'LOCK' || marker.label === 'OPEN';
+    if (marker.kind === 'exit') return marker.label === 'EXIT';
+    return false;
+  }
+
+  private updateHealthHud(): void {
+    const visual = getRaycastHealthVisualState(this.playerHealth);
+    this.healthText.setText(buildRaycastPlayerHealthLine({ health: this.playerHealth })).setColor(visual.color);
+    this.healthBarFill.setFillStyle(visual.accentColor, 1);
+    this.healthBarFill.setSize(168 * visual.ratio, 6);
+  }
+
+  private updateFocusedEnemyHud(): void {
+    const target = getRaycastCrosshairTargetInfo(
+      this.player,
+      this.enemies,
+      castRay(this.map, this.player.x, this.player.y, this.player.angle, this.player.angle).distance,
+      this.time.now
+    );
+    if (!target) {
+      this.targetText.setVisible(false);
+      this.targetBarTrack.setVisible(false);
+      this.targetBarFill.setVisible(false);
+      return;
+    }
+
+    const targetColor = target.isTelegraphing ? '#ffcf7c' : target.isWindingUp ? '#ff9ca8' : '#fff0c2';
+    this.targetText
+      .setText(
+        buildRaycastFocusedEnemyLine({
+          label: target.kindLabel,
+          health: target.health,
+          maxHealth: target.maxHealth,
+          isWindingUp: target.isWindingUp,
+          isTelegraphing: target.isTelegraphing
+        })
+      )
+      .setColor(targetColor)
+      .setVisible(true);
+    this.targetBarTrack.setVisible(true);
+    this.targetBarFill
+      .setVisible(true)
+      .setFillStyle(target.isTelegraphing ? 0xffb347 : target.isWindingUp ? 0xff5b6f : 0xfff29e, 1);
+    this.targetBarFill.setSize(118 * Phaser.Math.Clamp(target.healthRatio, 0, 1), 4);
+  }
+
+  private flashDamage(amount: number): void {
+    const frameAlpha = Phaser.Math.Clamp(0.42 + amount / 22, 0.42, 0.9);
+    const flashAlpha = Phaser.Math.Clamp(0.16 + amount / 60, 0.16, 0.32);
+    this.damageFlash.setAlpha(flashAlpha);
+    this.damageFrameTop.setAlpha(frameAlpha);
+    this.damageFrameBottom.setAlpha(frameAlpha);
+    this.damageFrameLeft.setAlpha(frameAlpha);
+    this.damageFrameRight.setAlpha(frameAlpha);
+    this.tweens.killTweensOf([
+      this.damageFlash,
+      this.damageFrameTop,
+      this.damageFrameBottom,
+      this.damageFrameLeft,
+      this.damageFrameRight
+    ]);
     this.tweens.add({
-      targets: this.damageFlash,
+      targets: [
+        this.damageFlash,
+        this.damageFrameTop,
+        this.damageFrameBottom,
+        this.damageFrameLeft,
+        this.damageFrameRight
+      ],
       alpha: 0,
-      duration: 180,
+      duration: 220,
       ease: 'Quad.easeOut'
     });
   }

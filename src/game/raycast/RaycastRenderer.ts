@@ -1,6 +1,12 @@
 import Phaser from 'phaser';
 import { castRay, type RaycastMap } from './RaycastMap';
-import type { RaycastEnemy } from './RaycastEnemy';
+import {
+  getRaycastEnemySpawnTelegraphProgress,
+  getRaycastEnemyWindupProgress,
+  isRaycastEnemyTelegraphing,
+  isRaycastEnemyWindingUp,
+  type RaycastEnemy
+} from './RaycastEnemy';
 import type { RaycastEnemyProjectile } from './RaycastEnemySystem';
 import type { RaycastPlayerState } from './RaycastPlayerController';
 import type { WeaponKind } from '../systems/WeaponTypes';
@@ -108,32 +114,92 @@ export class RaycastRenderer {
         return;
       }
 
-      const color = projection.enemy.hitFlashUntil > time ? 0xffffff : projection.enemy.color;
+      if (isRaycastEnemyTelegraphing(projection.enemy, time)) {
+        const progress = getRaycastEnemySpawnTelegraphProgress(projection.enemy, time);
+        const pulse = Math.sin(time / 64) * 0.5 + 0.5;
+        const visibility = calculateEnemyVisibility(projection.distance, atmosphere);
+        const markerRadius = projection.size * (0.42 + progress * 0.14 + pulse * 0.08);
+        const haloRadius = projection.size * (0.72 + progress * 0.2 + pulse * 0.1);
+        const alpha = (0.42 + pulse * 0.18) * visibility;
+        this.graphics.fillStyle(0x15050a, 0.52 * visibility);
+        this.graphics.fillRect(
+          projection.screenX - projection.size * 0.6,
+          height * 0.5 - projection.size * 0.7,
+          projection.size * 1.2,
+          projection.size * 1.4
+        );
+        this.graphics.fillStyle(0xff5b6f, 0.16 * visibility + progress * 0.08);
+        this.graphics.fillCircle(projection.screenX, height * 0.5, haloRadius);
+        this.graphics.lineStyle(4, 0xffcf7c, alpha);
+        this.graphics.strokeCircle(projection.screenX, height * 0.5, markerRadius);
+        this.graphics.lineStyle(2, 0xffffff, (0.35 + pulse * 0.12) * visibility);
+        this.graphics.lineBetween(
+          projection.screenX - projection.size * 0.36,
+          height * 0.5,
+          projection.screenX + projection.size * 0.36,
+          height * 0.5
+        );
+        this.graphics.lineBetween(
+          projection.screenX,
+          height * 0.5 - projection.size * 0.36,
+          projection.screenX,
+          height * 0.5 + projection.size * 0.36
+        );
+        this.graphics.fillStyle(0xffe8aa, (0.55 + pulse * 0.16) * visibility);
+        this.graphics.fillRect(projection.screenX - projection.size * 0.2, height * 0.5 - projection.size * 0.9, projection.size * 0.4, 5);
+        this.graphics.fillStyle(0xff5b6f, 0.78 * visibility);
+        this.graphics.fillRect(
+          projection.screenX - projection.size * 0.28,
+          height * 0.5 - projection.size * 0.52,
+          projection.size * 0.56,
+          projection.size * (0.72 + pulse * 0.06)
+        );
+        return;
+      }
+
+      const isWindingUp = isRaycastEnemyWindingUp(projection.enemy, time);
+      const windupProgress = getRaycastEnemyWindupProgress(projection.enemy, time);
+      const pulse = isWindingUp ? Math.sin(time / 38) * 0.5 + 0.5 : 0;
+      const telegraphMix = isWindingUp ? 0.3 + windupProgress * 0.4 + pulse * 0.18 : 0;
+      const color = projection.enemy.hitFlashUntil > time
+        ? 0xffffff
+        : this.blendColors(projection.enemy.color, 0xff6b5f, telegraphMix);
       const visibility = calculateEnemyVisibility(projection.distance, atmosphere);
-      const isWindingUp = projection.enemy.attackWindupUntil > time;
+      const size = projection.size * (isWindingUp ? 1.04 + windupProgress * 0.08 + pulse * 0.04 : 1);
       this.graphics.fillStyle(RAYCAST_ATMOSPHERE.enemyOutline, 0.72 * visibility);
       this.graphics.fillRect(
-        projection.screenX - projection.size * 0.56,
-        height * 0.5 - projection.size * 0.61,
-        projection.size * 1.12,
-        projection.size * 1.22
+        projection.screenX - size * 0.56,
+        height * 0.5 - size * 0.61,
+        size * 1.12,
+        size * 1.22
       );
-      this.graphics.fillStyle(color, 0.95 * visibility);
-      this.drawEnemySilhouette(projection, height, color, visibility);
       if (isWindingUp) {
-        this.graphics.lineStyle(3, 0xfff29e, 0.82 * visibility);
+        this.graphics.fillStyle(0xff5b6f, (0.18 + windupProgress * 0.14 + pulse * 0.08) * visibility);
+        this.graphics.fillCircle(projection.screenX, height * 0.5, size * (0.46 + windupProgress * 0.08));
+      }
+      this.graphics.fillStyle(color, 0.95 * visibility);
+      this.drawEnemySilhouette({ ...projection, size }, height, color, visibility);
+      if (isWindingUp) {
+        this.graphics.lineStyle(4, 0xffe08a, (0.78 + pulse * 0.14) * visibility);
         this.graphics.strokeRect(
-          projection.screenX - projection.size * 0.62,
-          height * 0.5 - projection.size * 0.67,
-          projection.size * 1.24,
-          projection.size * 1.34
+          projection.screenX - size * 0.66,
+          height * 0.5 - size * 0.71,
+          size * 1.32,
+          size * 1.42
         );
-        this.graphics.fillStyle(0xfff29e, 0.52 * visibility);
-        this.graphics.fillRect(projection.screenX - projection.size * 0.34, height * 0.5 - projection.size * 0.82, projection.size * 0.68, 4);
+        this.graphics.fillStyle(0xff5b6f, (0.5 + windupProgress * 0.2) * visibility);
+        this.graphics.fillRect(projection.screenX - size * 0.42, height * 0.5 - size * 0.92, size * 0.84, 6);
+        this.graphics.lineStyle(2, 0xffffff, (0.5 + pulse * 0.18) * visibility);
+        this.graphics.lineBetween(
+          projection.screenX - size * 0.38,
+          height * 0.5 - size * 0.89,
+          projection.screenX + size * (windupProgress * 0.76 - 0.38),
+          height * 0.5 - size * 0.89
+        );
       }
       this.graphics.fillStyle(0x0b0d12, 1);
-      this.graphics.fillRect(projection.screenX - projection.size * 0.22, height * 0.5 - projection.size * 0.24, projection.size * 0.12, projection.size * 0.12);
-      this.graphics.fillRect(projection.screenX + projection.size * 0.1, height * 0.5 - projection.size * 0.24, projection.size * 0.12, projection.size * 0.12);
+      this.graphics.fillRect(projection.screenX - size * 0.22, height * 0.5 - size * 0.24, size * 0.12, size * 0.12);
+      this.graphics.fillRect(projection.screenX + size * 0.1, height * 0.5 - size * 0.24, size * 0.12, size * 0.12);
     });
   }
 

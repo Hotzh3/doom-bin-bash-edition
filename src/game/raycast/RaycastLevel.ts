@@ -35,6 +35,7 @@ export interface RaycastDoor extends LockedDoor {
   tileX: number;
   tileY: number;
   billboardLabel: string;
+  requiredKeyIds?: string[];
 }
 
 export interface RaycastTrigger extends LevelTrigger {
@@ -87,6 +88,8 @@ export interface RaycastLevel {
     requiredExitKeyIds: string[];
     requiredExitDoorIds: string[];
     requiredExitTriggerIds: string[];
+    requiredExitKeyGroups?: string[][];
+    requireCombatClear?: boolean;
     blockedExitMessage: string;
   };
   director: {
@@ -498,11 +501,20 @@ export interface RaycastProgressSnapshot {
   collectedKeyIds: Iterable<string>;
   openDoorIds: Iterable<string>;
   activatedTriggerIds: Iterable<string>;
+  livingEnemyCount?: number;
 }
 
 export interface RaycastExitAccessResult {
   allowed: boolean;
   message?: string;
+  reason?: 'TOKEN_REQUIRED' | 'ACCESS_DENIED' | 'TRIGGER_REQUIRED' | 'SIGNAL_LOCKED';
+  missingKeyIds?: string[];
+  missingDoorIds?: string[];
+  missingTriggerIds?: string[];
+}
+
+export function getRaycastDoorRequiredKeyIds(door: Pick<RaycastDoor, 'keyId' | 'requiredKeyIds'>): string[] {
+  return door.requiredKeyIds?.length ? [...door.requiredKeyIds] : [door.keyId];
 }
 
 export function getRaycastExitAccess(level: RaycastLevel, progress: RaycastProgressSnapshot): RaycastExitAccessResult {
@@ -510,12 +522,55 @@ export function getRaycastExitAccess(level: RaycastLevel, progress: RaycastProgr
   const doorIds = new Set(progress.openDoorIds);
   const triggerIds = new Set(progress.activatedTriggerIds);
   const requirements = level.progression;
-  const hasRequiredKeys = requirements.requiredExitKeyIds.every((id) => keyIds.has(id));
-  const hasRequiredDoors = requirements.requiredExitDoorIds.every((id) => doorIds.has(id));
-  const hasRequiredTriggers = requirements.requiredExitTriggerIds.every((id) => triggerIds.has(id));
+  const requiredKeyGroups =
+    requirements.requiredExitKeyGroups?.length
+      ? requirements.requiredExitKeyGroups
+      : requirements.requiredExitKeyIds.map((id) => [id]);
+  const missingKeyIds = requirements.requiredExitKeyIds.filter((id) => !keyIds.has(id));
+  const missingDoorIds = requirements.requiredExitDoorIds.filter((id) => !doorIds.has(id));
+  const missingTriggerIds = requirements.requiredExitTriggerIds.filter((id) => !triggerIds.has(id));
+  const hasRequiredKeys = requiredKeyGroups.every((group) => group.some((id) => keyIds.has(id)));
+  const hasRequiredDoors = missingDoorIds.length === 0;
+  const hasRequiredTriggers = missingTriggerIds.length === 0;
+  const combatLocked = Boolean(requirements.requireCombatClear && (progress.livingEnemyCount ?? 0) > 0);
 
-  if (hasRequiredKeys && hasRequiredDoors && hasRequiredTriggers) {
+  if (hasRequiredKeys && hasRequiredDoors && hasRequiredTriggers && !combatLocked) {
     return { allowed: true };
+  }
+
+  if (!hasRequiredKeys) {
+    return {
+      allowed: false,
+      reason: 'TOKEN_REQUIRED',
+      message: 'TOKEN REQUIRED',
+      missingKeyIds
+    };
+  }
+
+  if (!hasRequiredDoors) {
+    return {
+      allowed: false,
+      reason: 'ACCESS_DENIED',
+      message: requirements.blockedExitMessage,
+      missingDoorIds
+    };
+  }
+
+  if (!hasRequiredTriggers) {
+    return {
+      allowed: false,
+      reason: 'TRIGGER_REQUIRED',
+      message: 'TRIGGER REQUIRED',
+      missingTriggerIds
+    };
+  }
+
+  if (combatLocked) {
+    return {
+      allowed: false,
+      reason: 'SIGNAL_LOCKED',
+      message: 'SIGNAL LOCKED'
+    };
   }
 
   return {
@@ -537,20 +592,23 @@ export function getSafeDirectorSpawnPoints(
   const zoneMatches = level.director.spawnPoints.filter((point) => !activeZoneId || point.zoneId === activeZoneId);
   const candidates = zoneMatches.length > 0 ? zoneMatches : level.director.spawnPoints;
   return candidates.filter((point) => {
-    if (Math.hypot(point.x - player.x, point.y - player.y) < point.minPlayerDistance) return false;
+    const distance = Math.hypot(point.x - player.x, point.y - player.y);
+    const safeDistanceFloor = Math.max(point.minPlayerDistance, 2.75);
+    if (distance < safeDistanceFloor) return false;
     if (options?.map && options.map.grid[Math.floor(point.y)]?.[Math.floor(point.x)] !== RAYCAST_TILE.EMPTY) return false;
     if (options?.enemies?.some((enemy) => enemy.alive && Math.hypot(point.x - enemy.x, point.y - enemy.y) <= enemy.radius + 0.45)) {
       return false;
     }
     if (options?.allowVisibleFrontSpawns) return true;
     if (player.angle === undefined || !options?.map) return true;
-    const distance = Math.hypot(point.x - player.x, point.y - player.y);
     const forwardX = Math.cos(player.angle);
     const forwardY = Math.sin(player.angle);
     const dot = ((point.x - player.x) * forwardX + (point.y - player.y) * forwardY) / Math.max(distance, 0.001);
-    if (dot >= 0.75 && distance <= Math.max(3.5, point.minPlayerDistance + 0.8)) return false;
-    if (!hasLineOfSightToPoint(options.map, player, point)) return true;
-    return dot < 0.35;
+    const hasSight = hasLineOfSightToPoint(options.map, player, point);
+    if (!hasSight) return true;
+    if (distance <= Math.max(safeDistanceFloor + 1.4, 4.8)) return false;
+    if (dot >= 0.45) return false;
+    return dot < 0.2 || distance >= safeDistanceFloor + 2.6;
   });
 }
 

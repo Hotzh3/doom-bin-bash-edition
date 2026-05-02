@@ -25,6 +25,7 @@ export function buildRaycastEpisodeBanner(input: RaycastEpisodeBannerInput): str
     'TURN MOUSE/QE/ARROWS',
     'FIRE F/SPACE/CLICK',
     'WEAPONS 1/2/3',
+    'M MAP',
     'R RESTART',
     'N NEXT WHEN CLEAR',
     'TAB DEBUG'
