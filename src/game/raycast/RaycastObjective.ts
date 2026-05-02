@@ -59,7 +59,7 @@ export function buildRaycastHintText(state: RaycastObjectiveState): string {
 
 export function buildRaycastInstructionText(minimapToggleKey = 'M'): string {
   return [
-    `MOVE WASD  FIRE F/SPACE/CLICK  SWITCH 1/2/3`,
-    `KEYS OPEN DOORS  MAP ${minimapToggleKey}  TAB DEBUG`
+    `MOVE WASD  TURN MOUSE/QE/ARROWS  FIRE F/SPACE/CLICK  WEAPONS 1/2/3`,
+    `INTERACT WALK INTO GATES/EXITS  MAP ${minimapToggleKey}  H/? HELP  TAB DEBUG`
   ].join('\n');
 }

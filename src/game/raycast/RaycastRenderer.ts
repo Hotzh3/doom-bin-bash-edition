@@ -21,8 +21,13 @@ import { RAYCAST_LEVEL, type RaycastLevel } from './RaycastLevel';
 import { RAYCAST_RENDERER_CONFIG } from './RaycastRendererConfig';
 import {
   getRaycastCellVariant,
+  getRaycastEnemyVisualStyle,
+  getRaycastGroundVisualStyle,
+  sampleRaycastGroundBand,
+  sampleRaycastWallPattern,
   getRaycastZoneTheme,
   getRaycastZoneVisual,
+  getRaycastWallVisualStyle,
   sampleRaycastSurfaceContext
 } from './RaycastVisualTheme';
 export { RAYCAST_RENDERER_CONFIG, type RaycastRendererConfig } from './RaycastRendererConfig';
@@ -164,32 +169,23 @@ export class RaycastRenderer {
       const color = projection.enemy.hitFlashUntil > time
         ? 0xffffff
         : this.blendColors(projection.enemy.color, 0xff6b5f, telegraphMix);
+      const enemyStyle = getRaycastEnemyVisualStyle(projection.enemy.kind, projection.enemy.color);
       const visibility = calculateEnemyVisibility(projection.distance, atmosphere);
       const size = projection.size * (isWindingUp ? 1.04 + windupProgress * 0.08 + pulse * 0.04 : 1);
-      this.graphics.fillStyle(RAYCAST_ATMOSPHERE.enemyOutline, 0.72 * visibility);
-      this.graphics.fillRect(
-        projection.screenX - size * 0.56,
-        height * 0.5 - size * 0.61,
-        size * 1.12,
-        size * 1.22
-      );
+      this.graphics.fillStyle(enemyStyle.outlineColor, 0.78 * visibility);
+      this.graphics.fillEllipse(projection.screenX, height * 0.5 + size * 0.08, size * 1.28, size * 1.42);
       if (isWindingUp) {
-        this.graphics.fillStyle(0xff5b6f, (0.18 + windupProgress * 0.14 + pulse * 0.08) * visibility);
+        this.graphics.fillStyle(enemyStyle.windupColor, (0.18 + windupProgress * 0.14 + pulse * 0.08) * visibility);
         this.graphics.fillCircle(projection.screenX, height * 0.5, size * (0.46 + windupProgress * 0.08));
       }
       this.graphics.fillStyle(color, 0.95 * visibility);
-      this.drawEnemySilhouette({ ...projection, size }, height, color, visibility);
+      this.drawEnemySilhouette({ ...projection, size }, height, color, visibility, enemyStyle, telegraphMix);
       if (isWindingUp) {
-        this.graphics.lineStyle(4, 0xffe08a, (0.78 + pulse * 0.14) * visibility);
-        this.graphics.strokeRect(
-          projection.screenX - size * 0.66,
-          height * 0.5 - size * 0.71,
-          size * 1.32,
-          size * 1.42
-        );
-        this.graphics.fillStyle(0xff5b6f, (0.5 + windupProgress * 0.2) * visibility);
+        this.graphics.lineStyle(4, enemyStyle.accentColor, (0.78 + pulse * 0.14) * visibility);
+        this.graphics.strokeEllipse(projection.screenX, height * 0.5 + size * 0.08, size * 1.48, size * 1.56);
+        this.graphics.fillStyle(enemyStyle.windupColor, (0.5 + windupProgress * 0.2) * visibility);
         this.graphics.fillRect(projection.screenX - size * 0.42, height * 0.5 - size * 0.92, size * 0.84, 6);
-        this.graphics.lineStyle(2, 0xffffff, (0.5 + pulse * 0.18) * visibility);
+        this.graphics.lineStyle(2, enemyStyle.eyeColor, (0.5 + pulse * 0.18) * visibility);
         this.graphics.lineBetween(
           projection.screenX - size * 0.38,
           height * 0.5 - size * 0.89,
@@ -197,9 +193,6 @@ export class RaycastRenderer {
           height * 0.5 - size * 0.89
         );
       }
-      this.graphics.fillStyle(0x0b0d12, 1);
-      this.graphics.fillRect(projection.screenX - size * 0.22, height * 0.5 - size * 0.24, size * 0.12, size * 0.12);
-      this.graphics.fillRect(projection.screenX + size * 0.1, height * 0.5 - size * 0.24, size * 0.12, size * 0.12);
     });
   }
 
@@ -323,31 +316,106 @@ export class RaycastRenderer {
   ): void {
     const activeZone = getRaycastZoneVisual(this.level.zones, player.x, player.y);
     const zoneTheme = getRaycastZoneTheme(activeZone?.visualTheme);
+    const activeSurface = {
+      cellX: Math.floor(player.x),
+      cellY: Math.floor(player.y),
+      landmark: activeZone?.landmark ?? 'none',
+      variant: getRaycastCellVariant(Math.floor(player.x * 2), Math.floor(player.y * 2))
+    };
+    const groundStyle = getRaycastGroundVisualStyle({
+      theme: zoneTheme,
+      landmark: activeSurface.landmark,
+      variant: activeSurface.variant
+    });
     const horizonY = height * 0.5;
 
     for (let y = 0; y < horizonY; y += 4) {
       const t = y / horizonY;
+      const bandIndex = Math.floor(y / 4);
+      const bandSample = sampleRaycastGroundBand(activeSurface, bandIndex, 'ceiling');
       const bandShade = 1 - t * 0.55;
       const color = this.blendColors(
-        this.applyShade(zoneTheme.ceilingColor, bandShade),
+        this.applyShade(
+          this.blendColors(zoneTheme.ceilingColor, zoneTheme.accentColor, 0.06 + bandSample.scatter * 0.08),
+          bandShade
+        ),
         RAYCAST_ATMOSPHERE.voidColor,
         0.36 + t * 0.42
       );
       this.graphics.fillStyle(color, 1);
       this.graphics.fillRect(0, y, width, 4);
+
+      if (groundStyle.ceilingPattern === 'crossbars' && (y + bandSample.crossbarOffset) % 28 === 0) {
+        this.graphics.fillStyle(zoneTheme.signalColor, (0.02 + (1 - t) * 0.028) * bandSample.accentAlpha);
+        this.graphics.fillRect(0, y, width, 2);
+        this.graphics.fillStyle(zoneTheme.patternColor, (0.012 + (1 - t) * 0.02) * bandSample.accentAlpha);
+        this.graphics.fillRect(width * 0.18, y + 2, width * 0.64, 1);
+      } else if (groundStyle.ceilingPattern === 'void-noise' && (y + Math.floor(player.x * 10)) % 22 === 0) {
+        const laneX = (bandSample.laneOffset * 9) % Math.max(16, width);
+        this.graphics.fillStyle(zoneTheme.patternColor, (0.018 + (1 - t) * 0.025) * bandSample.accentAlpha);
+        this.graphics.fillRect(laneX, y, width * (0.34 + bandSample.scatter * 0.4), 1);
+        if (bandSample.scatter > 0.58) {
+          this.graphics.fillRect(Math.max(0, width - laneX - width * 0.22), y + 2, width * 0.22, 1);
+        }
+      } else if (groundStyle.ceilingPattern === 'scanlines' && y % 20 === 0) {
+        this.graphics.fillStyle(zoneTheme.patternColor, (0.012 + (1 - t) * 0.018) * bandSample.accentAlpha);
+        this.graphics.fillRect(width * 0.12, y, width * (0.2 + bandSample.scatter * 0.32), 1);
+        this.graphics.fillRect(width * 0.62, y, width * (0.12 + bandSample.scatter * 0.18), 1);
+      }
     }
 
     for (let y = horizonY; y < height; y += 4) {
       const t = (y - horizonY) / Math.max(1, height - horizonY);
+      const bandIndex = Math.floor((y - horizonY) / 4);
+      const bandSample = sampleRaycastGroundBand(activeSurface, bandIndex, 'floor');
       const variant = getRaycastCellVariant(Math.floor(player.x * 3 + t * 19), Math.floor(player.y * 3 + t * 27));
       const base = this.blendColors(zoneTheme.floorColor, zoneTheme.accentColor, 0.1 + variant * 0.14);
-      const color = this.blendColors(base, RAYCAST_ATMOSPHERE.floorColor, t * 0.5);
+      const color = this.blendColors(
+        this.blendColors(base, groundStyle.floorGlowColor, bandSample.scatter * 0.05),
+        RAYCAST_ATMOSPHERE.floorColor,
+        t * 0.5
+      );
       this.graphics.fillStyle(color, 1);
       this.graphics.fillRect(0, y, width, 4);
 
-      if ((y + Math.floor(player.x * 12)) % 24 === 0) {
-        this.graphics.fillStyle(zoneTheme.patternColor, 0.04 + (1 - t) * 0.03);
+      if (groundStyle.floorPattern === 'scanlines' && (y + Math.floor(player.x * 12)) % 24 === 0) {
+        this.graphics.fillStyle(zoneTheme.patternColor, (0.024 + (1 - t) * 0.028) * bandSample.accentAlpha);
         this.graphics.fillRect(0, y, width, 1);
+        this.graphics.fillRect(width * 0.16 + bandSample.laneOffset, y + 2, width * 0.14, 1);
+      } else if (groundStyle.floorPattern === 'grid-cells' && y % groundStyle.cellStride < 4) {
+        this.graphics.fillStyle(groundStyle.floorGlowColor, (0.02 + (1 - t) * 0.025) * bandSample.accentAlpha);
+        this.graphics.fillRect(0, y, width, 1);
+        for (let x = ((Math.floor(player.x * 14) + bandSample.laneOffset) % groundStyle.cellStride); x < width; x += groundStyle.cellStride) {
+          this.graphics.fillRect(x, y, 1, 4);
+        }
+      } else if (groundStyle.floorPattern === 'hazard-lattice' && y % groundStyle.cellStride < 4) {
+        this.graphics.fillStyle(groundStyle.floorGlowColor, (0.03 + (1 - t) * 0.036) * bandSample.accentAlpha);
+        this.graphics.fillRect(0, y, width, 2);
+        for (let x = ((Math.floor(player.y * 11) + bandSample.laneOffset) % groundStyle.cellStride); x < width; x += groundStyle.cellStride) {
+          this.graphics.fillRect(x, y, 2, 4);
+        }
+      } else if (groundStyle.floorPattern === 'glow-rings' && y % groundStyle.cellStride < 4) {
+        const ringInset = width * (0.24 + bandSample.scatter * 0.08);
+        this.graphics.fillStyle(groundStyle.floorGlowColor, (0.028 + (1 - t) * 0.046) * bandSample.accentAlpha);
+        this.graphics.fillRect(ringInset, y, width - ringInset * 2, 2);
+        this.graphics.fillRect(ringInset + bandSample.segmentLength, y + 2, Math.max(16, width * 0.18), 1);
+      } else if (groundStyle.floorPattern === 'noise-cells') {
+        const cellStride = groundStyle.cellStride;
+        const rowSeed = Math.floor(player.x * 9 + y * 0.15 + bandSample.laneOffset);
+        if (y % Math.max(8, Math.floor(cellStride * 0.66)) === 0) {
+          for (let x = 0; x < width; x += Math.max(10, Math.floor(cellStride * 0.75))) {
+            const noise = getRaycastCellVariant(Math.floor(x * 0.2) + rowSeed, Math.floor(y * 0.18) + Math.floor(player.y * 8));
+            if (noise > 0.52) {
+              this.graphics.fillStyle(groundStyle.floorGlowColor, (0.012 + noise * 0.04 * (1 - t)) * bandSample.accentAlpha);
+              this.graphics.fillRect(x, y, Math.max(3, cellStride * (0.24 + bandSample.scatter * 0.22)), 2);
+            }
+          }
+        }
+      }
+
+      if (bandSample.scatter > 0.6 && y % Math.max(12, Math.floor(groundStyle.cellStride * 0.55)) === 0) {
+        this.graphics.fillStyle(zoneTheme.patternColor, 0.01 + (1 - t) * 0.018 * groundStyle.floorBandAlpha);
+        this.graphics.fillRect(width * 0.5 - bandSample.segmentLength, y + 1, bandSample.segmentLength * 2, 1);
       }
     }
 
@@ -355,7 +423,7 @@ export class RaycastRenderer {
     this.graphics.fillRect(0, 0, width, height);
     this.graphics.fillStyle(atmosphere.corruptionTint, atmosphere.pulseAlpha);
     this.graphics.fillRect(0, height * 0.47, width, height * 0.06);
-    this.graphics.lineStyle(1, zoneTheme.signalColor, 0.08);
+    this.graphics.lineStyle(1, zoneTheme.signalColor, 0.08 + groundStyle.floorBandAlpha);
     for (let y = 18; y < height; y += 36) {
       this.graphics.lineBetween(0, y, width, y);
     }
@@ -378,44 +446,101 @@ export class RaycastRenderer {
     atmosphere: RaycastAtmosphereRenderOptions,
     surface: ReturnType<typeof sampleRaycastSurfaceContext>
   ): void {
+    const wallStyle = getRaycastWallVisualStyle(wallType, surface);
+    const detail = sampleRaycastWallPattern(wallType, surface, column);
     const patternColor = this.blendColors(
       this.applyShade(
         this.blendColors(
           RAYCAST_ATMOSPHERE.wallPatternColors[wallType as keyof typeof RAYCAST_ATMOSPHERE.wallPatternColors] ?? 0x5f7190,
-          surface.theme.patternColor,
-          0.28 + surface.variant * 0.18
+          wallStyle.detailColor,
+          wallStyle.trimMix + surface.variant * 0.12
         ),
         shade
       ),
       atmosphere.fogColor,
       1 - shade
     );
+    const secondaryColor = this.blendColors(
+      this.applyShade(wallStyle.secondaryColor, shade),
+      atmosphere.fogColor,
+      1 - shade
+    );
+    const signalColor = this.blendColors(
+      this.applyShade(wallStyle.signalColor, shade),
+      atmosphere.fogColor,
+      1 - shade
+    );
     const alpha = Phaser.Math.Clamp((shade - atmosphere.ambientDarkness) * (0.42 + surface.variant * 0.18), 0.05, 0.32);
+    const pulseAlpha = wallStyle.pulseSignal ? atmosphere.pulseAlpha * 0.6 : 0;
+    const insetX = x + width * detail.horizontalInset * 0.2;
+    const insetWidth = Math.max(1, width - width * detail.horizontalInset * 0.4);
 
     if ((surface.cellX + surface.cellY) % 3 === 0 && column % 7 === 0) {
-      this.graphics.fillStyle(patternColor, alpha * 0.55);
-      this.graphics.fillRect(x, y + wallHeight * (0.18 + surface.variant * 0.12), width, Math.max(2, wallHeight * 0.018));
+      this.graphics.fillStyle(patternColor, alpha * 0.45);
+      this.graphics.fillRect(
+        insetX,
+        y + wallHeight * (0.18 + surface.variant * 0.12 + detail.bandOffset),
+        insetWidth,
+        Math.max(2, wallHeight * 0.018)
+      );
     }
 
-    if (wallType === 1 && column % 13 === 0) {
+    if (wallStyle.pattern === 'terminal-panels' && column % wallStyle.panelStride === 0) {
       this.graphics.fillStyle(patternColor, alpha);
-      this.graphics.fillRect(x, y + wallHeight * 0.24, width, 2);
-      this.graphics.fillRect(x, y + wallHeight * 0.68, width, 2);
-    } else if (wallType === 2 && column % 17 === 0) {
+      this.graphics.fillRect(insetX, y + wallHeight * (0.18 + detail.bandOffset), insetWidth, Math.max(2, wallHeight * 0.028));
+      this.graphics.fillRect(insetX, y + wallHeight * (0.64 - detail.bandOffset * 0.5), insetWidth, Math.max(2, wallHeight * 0.022));
+      this.graphics.fillStyle(secondaryColor, alpha * 0.7);
+      this.graphics.fillRect(insetX, y + wallHeight * 0.34, insetWidth, Math.max(3, wallHeight * (0.1 + detail.chip * 0.05)));
+      if (detail.energy > 0.62) {
+        this.graphics.fillStyle(signalColor, alpha * 0.3 + pulseAlpha * 0.4);
+        this.graphics.fillRect(x + width * 0.5, y + wallHeight * 0.22, Math.max(1, width * 0.35), Math.max(2, wallHeight * 0.12));
+      }
+    } else if (wallStyle.pattern === 'corrupted-ribs' && column % wallStyle.panelStride === 0) {
       this.graphics.lineStyle(1, patternColor, alpha + 0.08);
-      this.graphics.lineBetween(x, y + wallHeight * 0.2, x + width, y + wallHeight * 0.42);
-      this.graphics.lineBetween(x + width, y + wallHeight * 0.42, x, y + wallHeight * 0.7);
-    } else if (wallType === 3 && column % 9 === 0) {
-      this.graphics.fillStyle(patternColor, alpha + atmosphere.pulseAlpha);
-      this.graphics.fillRect(x, y + wallHeight * 0.16, width, wallHeight * 0.1);
-      this.graphics.fillRect(x, y + wallHeight * 0.54, width, wallHeight * 0.08);
-    } else if (wallType === 4 && column % 11 === 0) {
-      this.graphics.lineStyle(1, patternColor, alpha + 0.1);
-      this.graphics.strokeRect(x, y + wallHeight * 0.32, Math.max(2, width), Math.max(5, wallHeight * 0.2));
+      if (detail.diagonalFlip) {
+        this.graphics.lineBetween(x, y + wallHeight * (0.18 + detail.seamOffset * 0.2), x + width, y + wallHeight * 0.42);
+        this.graphics.lineBetween(x + width, y + wallHeight * 0.42, x, y + wallHeight * (0.76 - detail.seamOffset * 0.2));
+      } else {
+        this.graphics.lineBetween(x + width, y + wallHeight * (0.18 + detail.seamOffset * 0.2), x, y + wallHeight * 0.42);
+        this.graphics.lineBetween(x, y + wallHeight * 0.42, x + width, y + wallHeight * (0.76 - detail.seamOffset * 0.2));
+      }
+      this.graphics.fillStyle(secondaryColor, alpha * 0.42);
+      this.graphics.fillRect(insetX, y + wallHeight * (0.48 + detail.bandOffset * 0.6), insetWidth, Math.max(2, wallHeight * 0.06));
+    } else if (wallStyle.pattern === 'hazard-strips' && column % Math.max(6, wallStyle.panelStride - 2) === 0) {
+      this.graphics.fillStyle(patternColor, alpha + pulseAlpha);
+      this.graphics.fillRect(insetX, y + wallHeight * (0.16 + detail.bandOffset * 0.5), insetWidth, Math.max(2, wallHeight * 0.1));
+      this.graphics.fillRect(insetX, y + wallHeight * (0.56 - detail.bandOffset * 0.35), insetWidth, Math.max(2, wallHeight * 0.08));
+      this.graphics.lineStyle(1, signalColor, alpha + 0.12 + pulseAlpha);
+      this.graphics.lineBetween(x, y + wallHeight * (0.26 + detail.seamOffset * 0.12), x + width, y + wallHeight * (0.34 - detail.seamOffset * 0.12));
+    } else if (wallStyle.pattern === 'locked-warning-frame' && column % wallStyle.panelStride === 0) {
+      this.graphics.lineStyle(1, signalColor, alpha + 0.14 + pulseAlpha);
+      this.graphics.strokeRect(insetX, y + wallHeight * (0.22 + detail.bandOffset * 0.3), Math.max(2, insetWidth), Math.max(6, wallHeight * 0.5));
+      this.graphics.fillStyle(secondaryColor, alpha * 0.6);
+      this.graphics.fillRect(insetX, y + wallHeight * (0.42 + detail.seamOffset * 0.08), insetWidth, Math.max(2, wallHeight * 0.06));
+    } else if (wallStyle.pattern === 'exit-glow' && column % wallStyle.panelStride === 0) {
+      this.graphics.fillStyle(signalColor, alpha * 0.5 + pulseAlpha);
+      this.graphics.fillRect(insetX, y + wallHeight * (0.14 + detail.bandOffset * 0.3), insetWidth, Math.max(3, wallHeight * 0.14));
+      this.graphics.lineStyle(2, patternColor, alpha + 0.16);
+      this.graphics.strokeCircle(x + width * 0.5, y + wallHeight * 0.34, Math.max(2, width * 0.72));
+    } else if (wallStyle.pattern === 'data-noise-cells' && column % wallStyle.panelStride === 0) {
+      const noiseStep = wallHeight * 0.1;
+      for (let row = 0; row < 4; row += 1) {
+        const noise = getRaycastCellVariant(surface.cellX + column + row, surface.cellY + row);
+        const rowY = y + wallHeight * (0.18 + row * 0.16 + detail.bandOffset * 0.35);
+        if (noise > 0.42) {
+          this.graphics.fillStyle(noise > 0.72 ? signalColor : patternColor, alpha * (0.6 + noise * 0.2));
+          this.graphics.fillRect(insetX, rowY, insetWidth, Math.max(2, noiseStep * (0.18 + noise * 0.24)));
+        }
+      }
+    }
+
+    if (detail.chip > 0.66 && column % Math.max(5, wallStyle.panelStride - 4) === 0) {
+      this.graphics.fillStyle(secondaryColor, alpha * 0.4);
+      this.graphics.fillRect(x, y + wallHeight * (0.28 + detail.seamOffset * 0.15), Math.max(1, width * 0.35), Math.max(2, wallHeight * 0.05));
     }
 
     if (surface.landmark === 'key' && column % 15 === 0) {
-      this.graphics.lineStyle(2, surface.theme.signalColor, alpha + 0.08);
+      this.graphics.lineStyle(2, signalColor, alpha + 0.08);
       this.graphics.lineBetween(x + width * 0.5, y + wallHeight * 0.2, x + width, y + wallHeight * 0.32);
       this.graphics.lineBetween(x + width, y + wallHeight * 0.32, x + width * 0.5, y + wallHeight * 0.44);
       this.graphics.lineBetween(x + width * 0.5, y + wallHeight * 0.44, x, y + wallHeight * 0.32);
@@ -423,18 +548,18 @@ export class RaycastRenderer {
     }
 
     if (surface.landmark === 'gate' && column % 11 === 0) {
-      this.graphics.lineStyle(1, surface.theme.signalColor, alpha + 0.14);
+      this.graphics.lineStyle(1, signalColor, alpha + 0.14 + pulseAlpha);
       this.graphics.lineBetween(x + width * 0.5, y + wallHeight * 0.16, x + width * 0.5, y + wallHeight * 0.82);
     }
 
     if (surface.landmark === 'ambush' && column % 19 === 0) {
-      this.graphics.lineStyle(2, surface.theme.signalColor, alpha + atmosphere.pulseAlpha * 0.6);
+      this.graphics.lineStyle(2, signalColor, alpha + atmosphere.pulseAlpha * 0.6);
       this.graphics.lineBetween(x, y + wallHeight * 0.24, x + width, y + wallHeight * 0.3);
       this.graphics.lineBetween(x + width, y + wallHeight * 0.3, x, y + wallHeight * 0.38);
     }
 
     if (surface.landmark === 'exit' && column % 13 === 0) {
-      this.graphics.lineStyle(2, surface.theme.signalColor, alpha + 0.14);
+      this.graphics.lineStyle(2, signalColor, alpha + 0.14 + pulseAlpha);
       this.graphics.strokeCircle(x + width * 0.5, y + wallHeight * 0.32, Math.max(2, width * 0.7));
     }
   }
@@ -459,66 +584,149 @@ export class RaycastRenderer {
     this.graphics.lineBetween(projection.screenX, height * 0.5 - burstSize * 0.42, projection.screenX, height * 0.5 + burstSize * 0.42);
   }
 
-  private drawEnemySilhouette(projection: EnemyProjection, height: number, color: number, visibility: number): void {
+  private drawEnemySilhouette(
+    projection: EnemyProjection,
+    height: number,
+    color: number,
+    visibility: number,
+    style: ReturnType<typeof getRaycastEnemyVisualStyle>,
+    telegraphMix: number
+  ): void {
     const bodyTop = height * 0.5 - projection.size * 0.55;
     const bodyLeft = projection.screenX - projection.size * 0.5;
+    const centerY = height * 0.5;
+    const accentColor = this.blendColors(style.accentColor, 0xff6b5f, telegraphMix * 0.45);
 
     this.graphics.fillStyle(color, 0.95 * visibility);
 
-    if (projection.enemy.kind === 'BRUTE') {
-      this.graphics.fillRect(bodyLeft + projection.size * 0.08, bodyTop + projection.size * 0.08, projection.size * 0.84, projection.size);
-      this.graphics.fillRect(bodyLeft - projection.size * 0.16, bodyTop + projection.size * 0.18, projection.size * 0.2, projection.size * 0.62);
-      this.graphics.fillRect(bodyLeft + projection.size * 0.96, bodyTop + projection.size * 0.18, projection.size * 0.2, projection.size * 0.62);
+    if (style.silhouette === 'juggernaut') {
+      this.graphics.fillCircle(projection.screenX, bodyTop + projection.size * 0.16, projection.size * 0.18);
+      this.graphics.fillEllipse(projection.screenX, bodyTop + projection.size * 0.6, projection.size * 0.86, projection.size * 0.92);
+      this.graphics.fillCircle(bodyLeft + projection.size * 0.16, bodyTop + projection.size * 0.46, projection.size * 0.14);
+      this.graphics.fillCircle(bodyLeft + projection.size * 0.84, bodyTop + projection.size * 0.46, projection.size * 0.14);
       this.graphics.fillTriangle(
         projection.screenX,
-        bodyTop - projection.size * 0.14,
-        bodyLeft + projection.size * 0.14,
+        bodyTop + projection.size * 0.52,
+        bodyLeft + projection.size * 0.2,
+        bodyTop + projection.size * 1.04,
+        bodyLeft + projection.size * 0.4,
+        bodyTop + projection.size * 0.62
+      );
+      this.graphics.fillTriangle(
+        projection.screenX,
+        bodyTop + projection.size * 0.52,
+        bodyLeft + projection.size * 0.8,
+        bodyTop + projection.size * 1.04,
+        bodyLeft + projection.size * 0.6,
+        bodyTop + projection.size * 0.62
+      );
+      this.graphics.fillStyle(accentColor, 0.22 * visibility);
+      this.graphics.fillEllipse(projection.screenX, bodyTop + projection.size * 0.42, projection.size * 0.54, projection.size * 0.14);
+      this.graphics.fillStyle(style.coreColor, 0.72 * visibility);
+      this.graphics.fillCircle(projection.screenX, bodyTop + projection.size * 0.56, projection.size * 0.11);
+      this.graphics.fillStyle(style.eyeColor, 0.98 * visibility);
+      this.graphics.fillCircle(bodyLeft + projection.size * 0.42, bodyTop + projection.size * 0.18, projection.size * 0.04);
+      this.graphics.fillCircle(bodyLeft + projection.size * 0.58, bodyTop + projection.size * 0.18, projection.size * 0.04);
+      this.graphics.lineStyle(2, accentColor, 0.42 * visibility);
+      this.graphics.lineBetween(bodyLeft + projection.size * 0.32, bodyTop + projection.size * 0.06, bodyLeft + projection.size * 0.18, bodyTop - projection.size * 0.06);
+      this.graphics.lineBetween(bodyLeft + projection.size * 0.68, bodyTop + projection.size * 0.06, bodyLeft + projection.size * 0.82, bodyTop - projection.size * 0.06);
+      return;
+    }
+
+    if (style.silhouette === 'phantom') {
+      this.graphics.fillCircle(projection.screenX, bodyTop + projection.size * 0.18, projection.size * 0.14);
+      this.graphics.fillTriangle(
+        projection.screenX,
+        bodyTop + projection.size * 0.08,
+        bodyLeft + projection.size * 0.08,
+        bodyTop + projection.size * 1.02,
+        bodyLeft + projection.size * 0.92,
+        bodyTop + projection.size * 1.02
+      );
+      this.graphics.fillTriangle(
+        projection.screenX - projection.size * 0.08,
         bodyTop + projection.size * 0.18,
-        bodyLeft + projection.size * 0.86,
-        bodyTop + projection.size * 0.18
+        projection.screenX - projection.size * 0.34,
+        bodyTop + projection.size * 0.02,
+        projection.screenX - projection.size * 0.12,
+        bodyTop + projection.size * 0.46
       );
-      this.graphics.fillStyle(0xffffff, 0.08 * visibility);
-      this.graphics.fillRect(bodyLeft + projection.size * 0.22, bodyTop + projection.size * 0.2, projection.size * 0.56, projection.size * 0.08);
-      this.graphics.lineStyle(2, 0xffd38b, 0.4 * visibility);
-      this.graphics.lineBetween(bodyLeft + projection.size * 0.2, bodyTop + projection.size * 0.66, bodyLeft + projection.size * 0.8, bodyTop + projection.size * 0.66);
+      this.graphics.fillTriangle(
+        projection.screenX + projection.size * 0.08,
+        bodyTop + projection.size * 0.18,
+        projection.screenX + projection.size * 0.34,
+        bodyTop + projection.size * 0.02,
+        projection.screenX + projection.size * 0.12,
+        bodyTop + projection.size * 0.46
+      );
+      this.graphics.fillStyle(style.coreColor, 0.42 * visibility);
+      this.graphics.fillEllipse(projection.screenX, bodyTop + projection.size * 0.56, projection.size * 0.26, projection.size * 0.38);
+      this.graphics.lineStyle(2, accentColor, 0.38 * visibility);
+      this.graphics.lineBetween(projection.screenX, bodyTop + projection.size * 0.16, projection.screenX, bodyTop + projection.size * 0.86);
+      this.graphics.lineBetween(projection.screenX - projection.size * 0.16, centerY + projection.size * 0.1, projection.screenX - projection.size * 0.3, centerY + projection.size * 0.42);
+      this.graphics.lineBetween(projection.screenX + projection.size * 0.16, centerY + projection.size * 0.1, projection.screenX + projection.size * 0.3, centerY + projection.size * 0.42);
+      this.graphics.fillStyle(style.eyeColor, 0.92 * visibility);
+      this.graphics.fillCircle(projection.screenX - projection.size * 0.05, bodyTop + projection.size * 0.22, projection.size * 0.03);
+      this.graphics.fillCircle(projection.screenX + projection.size * 0.05, bodyTop + projection.size * 0.22, projection.size * 0.03);
       return;
     }
 
-    if (projection.enemy.kind === 'STALKER') {
+    if (style.silhouette === 'sentinel') {
+      this.graphics.fillCircle(projection.screenX, bodyTop + projection.size * 0.18, projection.size * 0.18);
+      this.graphics.fillEllipse(projection.screenX, bodyTop + projection.size * 0.56, projection.size * 0.68, projection.size * 0.76);
+      this.graphics.fillCircle(bodyLeft + projection.size * 0.16, centerY, projection.size * 0.11);
+      this.graphics.fillCircle(bodyLeft + projection.size * 0.84, centerY, projection.size * 0.11);
       this.graphics.fillTriangle(
         projection.screenX,
-        bodyTop - projection.size * 0.08,
-        bodyLeft,
-        bodyTop + projection.size * 0.98,
-        bodyLeft + projection.size,
-        bodyTop + projection.size * 0.98
+        bodyTop + projection.size * 0.3,
+        bodyLeft + projection.size * 0.3,
+        bodyTop + projection.size * 0.88,
+        bodyLeft + projection.size * 0.7,
+        bodyTop + projection.size * 0.88
       );
-      this.graphics.fillRect(projection.screenX - projection.size * 0.12, bodyTop + projection.size * 0.12, projection.size * 0.24, projection.size * 0.76);
-      this.graphics.lineStyle(2, 0xa8ffd4, 0.34 * visibility);
-      this.graphics.lineBetween(projection.screenX, bodyTop + projection.size * 0.1, projection.screenX, bodyTop + projection.size * 0.88);
+      this.graphics.lineStyle(2, accentColor, 0.4 * visibility);
+      this.graphics.strokeCircle(projection.screenX, bodyTop + projection.size * 0.18, projection.size * 0.24);
+      this.graphics.lineBetween(bodyLeft + projection.size * 0.4, bodyTop + projection.size * 0.02, bodyLeft + projection.size * 0.34, bodyTop - projection.size * 0.16);
+      this.graphics.lineBetween(bodyLeft + projection.size * 0.6, bodyTop + projection.size * 0.02, bodyLeft + projection.size * 0.66, bodyTop - projection.size * 0.16);
+      this.graphics.fillStyle(style.coreColor, 0.68 * visibility);
+      this.graphics.fillCircle(projection.screenX, bodyTop + projection.size * 0.58, projection.size * 0.1);
+      this.graphics.fillStyle(style.eyeColor, 0.96 * visibility);
+      this.graphics.fillCircle(projection.screenX, bodyTop + projection.size * 0.18, projection.size * 0.04);
       return;
     }
 
-    if (projection.enemy.kind === 'RANGED') {
-      this.graphics.fillRect(bodyLeft + projection.size * 0.08, bodyTop + projection.size * 0.18, projection.size * 0.84, projection.size * 0.82);
-      this.graphics.fillRect(bodyLeft - projection.size * 0.1, bodyTop + projection.size * 0.42, projection.size * 1.2, projection.size * 0.12);
-      this.graphics.fillCircle(projection.screenX, bodyTop + projection.size * 0.14, projection.size * 0.16);
-      this.graphics.lineStyle(2, 0xd2f7ff, 0.36 * visibility);
-      this.graphics.strokeCircle(projection.screenX, bodyTop + projection.size * 0.14, projection.size * 0.22);
-      return;
-    }
-
-    this.graphics.fillRect(bodyLeft + projection.size * 0.14, bodyTop + projection.size * 0.08, projection.size * 0.72, projection.size);
+    this.graphics.fillCircle(projection.screenX, bodyTop + projection.size * 0.18, projection.size * 0.14);
     this.graphics.fillTriangle(
       projection.screenX,
-      bodyTop - projection.size * 0.08,
+      bodyTop + projection.size * 0.16,
       bodyLeft + projection.size * 0.18,
-      bodyTop + projection.size * 0.22,
+      bodyTop + projection.size * 0.92,
       bodyLeft + projection.size * 0.82,
-      bodyTop + projection.size * 0.22
+      bodyTop + projection.size * 0.92
     );
-    this.graphics.lineStyle(2, 0xffc2b1, 0.26 * visibility);
+    this.graphics.fillTriangle(
+      bodyLeft + projection.size * 0.18,
+      bodyTop + projection.size * 0.42,
+      bodyLeft + projection.size * 0.04,
+      bodyTop + projection.size * 0.72,
+      bodyLeft + projection.size * 0.24,
+      bodyTop + projection.size * 0.54
+    );
+    this.graphics.fillTriangle(
+      bodyLeft + projection.size * 0.82,
+      bodyTop + projection.size * 0.42,
+      bodyLeft + projection.size * 0.96,
+      bodyTop + projection.size * 0.72,
+      bodyLeft + projection.size * 0.76,
+      bodyTop + projection.size * 0.54
+    );
+    this.graphics.fillStyle(style.coreColor, 0.5 * visibility);
+    this.graphics.fillCircle(projection.screenX, bodyTop + projection.size * 0.54, projection.size * 0.08);
+    this.graphics.lineStyle(2, accentColor, 0.3 * visibility);
     this.graphics.lineBetween(bodyLeft + projection.size * 0.26, bodyTop + projection.size * 0.72, bodyLeft + projection.size * 0.74, bodyTop + projection.size * 0.72);
+    this.graphics.fillStyle(style.eyeColor, 0.94 * visibility);
+    this.graphics.fillCircle(bodyLeft + projection.size * 0.42, bodyTop + projection.size * 0.22, projection.size * 0.03);
+    this.graphics.fillCircle(bodyLeft + projection.size * 0.58, bodyTop + projection.size * 0.22, projection.size * 0.03);
   }
 
   private drawBillboardGlyph(projection: BillboardProjection, height: number): void {
