@@ -1,6 +1,6 @@
 import { getEnemyConfig } from '../entities/enemyConfig';
 import type { EnemyKind } from '../types/game';
-import { RAYCAST_LEVEL, type RaycastEnemySpawn } from './RaycastLevel';
+import { RAYCAST_LEVEL, type RaycastEnemySpawn, type RaycastLevel } from './RaycastLevel';
 
 export interface RaycastEnemy {
   id: string;
@@ -17,8 +17,8 @@ export interface RaycastEnemy {
   deathBurstUntil: number;
 }
 
-export function cloneRaycastEnemies(): RaycastEnemy[] {
-  return RAYCAST_LEVEL.initialSpawns.map(createRaycastEnemy);
+export function cloneRaycastEnemies(level: RaycastLevel = RAYCAST_LEVEL): RaycastEnemy[] {
+  return level.initialSpawns.map(createRaycastEnemy);
 }
 
 export function createRaycastEnemy(spawn: RaycastEnemySpawn): RaycastEnemy {

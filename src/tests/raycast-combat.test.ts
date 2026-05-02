@@ -137,5 +137,6 @@ describe('raycast combat', () => {
     expect(nearby.alive).toBe(false);
     expect(far.alive).toBe(true);
     expect(shot.killCount).toBe(2);
+    expect(shot.splashHitCount).toBe(1);
   });
 });

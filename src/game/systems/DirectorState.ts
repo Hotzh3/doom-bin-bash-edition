@@ -1,10 +1,11 @@
-export type DirectorState = 'EXPLORATION' | 'BUILD_UP' | 'AMBUSH' | 'HIGH_INTENSITY' | 'RECOVERY';
+export type DirectorState = 'CALM' | 'WATCHING' | 'WARNING' | 'AMBUSH' | 'PRESSURE' | 'RECOVERY';
 
 export const DIRECTOR_STATE_LABELS: Record<DirectorState, string> = {
-  EXPLORATION: 'Exploration',
-  BUILD_UP: 'Tension',
+  CALM: 'Calm',
+  WATCHING: 'Watching',
+  WARNING: 'Warning',
   AMBUSH: 'Ambush',
-  HIGH_INTENSITY: 'HighIntensity',
+  PRESSURE: 'Pressure',
   RECOVERY: 'Recovery'
 };
 
@@ -17,4 +18,5 @@ export interface DirectorDebugInfo {
   spawnCooldownRemainingMs: number;
   lastDecisionReason: string;
   spawnBudgetRemaining?: number;
+  antiCampMeterMs?: number;
 }

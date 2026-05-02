@@ -67,7 +67,7 @@ export const RAYCAST_ATMOSPHERE = {
 export function getAtmosphereForDirector(state: DirectorState | null, intensity: number): RaycastAtmosphereRenderOptions {
   const pressure = Math.max(0, Math.min(1, intensity / 5));
 
-  if (state === 'HIGH_INTENSITY') {
+  if (state === 'PRESSURE') {
     return {
       ambientDarkness: 0.29 + pressure * 0.05,
       fogStart: 3.2,
@@ -93,7 +93,20 @@ export function getAtmosphereForDirector(state: DirectorState | null, intensity:
     };
   }
 
-  if (state === 'BUILD_UP') {
+  if (state === 'WARNING') {
+    return {
+      ambientDarkness: 0.278 + pressure * 0.038,
+      fogStart: 3.5,
+      fogEnd: 8.7,
+      fogColor: RAYCAST_ATMOSPHERE.fogColor,
+      corruptionTint: RAYCAST_ATMOSPHERE.corruptionTint,
+      corruptionAlpha: 0.072 + pressure * 0.048,
+      pulseAlpha: 0.08 + pressure * 0.05,
+      enemyMinVisibility: 0.63
+    };
+  }
+
+  if (state === 'WATCHING') {
     return {
       ambientDarkness: 0.27 + pressure * 0.035,
       fogStart: 3.6,

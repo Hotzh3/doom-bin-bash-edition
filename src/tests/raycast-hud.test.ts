@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildRaycastDebugLine, buildRaycastHudLine } from '../game/raycast/RaycastHud';
+import { buildRaycastDebugLine, buildRaycastHudLine, formatRaycastObjectiveLabel } from '../game/raycast/RaycastHud';
 
 describe('raycast HUD', () => {
   it('builds a compact readable status line', () => {
@@ -62,5 +62,12 @@ describe('raycast HUD', () => {
     expect(debugHud).toContain('POS 2.5,12.5');
     expect(debugHud).toContain('AI Tension');
     expect(debugHud).toContain('budget 4');
+  });
+
+  it('compresses longer objective phrases into readable HUD tags', () => {
+    expect(formatRaycastObjectiveLabel('find token')).toBe('TOKEN');
+    expect(formatRaycastObjectiveLabel('OPEN GATE')).toBe('GATE');
+    expect(formatRaycastObjectiveLabel('Expect Ambush')).toBe('AMBUSH');
+    expect(formatRaycastObjectiveLabel('EXIT READY')).toBe('EXIT');
   });
 });

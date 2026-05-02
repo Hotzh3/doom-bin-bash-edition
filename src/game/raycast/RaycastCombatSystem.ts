@@ -12,6 +12,7 @@ export interface RaycastCombatResult {
   hitEnemy: RaycastEnemy | null;
   killed: boolean;
   killCount: number;
+  splashHitCount: number;
   wallDistance: number;
   totalDamage: number;
   hitCount: number;
@@ -54,6 +55,7 @@ export class RaycastCombatSystem {
         hitEnemy: null,
         killed: false,
         killCount: 0,
+        splashHitCount: 0,
         wallDistance,
         totalDamage: 0,
         hitCount: 0,
@@ -72,6 +74,7 @@ export class RaycastCombatSystem {
         hitEnemy: null,
         killed: false,
         killCount: 0,
+        splashHitCount: 0,
         wallDistance,
         totalDamage: 0,
         hitCount: 0,
@@ -85,6 +88,7 @@ export class RaycastCombatSystem {
       hitEnemy: impacts[0].enemy,
       killed: impacts.some((impact) => impact.killed),
       killCount: impacts.reduce((total, impact) => total + impact.killCount, 0),
+      splashHitCount: impacts.reduce((total, impact) => total + impact.splashHitCount, 0),
       wallDistance,
       totalDamage: impacts.reduce((total, impact) => total + impact.damage, 0),
       hitCount: impacts.length,
@@ -114,7 +118,8 @@ export class RaycastCombatSystem {
       enemy: target,
       damage: projectile.damage + splashImpacts.damage,
       killed: directKilled || splashImpacts.killCount > 0,
-      killCount: (directKilled ? 1 : 0) + splashImpacts.killCount
+      killCount: (directKilled ? 1 : 0) + splashImpacts.killCount,
+      splashHitCount: splashImpacts.hitCount
     };
   }
 
@@ -123,12 +128,13 @@ export class RaycastCombatSystem {
     projectile: ProjectileSpawn,
     enemies: RaycastEnemy[],
     time: number
-  ): { damage: number; killCount: number } {
-    if (projectile.explosionRadius <= 0) return { damage: 0, killCount: 0 };
+  ): { damage: number; killCount: number; hitCount: number } {
+    if (projectile.explosionRadius <= 0) return { damage: 0, killCount: 0, hitCount: 0 };
 
     const radius = projectile.explosionRadius / GRID_SCALE;
     let damage = 0;
     let killCount = 0;
+    let hitCount = 0;
     enemies.forEach((enemy) => {
       if (!enemy.alive || enemy.id === originEnemy.id) return;
       const distance = Math.hypot(enemy.x - originEnemy.x, enemy.y - originEnemy.y);
@@ -136,6 +142,7 @@ export class RaycastCombatSystem {
 
       const falloff = 1 - distance / radius;
       const splashDamage = Math.max(1, Math.round(projectile.damage * 0.62 * falloff));
+      hitCount += 1;
       if (applyDamage(enemy, splashDamage)) {
         enemy.deathBurstUntil = time + DEATH_BURST_MS;
         killCount += 1;
@@ -144,7 +151,7 @@ export class RaycastCombatSystem {
       damage += splashDamage;
     });
 
-    return { damage, killCount };
+    return { damage, killCount, hitCount };
   }
 }
 
@@ -153,6 +160,7 @@ interface RaycastProjectileImpact {
   damage: number;
   killed: boolean;
   killCount: number;
+  splashHitCount: number;
 }
 
 export function findEnemyInCrosshair(

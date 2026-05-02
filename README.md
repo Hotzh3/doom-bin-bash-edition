@@ -4,36 +4,44 @@
 
 # doom-bin-bash-edition
 
-Shooter FPS raycast original construido con Phaser 3, TypeScript y Vite. El foco actual del proyecto es `RaycastScene`: una experiencia first-person rápida, legible y oscura, inspirada solo a nivel de principios por shooters clásicos. `ArenaScene` se mantiene intacta como modo secundario/sandbox para sistemas 2D existentes.
+Original retro horror raycast FPS prototype built with Phaser 3, TypeScript, and Vite. The primary product direction is `RaycastScene`: a clean-room first-person mini episode with original levels, compact combat, and `GameDirector` pacing. `ArenaScene` remains available as a preserved secondary sandbox for the earlier 2D systems.
 
 ## Disclaimer
 
-Este es un proyecto original, creado con fines académicos y de portafolio. Está inspirado en la energía y estructura de arena shooters clásicos, pero no está afiliado a Doom, no es una copia ni un port de Doom, y no usa nombres, sprites, assets ni contenido copyrighted de Doom.
+This is an original portfolio / learning project. It is inspired by the feel of classic retro FPS games, but it is not affiliated with Doom or Doom 64 and does not reuse their code, assets, maps, names, sprites, sounds, or copyrighted content.
 
 ## Clean-room / Original Content Boundary
 
-Este repositorio no copia código, assets, mapas, sonidos, nombres, constantes, datos propietarios ni implementaciones reverse-engineered de juegos existentes. Tampoco usa contenido de DOOM64-RE.
+This repository does not copy code, assets, maps, sounds, names, constants, proprietary data, or reverse-engineered implementations from existing games. It also does not use content from DOOM64-RE.
 
-Las referencias se limitan a diseño de alto nivel: movimiento rápido, input inmediato, strafe central, FOV amplio, disparo instantáneo, enemigos simples pero peligrosos en grupo, triggers de emboscada, ritmo de calma a caos y atmósfera oscura/claustrofóbica pero legible. Todo código, tuning, layouts, visuales, audio, nombres y datos del juego deben ser originales del proyecto o provenir de fuentes permisivas con licencia clara.
+Reference points are limited to high-level feel goals such as fast movement, immediate input, strong strafe play, wide FOV, hitscan combat, ambush triggers, calm-to-chaos pacing, and a readable horror atmosphere. Code, tuning, layouts, visuals, audio, names, and gameplay data are original to this repo.
 
-## Descripción
+## Current Project
 
-`doom-bin-bash-edition` presenta ahora un modo FPS/raycast como ruta principal de desarrollo. La base del gameplay está separada en scenes, raycast modules, entities y systems de lógica pura para mantener el código claro, escalable y fácil de probar.
+`doom-bin-bash-edition` currently presents a compact original raycast FPS vertical slice as the main experience. The gameplay is split across scenes, raycast modules, entities, and pure systems so the project stays testable and easy to hand off.
 
-El foco actual está en una experiencia compacta y presentable de exploración y combate first-person: movimiento constante, strafe, cámara horizontal, disparo instantáneo, enemigos simples, puertas, llaves, secretos, triggers de emboscada, HUD, feedback audiovisual generado y un `GameDirector` básico que regula la presión del combate.
+The current slice focuses on a short but complete flow: a menu, a two-level mini episode, objective-driven progression, generated audiovisual feedback, and a `GameDirector` that shapes pressure without requiring a large content footprint.
 
-## Features Actuales
+## Current Features
 
 - `RaycastScene` como modo principal FPS/raycast.
+- `GameDirector` pacing that shifts between calm, warning, pressure, ambush, and recovery states.
+- Two linked original raycast levels presented as a mini episode.
+- First-person movement with `WASD`, mouse / key turning, instant fire, and weapon switching.
+- Doors, keys, secrets, and ambush triggers that support short guided runs.
+- Compact HUD with health, weapon, token, secret, objective, and critical messaging.
+- Level-clear, episode-clear, retry, and menu-return flows.
+- Generated WebAudio feedback with no external sound files.
+- `ArenaScene` preserved as a secondary 2D sandbox for legacy systems and regression safety.
 - Movimiento first-person con `WASD`, giro con flechas/`Q`/`E`, strafe central y cámara horizontal.
 - Mouse turn horizontal con pointer lock al hacer click dentro del canvas.
 - Render raycast con atmósfera oscura, contraste jugable y billboards.
 - Combate con disparo instantáneo, auto-aim permisivo, feedback de muzzle flash, hit flash, impactos y cambio de armas.
 - Enemigos simples pero peligrosos en grupo, con daño al jugador, windup visible y proyectiles enemigos.
 - Puertas, llaves, secretos, zonas y triggers de emboscada.
-- `GameDirector` como Game Master de ritmo: calma, tensión, caos y recuperación.
+- Catálogo compacto de niveles raycast con dos mapas originales enlazados como mini episodio.
 - HUD raycast compacto con vida, arma, tokens, secretos, objetivo, mensajes críticos y debug oculto por toggle.
-- Loop completo con `SIGNAL LOST`, retry, victoria, salida a menú y resumen final.
+- Loop completo con `SIGNAL LOST`, retry por nivel, avance al siguiente mapa y cierre de episodio con resumen final.
 - Audio básico generado con WebAudio, opcional y sin archivos externos.
 - `ArenaScene` conservada como modo secundario/sandbox 2D.
 - Arena responsive/fullscreen con dos jugadores locales y combate PvP + PvE.
@@ -50,10 +58,10 @@ El foco actual está en una experiencia compacta y presentable de exploración y
 - Feedback visual: hit flash, muzzle flash, death burst, screenshake sutil y arena decorativa.
 - Tests de lógica crítica para raycast, combate, FSM, configuración de enemigos, TargetSelector, audio config y GameDirector.
 
-## Controles
+## Controls
 
 - Menú: `SPACE` inicia `RaycastScene`; `A` abre `ArenaScene`.
-- Raycast: mover con `WASD`; girar con mouse horizontal, flechas izquierda/derecha o `Q`/`E`; disparar con `F`, `SPACE` o click; cambiar arma con `1`/`2`/`3`; `R` reintenta la run; `ESC` vuelve al menú; `TAB`/backtick alterna debug.
+- Raycast: mover con `WASD`; girar con mouse horizontal, flechas izquierda/derecha o `Q`/`E`; disparar con `F`, `SPACE` o click; cambiar arma con `1`/`2`/`3`; `R` reinicia el nivel actual; `N` avanza al siguiente nivel cuando el clear overlay está activo; `ESC` vuelve al menú; `TAB`/backtick alterna debug.
 - Arena secundaria: `R` reinicia arena; Player 1 mueve con `WASD` y dispara con `F`; Player 2 mueve con flechas y dispara con `L`.
 
 ## Stack Técnico
@@ -119,9 +127,26 @@ src/
 - `AudioFeedbackSystem`: genera cues cortos con WebAudio y falla de forma segura si el navegador bloquea audio.
 - `tests`: cubren lógica pura para reducir riesgo sin depender de rendering de Phaser.
 
-## Playtest
+## Run And Verify
 
-- Checklist rápida de feel y regresiones del vertical slice FPS: [docs/playtest/raycast-feel-checklist.md](docs/playtest/raycast-feel-checklist.md)
+```bash
+npm ci
+npm run dev
+```
+
+Verification commands:
+
+```bash
+npm run test
+npm run lint
+npm run build
+```
+
+## Manual QA
+
+- Demo script and handoff flow: [docs/demo/raycast-demo-script.md](docs/demo/raycast-demo-script.md)
+- Pre-demo / pre-PR release checklist: [docs/demo/release-checklist.md](docs/demo/release-checklist.md)
+- Raycast feel and regression checklist: [docs/playtest/raycast-feel-checklist.md](docs/playtest/raycast-feel-checklist.md)
 
 ## Technical Highlights
 
@@ -129,26 +154,11 @@ src/
 - **RaycastScene primary:** entrada principal desde menú para probar movimiento, cámara horizontal, combate, nivel, triggers y atmósfera.
 - **ArenaScene preserved:** modo 2D secundario para mantener compatibilidad con el sandbox local.
 - **GameDirector:** controla ritmo y eventos de presión, además de spawn budget y límite de enemigos vivos.
-- **Clean-room raycast feel:** movimiento inmediato, strafe fuerte, FOV amplio, disparo instantáneo, enemigos legibles, mapa con llave/puerta/emboscada/arena/secreto/salida y atmósfera procedural original.
+- **Clean-room raycast feel:** movimiento inmediato, strafe fuerte, FOV amplio, disparo instantáneo, enemigos legibles, dos mapas originales con llave/puerta/emboscada/secreto/salida y atmósfera procedural original.
 - **TargetSelector:** selección pura del jugador vivo más cercano, evitando targets muertos.
 - **Game states:** `RUNNING`, `GAME_OVER` y `ROUND_CLEAR` con overlay claro y reinicio por `R`.
 - **Critical logic tests:** cobertura de raycast, combate, FSM, configs de enemigos, selección de targets, audio config y director.
 - **Quality gates:** `npm run test`, `npm run lint`, `npm run build` y CI básico con GitHub Actions.
-
-## How To Run
-
-```bash
-npm ci
-npm run dev
-```
-
-Comandos de validación:
-
-```bash
-npm run test
-npm run lint
-npm run build
-```
 
 ## Visual Inspiration / Moodboard
 
@@ -176,9 +186,9 @@ Las imágenes siguientes son material visual local para presentación e inspirac
 
 No hay screenshots reales del gameplay versionadas todavía en `docs/assets`. Cuando se agreguen capturas reales del juego, deben colocarse en esta sección y etiquetarse explícitamente como gameplay screenshots.
 
-## Estado Actual del Proyecto
+## Project Status
 
-El proyecto está en reorientación hacia una vertical slice FPS/raycast jugable con polish visual y audio básico generado. Ya cuenta con movimiento first-person inmediato, renderer raycast, combate permisivo, enemigos legibles, puertas, llaves, secretos, triggers, director de ritmo, loop de muerte/victoria/retry, CI básico y tests de lógica crítica. `ArenaScene` sigue disponible como modo secundario. No incluye assets comerciales, mapas copiados, sistema formal de waves, powerups, boss ni multiplayer online.
+The project is currently a presentable raycast FPS vertical slice with a menu, two-level mini episode, generated audio, original progression content, and logic tests around critical systems. `ArenaScene` remains available as a secondary sandbox. The repo does not include copied maps, external commercial assets, bosses, online multiplayer, or large-scale progression systems.
 
 ## Roadmap por Fases
 

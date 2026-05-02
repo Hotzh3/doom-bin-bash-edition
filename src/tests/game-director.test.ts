@@ -13,6 +13,13 @@ const baseInput: GameDirectorInput = {
 };
 
 describe('GameDirector', () => {
+  const calmInput: GameDirectorInput = {
+    ...baseInput,
+    p2Alive: false,
+    p2Health: 0,
+    currentWave: 0
+  };
+
   it('lowers intensity when players are weak', () => {
     const director = new GameDirector();
     const healthyIntensity = director.calculateIntensity({
@@ -43,18 +50,40 @@ describe('GameDirector', () => {
     expect(progressedIntensity).toBeGreaterThan(openingIntensity);
   });
 
-  it('respects the maximum number of living enemies', () => {
-    const director = new GameDirector({ maxEnemiesAlive: 2, spawnCooldownMs: 0 });
+  it('starts calm, then shifts into watching as the run develops', () => {
+    const director = new GameDirector();
+
+    expect(director.update(calmInput).state).toBe('CALM');
+    expect(
+      director.update({
+        ...baseInput,
+        elapsedTime: 10_000
+      }).state
+    ).toBe('WATCHING');
+  });
+
+  it('respects the maximum number of living enemies during pressure', () => {
+    const director = new GameDirector({ config: { maxEnemiesAlive: 2, warningLeadMs: 0, highIntensitySpawnCooldownMs: 0 } });
+    director.update({
+      ...baseInput,
+      elapsedTime: 60_000,
+      totalKills: 8,
+      enemiesAlive: 1,
+      timeSincePlayerDamagedMs: 20_000
+    });
+
     const decision = director.update({
       ...baseInput,
+      elapsedTime: 61_000,
+      totalKills: 8,
       enemiesAlive: 2,
-      elapsedTime: 10_000
+      timeSincePlayerDamagedMs: 21_000
     });
 
     expect(decision.maxEnemiesAlive).toBe(2);
-    expect(decision.state).toBe('BUILD_UP');
+    expect(decision.state).toBe('PRESSURE');
     expect(decision.spawn).toBeNull();
-    expect(decision.events.some((event) => event.type === 'WARNING_MESSAGE')).toBe(true);
+    expect(decision.debug.lastDecisionReason).toBe('enemy cap reached');
   });
 
   it('does not spawn while both players are dead', () => {
@@ -82,29 +111,36 @@ describe('GameDirector', () => {
     expect(decision.spawn).toBeNull();
   });
 
-  it('respects spawn cooldown during ambush pressure', () => {
-    const director = new GameDirector({ config: { ambushSpawnCooldownMs: 5000 } });
+  it('telegraphs ambushes before pressure spawns and still respects cooldown', () => {
+    const director = new GameDirector({ config: { ambushSpawnCooldownMs: 5000, warningLeadMs: 1000 } });
     director.notifyZoneTrigger('cooldown-ambush', 1000);
+
+    const warning = director.update({ ...baseInput, elapsedTime: 1500, activatedTriggerCount: 1 });
     const first = director.update({ ...baseInput, elapsedTime: 2000, activatedTriggerCount: 1 });
     const second = director.update({ ...baseInput, elapsedTime: 3000, activatedTriggerCount: 1 });
 
+    expect(warning.state).toBe('WARNING');
+    expect(warning.spawn).toBeNull();
+    expect(warning.events.some((event) => event.type === 'PREPARE_AMBUSH')).toBe(true);
+    expect(warning.events.some((event) => event.type === 'WARNING_MESSAGE')).toBe(true);
+    expect(first.state).toBe('AMBUSH');
     expect(first.spawn).not.toBeNull();
-    expect(first.events.some((event) => event.type === 'PREPARE_AMBUSH')).toBe(true);
     expect(first.events.some((event) => event.type === 'SPAWN_PRESSURE')).toBe(true);
     expect(second.spawn).toBeNull();
-    expect(second.debug.lastDecisionReason).toBe('spawn cooldown');
+    expect(second.debug.lastDecisionReason).toMatch(/pause|cooldown/);
   });
 
   it('does not exceed total spawn budget', () => {
     const director = new GameDirector({
       maxTotalSpawns: 2,
       openingSpawnCount: 1,
-      spawnCooldownMs: 0
+      spawnCooldownMs: 0,
+      config: { warningLeadMs: 0, ambushSpawnCooldownMs: 0 }
     });
 
     expect(director.createOpeningSpawns()).toHaveLength(1);
     director.notifyZoneTrigger('test-ambush', 1000);
-    expect(director.update({ ...baseInput, elapsedTime: 2000 }).spawn).not.toBeNull();
+    expect(director.update({ ...baseInput, elapsedTime: 1500 }).spawn).not.toBeNull();
     expect(director.update({ ...baseInput, elapsedTime: 4000 }).spawn).toBeNull();
     expect(director.hasExhaustedSpawnBudget()).toBe(true);
   });
@@ -138,55 +174,114 @@ describe('GameDirector', () => {
     ).toBe('RANGED');
   });
 
-  it('enters ambush when a zone trigger notifies the director', () => {
-    const director = new GameDirector({ spawnCooldownMs: 0 });
+  it('enters ambush only after the warning window from a zone trigger', () => {
+    const director = new GameDirector({ spawnCooldownMs: 0, config: { warningLeadMs: 800 } });
     director.notifyZoneTrigger('foundry-ambush', 1000);
 
+    const warning = director.update({
+      ...baseInput,
+      elapsedTime: 1500,
+      activeZoneId: 'foundry-ambush',
+      activatedTriggerCount: 1
+    });
     const decision = director.update({
       ...baseInput,
-      elapsedTime: 2000,
+      elapsedTime: 1900,
       activeZoneId: 'foundry-ambush',
       activatedTriggerCount: 1
     });
 
+    expect(warning.state).toBe('WARNING');
     expect(decision.state).toBe('AMBUSH');
     expect(decision.spawn?.kind).toMatch(/STALKER|RANGED/);
-    expect(decision.debug.lastDecisionReason).toContain('spawn');
   });
 
-  it('punishes stationary players with stalker pressure', () => {
-    const director = new GameDirector({ spawnCooldownMs: 0 });
-    const decision = director.update({
-      ...baseInput,
-      elapsedTime: 2000,
-      playerStationaryMs: 3000
+  it('telegraphs stationary pressure before punishing with stalker spawns', () => {
+    const director = new GameDirector({
+      spawnCooldownMs: 0,
+      config: { warningLeadMs: 600, stationaryPressureGraceMs: 1000 }
     });
 
-    expect(decision.state).toBe('BUILD_UP');
+    const warning = director.update({
+      ...baseInput,
+      elapsedTime: 2000,
+      playerStationaryMs: 2200
+    });
+    const decision = director.update({
+      ...baseInput,
+      elapsedTime: 3200,
+      playerStationaryMs: 3400
+    });
+
+    expect(warning.state).toBe('WARNING');
+    expect(warning.spawn).toBeNull();
+    expect(warning.events.some((event) => event.type === 'WARNING_MESSAGE')).toBe(true);
+    expect(decision.state).toBe('PRESSURE');
     expect(decision.spawn?.kind).toBe('STALKER');
     expect(decision.events.some((event) => event.type === 'PUNISH_STATIONARY')).toBe(true);
   });
 
-  it('stationary player can emit pressure event without spawning when capped', () => {
-    const director = new GameDirector({ maxEnemiesAlive: 1, spawnCooldownMs: 0 });
-    const decision = director.update({
-      ...baseInput,
-      enemiesAlive: 1,
-      elapsedTime: 2000,
-      playerStationaryMs: 3000
+  it('moving and getting kills reduce anti-camp pressure over time', () => {
+    const director = new GameDirector({
+      spawnCooldownMs: 0,
+      config: { warningLeadMs: 600, stationaryPressureGraceMs: 1000 }
     });
 
-    expect(decision.state).toBe('BUILD_UP');
+    director.update({
+      ...baseInput,
+      elapsedTime: 2000,
+      playerStationaryMs: 2200
+    });
+    const pressured = director.update({
+      ...baseInput,
+      elapsedTime: 3200,
+      playerStationaryMs: 3400
+    });
+    const recovered = director.update({
+      ...baseInput,
+      elapsedTime: 5200,
+      enemiesAlive: 1,
+      totalKills: 1,
+      playerStationaryMs: 0
+    });
+
+    expect(pressured.debug.antiCampMeterMs).toBeGreaterThan(0);
+    expect(recovered.state).not.toBe('PRESSURE');
+    expect((recovered.debug.antiCampMeterMs ?? 0)).toBeLessThan(pressured.debug.antiCampMeterMs ?? 0);
+  });
+
+  it('stationary pressure still emits events without spawning when capped', () => {
+    const director = new GameDirector({
+      maxEnemiesAlive: 1,
+      spawnCooldownMs: 0,
+      config: { warningLeadMs: 600, stationaryPressureGraceMs: 1000 }
+    });
+
+    director.update({
+      ...baseInput,
+      elapsedTime: 2000,
+      enemiesAlive: 1,
+      playerStationaryMs: 2200
+    });
+    const decision = director.update({
+      ...baseInput,
+      elapsedTime: 3200,
+      enemiesAlive: 1,
+      playerStationaryMs: 3400
+    });
+
+    expect(decision.state).toBe('PRESSURE');
     expect(decision.spawn).toBeNull();
     expect(decision.events.some((event) => event.type === 'PUNISH_STATIONARY')).toBe(true);
   });
 
   it('uses scene-filtered spawn points when provided', () => {
-    const director = new GameDirector({ spawnCooldownMs: 0 });
+    const director = new GameDirector({ spawnCooldownMs: 0, config: { warningLeadMs: 0, ambushSpawnCooldownMs: 0 } });
+    director.notifyZoneTrigger('gate-hall', 1000);
     const decision = director.update({
       ...baseInput,
-      elapsedTime: 2000,
-      playerStationaryMs: 3000,
+      elapsedTime: 1500,
+      activeZoneId: 'gate-hall',
       spawnPoints: [{ x: 9, y: 10, zoneId: 'gate-hall' }]
     });
 
@@ -194,49 +289,41 @@ describe('GameDirector', () => {
   });
 
   it('does not spend budget when no safe spawn points are available', () => {
-    const director = new GameDirector({ spawnCooldownMs: 0 });
-    const decision = director.update({
+    const director = new GameDirector({
+      spawnCooldownMs: 0,
+      config: { warningLeadMs: 0, stationaryPressureGraceMs: 0, highIntensitySpawnCooldownMs: 0 }
+    });
+    director.update({
+      ...baseInput,
+      elapsedTime: 1000,
+      playerStationaryMs: 2200
+    });
+    director.update({
       ...baseInput,
       elapsedTime: 2000,
-      playerStationaryMs: 3000,
+      playerStationaryMs: 3200
+    });
+    const budgetBefore = director.update({
+      ...baseInput,
+      elapsedTime: 2500,
+      enemiesAlive: 1,
+      playerStationaryMs: 3600
+    }).debug.spawnBudgetRemaining;
+    const decision = director.update({
+      ...baseInput,
+      elapsedTime: 3000,
+      playerStationaryMs: 4200,
       spawnPoints: []
     });
 
     expect(decision.spawn).toBeNull();
     expect(decision.debug.lastDecisionReason).toBe('no safe spawn points');
-    expect(decision.debug.spawnBudgetRemaining).toBe(22);
+    expect(decision.debug.spawnBudgetRemaining).toBe(budgetBefore);
   });
 
-  it('does not spawn over the configured enemy cap in high pressure', () => {
-    const director = new GameDirector({ config: { maxEnemiesAlive: 3, highIntensitySpawnCooldownMs: 0 } });
-    expect(
-      director.update({
-        ...baseInput,
-        elapsedTime: 60_000,
-        totalKills: 8,
-        enemiesAlive: 1,
-        timeSincePlayerDamagedMs: 20_000,
-        equippedWeapons: ['SHOTGUN']
-      }).state
-    ).toBe('HIGH_INTENSITY');
-
-    const decision = director.update({
-      ...baseInput,
-      elapsedTime: 61_000,
-      totalKills: 8,
-      enemiesAlive: 3,
-      timeSincePlayerDamagedMs: 20_000,
-      equippedWeapons: ['SHOTGUN']
-    });
-
-    expect(decision.state).toBe('HIGH_INTENSITY');
-    expect(decision.spawn).toBeNull();
-    expect(decision.debug.lastDecisionReason).toBe('enemy cap reached');
-  });
-
-  it('dominance generates high intensity pressure events', () => {
-    const director = new GameDirector({ config: { highIntensitySpawnCooldownMs: 0 } });
-    const decision = director.update({
+  it('dominance generates warning first and then pressure', () => {
+    const director = new GameDirector({ config: { highIntensitySpawnCooldownMs: 0, warningLeadMs: 600 } });
+    const warning = director.update({
       ...baseInput,
       elapsedTime: 60_000,
       totalKills: 8,
@@ -244,9 +331,18 @@ describe('GameDirector', () => {
       timeSincePlayerDamagedMs: 20_000,
       equippedWeapons: ['SHOTGUN']
     });
+    const decision = director.update({
+      ...baseInput,
+      elapsedTime: 61_000,
+      totalKills: 8,
+      enemiesAlive: 1,
+      timeSincePlayerDamagedMs: 21_000,
+      equippedWeapons: ['SHOTGUN']
+    });
 
-    expect(decision.state).toBe('HIGH_INTENSITY');
-    expect(decision.events.some((event) => event.type === 'WARNING_MESSAGE')).toBe(true);
+    expect(warning.state).toBe('WARNING');
+    expect(warning.events.some((event) => event.type === 'WARNING_MESSAGE')).toBe(true);
+    expect(decision.state).toBe('PRESSURE');
   });
 
   it('adds pressure when the player is far from an important pickup', () => {
@@ -266,11 +362,17 @@ describe('GameDirector', () => {
   });
 
   it('allows FPS-specific director config overrides', () => {
-    const director = new GameDirector({ config: { maxEnemiesAlive: 1, maxTotalSpawns: 3 } });
+    const director = new GameDirector({ config: { maxEnemiesAlive: 1, maxTotalSpawns: 3, warningLeadMs: 0 } });
+    director.update({
+      ...baseInput,
+      elapsedTime: 1000,
+      playerStationaryMs: 2200
+    });
     const decision = director.update({
       ...baseInput,
       enemiesAlive: 1,
-      elapsedTime: 10_000
+      elapsedTime: 2000,
+      playerStationaryMs: 3200
     });
 
     expect(decision.maxEnemiesAlive).toBe(1);
@@ -279,9 +381,9 @@ describe('GameDirector', () => {
   });
 
   it('allows stronger enemies when the player has the launcher', () => {
-    const director = new GameDirector({ spawnCooldownMs: 0 });
+    const director = new GameDirector({ spawnCooldownMs: 0, config: { warningLeadMs: 0 } });
     director.notifyZoneTrigger('test', 1000);
-    director.update({ ...baseInput, elapsedTime: 2000, activeZoneId: 'test' });
+    director.update({ ...baseInput, elapsedTime: 1500, activeZoneId: 'test' });
 
     const decision = director.update({
       ...baseInput,
@@ -307,14 +409,14 @@ describe('GameDirector', () => {
     expect(decision.events.some((event) => event.type === 'RECOVERY_SIGNAL')).toBe(true);
   });
 
-  it('emits ambient pulse during exploration without spawning', () => {
+  it('emits ambient pulse during calm windows without spawning', () => {
     const director = new GameDirector({ config: { ambientPulseCooldownMs: 1000 } });
     const decision = director.update({
-      ...baseInput,
+      ...calmInput,
       elapsedTime: 1000
     });
 
-    expect(decision.state).toBe('EXPLORATION');
+    expect(decision.state).toBe('CALM');
     expect(decision.spawn).toBeNull();
     expect(decision.events).toEqual(
       expect.arrayContaining([
@@ -344,12 +446,12 @@ describe('GameDirector', () => {
       p2Health: 70
     });
 
-    expect(recovered.state).toBe('EXPLORATION');
+    expect(recovered.state).toBe('CALM');
     expect(recovered.spawn).toBeNull();
   });
 
-  it('caps high intensity duration into recovery instead of looping forever', () => {
-    const director = new GameDirector({ config: { highIntensityDurationMs: 1000, highIntensitySpawnCooldownMs: 0 } });
+  it('caps pressure duration into recovery instead of looping forever', () => {
+    const director = new GameDirector({ config: { highIntensityDurationMs: 1000, highIntensitySpawnCooldownMs: 0, warningLeadMs: 0 } });
 
     expect(
       director.update({
@@ -359,7 +461,7 @@ describe('GameDirector', () => {
         enemiesAlive: 1,
         timeSincePlayerDamagedMs: 20_000
       }).state
-    ).toBe('HIGH_INTENSITY');
+    ).toBe('PRESSURE');
 
     const spent = director.update({
       ...baseInput,
