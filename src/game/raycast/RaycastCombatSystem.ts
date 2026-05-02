@@ -3,9 +3,10 @@ import { WeaponSystem } from '../systems/WeaponSystem';
 import { getWeaponConfig } from '../systems/WeaponConfig';
 import type { RaycastMap } from './RaycastMap';
 import { castRay } from './RaycastMap';
-import type { RaycastEnemy } from './RaycastEnemy';
+import { isRaycastEnemyTelegraphing, isRaycastEnemyWindingUp, type RaycastEnemy } from './RaycastEnemy';
 import type { RaycastPlayerState } from './RaycastPlayerController';
 import type { ProjectileSpawn, WeaponKind } from '../systems/WeaponTypes';
+import { formatRaycastEnemyKindLabel } from './RaycastHud';
 
 export interface RaycastCombatResult {
   fired: boolean;
@@ -163,6 +164,16 @@ interface RaycastProjectileImpact {
   splashHitCount: number;
 }
 
+export interface RaycastCrosshairTargetInfo {
+  id: string;
+  kindLabel: string;
+  health: number;
+  maxHealth: number;
+  healthRatio: number;
+  isWindingUp: boolean;
+  isTelegraphing: boolean;
+}
+
 export function findEnemyInCrosshair(
   player: Pick<RaycastPlayerState, 'x' | 'y' | 'angle'>,
   enemies: RaycastEnemy[],
@@ -170,6 +181,26 @@ export function findEnemyInCrosshair(
   aimToleranceRadians = DEFAULT_AIM_TOLERANCE_RADIANS
 ): RaycastEnemy | null {
   return findEnemyAlongAim(player, player.angle, enemies, wallDistance, aimToleranceRadians);
+}
+
+export function getRaycastCrosshairTargetInfo(
+  player: Pick<RaycastPlayerState, 'x' | 'y' | 'angle'>,
+  enemies: RaycastEnemy[],
+  wallDistance: number,
+  time: number,
+  aimToleranceRadians = DEFAULT_AIM_TOLERANCE_RADIANS
+): RaycastCrosshairTargetInfo | null {
+  const enemy = findEnemyInCrosshair(player, enemies, wallDistance, aimToleranceRadians);
+  if (!enemy) return null;
+  return {
+    id: enemy.id,
+    kindLabel: formatRaycastEnemyKindLabel(enemy.kind),
+    health: enemy.health,
+    maxHealth: enemy.maxHealth,
+    healthRatio: enemy.maxHealth <= 0 ? 0 : enemy.health / enemy.maxHealth,
+    isWindingUp: isRaycastEnemyWindingUp(enemy, time),
+    isTelegraphing: isRaycastEnemyTelegraphing(enemy, time)
+  };
 }
 
 function findEnemyAlongAim(

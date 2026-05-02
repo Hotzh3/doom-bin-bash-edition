@@ -17,6 +17,7 @@ describe('raycast presentation helpers', () => {
     expect(banner).toContain('EP 1 MINI EPISODE');
     expect(banner).toContain('LVL 2/2 LOWER RELAY');
     expect(banner).toContain('MOVE WASD');
+    expect(banner).toContain('M MAP');
     expect(banner).toContain('N NEXT WHEN CLEAR');
   });
 

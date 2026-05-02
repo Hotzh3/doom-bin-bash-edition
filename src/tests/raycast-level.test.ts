@@ -14,6 +14,7 @@ import {
   isNearPoint,
   openRaycastDoor,
   registerRaycastSecret,
+  getRaycastDoorRequiredKeyIds,
   type RaycastLevel,
   type RaycastTrigger
 } from '../game/raycast/RaycastLevel';
@@ -104,16 +105,28 @@ describe('raycast level progression', () => {
     const level1Blocked = getRaycastExitAccess(RAYCAST_LEVEL, {
       collectedKeyIds: [],
       openDoorIds: [],
-      activatedTriggerIds: []
+      activatedTriggerIds: [],
+      livingEnemyCount: 0
     });
     const level2Blocked = getRaycastExitAccess(RAYCAST_LEVEL_2, {
       collectedKeyIds: [],
       openDoorIds: [],
-      activatedTriggerIds: []
+      activatedTriggerIds: [],
+      livingEnemyCount: 0
     });
 
-    expect(level1Blocked).toEqual({ allowed: false, message: 'ACCESS DENIED: NODE INCOMPLETE' });
-    expect(level2Blocked).toEqual({ allowed: false, message: 'ROUTE UNSTABLE: BREACH INCOMPLETE' });
+    expect(level1Blocked).toEqual({
+      allowed: false,
+      reason: 'TOKEN_REQUIRED',
+      message: 'TOKEN REQUIRED',
+      missingKeyIds: ['rust-key']
+    });
+    expect(level2Blocked).toEqual({
+      allowed: false,
+      reason: 'TOKEN_REQUIRED',
+      message: 'TOKEN REQUIRED',
+      missingKeyIds: ['glass-sigil']
+    });
   });
 
   it('allows level exits after progression requirements are met', () => {
@@ -121,7 +134,8 @@ describe('raycast level progression', () => {
       getRaycastExitAccess(RAYCAST_LEVEL, {
         collectedKeyIds: ['rust-key'],
         openDoorIds: ['rust-gate'],
-        activatedTriggerIds: ['gate-ambush']
+        activatedTriggerIds: ['gate-ambush'],
+        livingEnemyCount: 0
       }).allowed
     ).toBe(true);
 
@@ -129,9 +143,71 @@ describe('raycast level progression', () => {
       getRaycastExitAccess(RAYCAST_LEVEL_2, {
         collectedKeyIds: ['glass-sigil'],
         openDoorIds: ['cistern-gate'],
-        activatedTriggerIds: ['furnace-ambush']
+        activatedTriggerIds: ['furnace-ambush'],
+        livingEnemyCount: 0
       }).allowed
     ).toBe(true);
+  });
+
+  it('returns specific exit block reasons for route, trigger, and combat locks', () => {
+    expect(
+      getRaycastExitAccess(RAYCAST_LEVEL, {
+        collectedKeyIds: ['rust-key'],
+        openDoorIds: [],
+        activatedTriggerIds: [],
+        livingEnemyCount: 0
+      })
+    ).toEqual({
+      allowed: false,
+      reason: 'ACCESS_DENIED',
+      message: 'ACCESS DENIED: NODE INCOMPLETE',
+      missingDoorIds: ['rust-gate']
+    });
+
+    expect(
+      getRaycastExitAccess(RAYCAST_LEVEL, {
+        collectedKeyIds: ['rust-key'],
+        openDoorIds: ['rust-gate'],
+        activatedTriggerIds: [],
+        livingEnemyCount: 0
+      })
+    ).toEqual({
+      allowed: false,
+      reason: 'TRIGGER_REQUIRED',
+      message: 'TRIGGER REQUIRED',
+      missingTriggerIds: ['gate-ambush']
+    });
+
+    const combatLockedLevel: RaycastLevel = {
+      ...RAYCAST_LEVEL,
+      progression: {
+        ...RAYCAST_LEVEL.progression,
+        requireCombatClear: true
+      }
+    };
+
+    expect(
+      getRaycastExitAccess(combatLockedLevel, {
+        collectedKeyIds: ['rust-key'],
+        openDoorIds: ['rust-gate'],
+        activatedTriggerIds: ['gate-ambush'],
+        livingEnemyCount: 2
+      })
+    ).toEqual({
+      allowed: false,
+      reason: 'SIGNAL_LOCKED',
+      message: 'SIGNAL LOCKED'
+    });
+  });
+
+  it('normalizes multi-token door metadata without changing existing single-token doors', () => {
+    expect(getRaycastDoorRequiredKeyIds(RAYCAST_LEVEL.doors[0])).toEqual(['rust-key']);
+    expect(
+      getRaycastDoorRequiredKeyIds({
+        ...RAYCAST_LEVEL.doors[0],
+        requiredKeyIds: ['rust-key', 'backup-token']
+      })
+    ).toEqual(['rust-key', 'backup-token']);
   });
 
   it('activates door-bound ambush triggers only once', () => {
@@ -228,7 +304,7 @@ describe('raycast level route safety', () => {
         spawnPoints: [
           { id: 'front-visible', zoneId: 'test', x: 4.5, y: 2.5, minPlayerDistance: 1.5 },
           { id: 'occupied-safe', zoneId: 'test', x: 1.5, y: 3.5, minPlayerDistance: 1.5 },
-          { id: 'rear-safe', zoneId: 'test', x: 1.5, y: 4.5, minPlayerDistance: 1.5 }
+          { id: 'rear-safe', zoneId: 'test', x: 4.5, y: 4.5, minPlayerDistance: 1.5 }
         ]
       }
     };
@@ -238,7 +314,7 @@ describe('raycast level route safety', () => {
         [1, 1, 1, 1, 1, 1, 1],
         [1, 0, 0, 0, 0, 0, 1],
         [1, 0, 0, 0, 0, 0, 1],
-        [1, 0, 0, 0, 0, 0, 1],
+        [1, 0, 0, 1, 0, 0, 1],
         [1, 0, 0, 0, 0, 0, 1],
         [1, 1, 1, 1, 1, 1, 1]
       ]
@@ -250,7 +326,39 @@ describe('raycast level route safety', () => {
 
     expect(spawns.some((spawn) => spawn.x === 4.5 && spawn.y === 2.5)).toBe(false);
     expect(spawns.some((spawn) => spawn.x === 1.5 && spawn.y === 3.5)).toBe(false);
-    expect(spawns).toEqual([expect.objectContaining({ x: 1.5, y: 4.5 })]);
+    expect(spawns).toEqual([expect.objectContaining({ x: 4.5, y: 4.5 })]);
+  });
+
+  it('rejects visible close-range director spawns even when they are not dead ahead', () => {
+    const customLevel: RaycastLevel = {
+      ...RAYCAST_LEVEL,
+      director: {
+        ...RAYCAST_LEVEL.director,
+        spawnPoints: [
+          { id: 'visible-close', zoneId: 'test', x: 3.5, y: 1.5, minPlayerDistance: 1.5 },
+          { id: 'hidden-far', zoneId: 'test', x: 5.5, y: 4.5, minPlayerDistance: 1.5 }
+        ]
+      }
+    };
+    const openMap: RaycastMap = {
+      tileSize: 1,
+      grid: [
+        [1, 1, 1, 1, 1, 1, 1],
+        [1, 0, 0, 0, 0, 0, 1],
+        [1, 0, 0, 0, 0, 0, 1],
+        [1, 0, 0, 1, 0, 0, 1],
+        [1, 0, 0, 0, 0, 0, 1],
+        [1, 0, 0, 0, 0, 0, 1],
+        [1, 1, 1, 1, 1, 1, 1]
+      ]
+    };
+
+    const spawns = getSafeDirectorSpawnPoints(customLevel, { x: 1.5, y: 2.5, angle: Math.PI / 4 }, 'test', {
+      map: openMap
+    });
+
+    expect(spawns.some((spawn) => spawn.x === 3.5 && spawn.y === 1.5)).toBe(false);
+    expect(spawns).toEqual([expect.objectContaining({ x: 5.5, y: 4.5 })]);
   });
 
   it('registers secrets once without blocking progress', () => {

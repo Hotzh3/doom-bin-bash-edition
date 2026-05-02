@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { ENEMY_CONFIG } from '../game/entities/enemyConfig';
-import { createRaycastEnemy } from '../game/raycast/RaycastEnemy';
+import {
+  createTelegraphedRaycastEnemy,
+  didRaycastEnemyFinishTelegraph,
+  getRaycastEnemySpawnTelegraphProgress,
+  createRaycastEnemy,
+  getRaycastEnemyWindupProgress,
+  isRaycastEnemyTelegraphing,
+  isRaycastEnemyWindingUp
+} from '../game/raycast/RaycastEnemy';
 import {
   hasLineOfSight,
   type RaycastEnemyProjectile,
@@ -34,6 +42,7 @@ describe('raycast enemy system', () => {
     const second = updateRaycastEnemies(RAYCAST_MAP, [enemy], { x: 2.5, y: 10.4, alive: true }, 1100, 16);
 
     expect(windup.meleeDamage).toBe(0);
+    expect(isRaycastEnemyWindingUp(enemy, 1040)).toBe(false);
     expect(hit.meleeDamage).toBeGreaterThan(0);
     expect(second.meleeDamage).toBe(0);
   });
@@ -44,6 +53,37 @@ describe('raycast enemy system', () => {
     const result = updateRaycastEnemies(RAYCAST_MAP, [enemy], { x: 2.5, y: 10.4, alive: true }, 100, 16);
 
     expect(result.meleeDamage).toBe(0);
+  });
+
+  it('keeps telegraphed spawns inactive until the breach window resolves', () => {
+    const enemy = createTelegraphedRaycastEnemy(
+      { id: 'breach-stalker', kind: 'STALKER', x: 2.5, y: 10.08 },
+      { telegraphStartedAt: 1000, telegraphDurationMs: 900 }
+    );
+
+    expect(isRaycastEnemyTelegraphing(enemy, 1400)).toBe(true);
+    expect(getRaycastEnemySpawnTelegraphProgress(enemy, 1400)).toBeGreaterThan(0.4);
+    const early = updateRaycastEnemies(RAYCAST_MAP, [enemy], { x: 2.5, y: 10.4, alive: true }, 1400, 16);
+    const ready = updateRaycastEnemies(RAYCAST_MAP, [enemy], { x: 2.5, y: 10.4, alive: true }, 1900, 16);
+    const hit = updateRaycastEnemies(RAYCAST_MAP, [enemy], { x: 2.5, y: 10.4, alive: true }, 1981, 16);
+
+    expect(early.meleeDamage).toBe(0);
+    expect(enemy.attackWindupUntil).toBe(0);
+    expect(ready.meleeDamage).toBe(0);
+    expect(enemy.spawnTelegraphUntil).toBe(0);
+    expect(hit.meleeDamage).toBeGreaterThan(0);
+  });
+
+  it('detects the frame where a spawn telegraph finishes at its exact boundary', () => {
+    const enemy = createTelegraphedRaycastEnemy(
+      { id: 'boundary-stalker', kind: 'STALKER', x: 2.5, y: 10.08 },
+      { telegraphStartedAt: 1000, telegraphDurationMs: 900 }
+    );
+
+    expect(isRaycastEnemyTelegraphing(enemy, 1899)).toBe(true);
+    expect(isRaycastEnemyTelegraphing(enemy, 1900)).toBe(false);
+    expect(didRaycastEnemyFinishTelegraph(enemy, 1884, 1900)).toBe(true);
+    expect(didRaycastEnemyFinishTelegraph(enemy, 1900, 1916)).toBe(false);
   });
 
   it('cancels melee damage when the player dodges out of range before windup completes', () => {
@@ -95,8 +135,18 @@ describe('raycast enemy system', () => {
 
     expect(windup.spawnedProjectiles).toHaveLength(0);
     expect(early.spawnedProjectiles).toHaveLength(0);
+    expect(enemy.attackWindupStartedAt).toBe(0);
     expect(enemy.attackWindupUntil).toBe(0);
     expect(result.spawnedProjectiles).toHaveLength(1);
+  });
+
+  it('tracks windup progress during the readable telegraph window', () => {
+    const enemy = createRaycastEnemy({ id: 'grunt', kind: 'GRUNT', x: 2.5, y: 10.08 });
+    updateRaycastEnemies(RAYCAST_MAP, [enemy], { x: 2.5, y: 10.4, alive: true }, 1000, 16);
+
+    expect(isRaycastEnemyWindingUp(enemy, 1040)).toBe(true);
+    expect(getRaycastEnemyWindupProgress(enemy, 1040)).toBeGreaterThan(0.3);
+    expect(getRaycastEnemyWindupProgress(enemy, 1079)).toBeGreaterThan(0.7);
   });
 
   it('ranged enemies respect cooldown after windup shot', () => {
