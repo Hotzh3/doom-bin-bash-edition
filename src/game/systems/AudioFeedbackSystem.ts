@@ -14,10 +14,15 @@ export type AudioFeedbackCue =
   | 'spawn'
   | 'door'
   | 'pickup'
+  | 'pickupHealth'
   | 'pickupKey'
   | 'secret'
+  | 'uiSoftDeny'
   | 'uiDeny'
   | 'uiConfirm'
+  | 'lowHealthWarning'
+  | 'difficultySelect'
+  | 'difficultyStart'
   | 'levelComplete'
   | 'episodeComplete'
   | 'directorWarning'
@@ -120,6 +125,13 @@ export const AUDIO_FEEDBACK_CONFIG: Record<AudioFeedbackCue, AudioFeedbackConfig
       { frequency: 420, endFrequency: 760, duration: 0.1, volume: 0.026, type: 'triangle' }
     ]
   },
+  pickupHealth: {
+    layers: [
+      { frequency: 352, endFrequency: 528, duration: 0.08, volume: 0.018, type: 'triangle' },
+      { frequency: 528, endFrequency: 864, duration: 0.12, volume: 0.018, type: 'sine', delay: 0.018 }
+    ],
+    throttleMs: 90
+  },
   pickupKey: {
     layers: [
       { frequency: 380, endFrequency: 760, duration: 0.08, volume: 0.019, type: 'triangle' },
@@ -132,6 +144,13 @@ export const AUDIO_FEEDBACK_CONFIG: Record<AudioFeedbackCue, AudioFeedbackConfig
       { frequency: 520, endFrequency: 940, duration: 0.15, volume: 0.018, type: 'triangle', delay: 0.01 }
     ],
     throttleMs: 180
+  },
+  uiSoftDeny: {
+    layers: [
+      { frequency: 238, endFrequency: 184, duration: 0.07, volume: 0.016, type: 'square' },
+      { frequency: 148, endFrequency: 110, duration: 0.09, volume: 0.01, type: 'triangle', delay: 0.01 }
+    ],
+    throttleMs: 260
   },
   uiDeny: {
     layers: [
@@ -146,6 +165,27 @@ export const AUDIO_FEEDBACK_CONFIG: Record<AudioFeedbackCue, AudioFeedbackConfig
       { frequency: 420, endFrequency: 620, duration: 0.08, volume: 0.014, type: 'sine', delay: 0.012 }
     ],
     throttleMs: 140
+  },
+  lowHealthWarning: {
+    layers: [
+      { frequency: 156, endFrequency: 132, duration: 0.08, volume: 0.017, type: 'sine' },
+      { frequency: 156, endFrequency: 132, duration: 0.08, volume: 0.014, type: 'sine', delay: 0.15 }
+    ],
+    throttleMs: 1800
+  },
+  difficultySelect: {
+    layers: [
+      { frequency: 318, endFrequency: 422, duration: 0.05, volume: 0.014, type: 'triangle' },
+      { frequency: 422, endFrequency: 636, duration: 0.07, volume: 0.012, type: 'sine', delay: 0.01 }
+    ],
+    throttleMs: 80
+  },
+  difficultyStart: {
+    layers: [
+      { frequency: 208, endFrequency: 318, duration: 0.08, volume: 0.018, type: 'triangle' },
+      { frequency: 318, endFrequency: 524, duration: 0.11, volume: 0.016, type: 'sine', delay: 0.03 }
+    ],
+    throttleMs: 220
   },
   levelComplete: {
     layers: [

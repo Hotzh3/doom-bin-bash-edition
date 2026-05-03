@@ -14,6 +14,7 @@ import {
   type RaycastMap,
   type RaycastPlayerStart
 } from './RaycastMap';
+import type { RaycastHealthPickup } from './RaycastItems';
 import type { RaycastLandmarkId, RaycastZoneThemeId, RaycastZoneVisualDescriptor } from './RaycastVisualTheme';
 
 export interface RaycastEnemySpawn {
@@ -82,6 +83,7 @@ export interface RaycastLevel {
   keys: RaycastKey[];
   doors: RaycastDoor[];
   triggers: RaycastTrigger[];
+  healthPickups: RaycastHealthPickup[];
   secrets: RaycastSecret[];
   exits: RaycastExit[];
   initialSpawns: RaycastEnemySpawn[];
@@ -195,6 +197,33 @@ export const RAYCAST_LEVEL_1: RaycastLevel = {
       ]
     }
   ],
+  healthPickups: [
+    {
+      id: 'start-repair-cell',
+      kind: 'repair-cell',
+      label: 'Emergency Repair Cell',
+      x: 3.5,
+      y: 11.5,
+      radius: 0.26,
+      restoreAmount: 20,
+      billboardLabel: 'CELL',
+      pickupMessage: 'Emergency repair cell routed',
+      fullHealthMessage: 'Systems stable: leave the repair cell intact'
+    },
+    {
+      id: 'arena-health-pack',
+      kind: 'health-pack',
+      label: 'Field Health Pack',
+      x: 12.5,
+      y: 11.5,
+      radius: 0.26,
+      restoreAmount: 30,
+      billboardLabel: 'PATCH',
+      pickupMessage: 'Field health pack applied',
+      fullHealthMessage: 'Vital bands full: save the patch for later',
+      requiredOpenDoorIds: ['rust-gate']
+    }
+  ],
   secrets: [
     {
       id: 'west-cache',
@@ -202,7 +231,7 @@ export const RAYCAST_LEVEL_1: RaycastLevel = {
       x: 5.5,
       y: 12.5,
       radius: 0.24,
-      objectiveText: 'Hidden node: 25 HP restored',
+      objectiveText: 'Hidden cache logged',
       billboardLabel: 'HIDDEN'
     }
   ],
@@ -375,6 +404,33 @@ export const RAYCAST_LEVEL_2: RaycastLevel = {
       ]
     }
   ],
+  healthPickups: [
+    {
+      id: 'trench-repair-cell',
+      kind: 'repair-cell',
+      label: 'Emergency Repair Cell',
+      x: 5.5,
+      y: 10.5,
+      radius: 0.26,
+      restoreAmount: 20,
+      billboardLabel: 'CELL',
+      pickupMessage: 'Emergency repair cell routed',
+      fullHealthMessage: 'Systems stable: leave the repair cell intact'
+    },
+    {
+      id: 'glass-run-health-pack',
+      kind: 'health-pack',
+      label: 'Field Health Pack',
+      x: 13.5,
+      y: 6.5,
+      radius: 0.26,
+      restoreAmount: 30,
+      billboardLabel: 'PATCH',
+      pickupMessage: 'Field health pack applied',
+      fullHealthMessage: 'Vital bands full: save the patch for later',
+      requiredOpenDoorIds: ['cistern-gate']
+    }
+  ],
   secrets: [
     {
       id: 'trench-cache',
@@ -382,7 +438,7 @@ export const RAYCAST_LEVEL_2: RaycastLevel = {
       x: 1.5,
       y: 7.5,
       radius: 0.24,
-      objectiveText: 'Trench cache: 25 HP restored',
+      objectiveText: 'Trench cache logged',
       billboardLabel: 'CACHE'
     }
   ],
@@ -558,6 +614,33 @@ export const RAYCAST_LEVEL_3: RaycastLevel = {
       ]
     }
   ],
+  healthPickups: [
+    {
+      id: 'loop-repair-cell',
+      kind: 'repair-cell',
+      label: 'Emergency Repair Cell',
+      x: 5.5,
+      y: 13.5,
+      radius: 0.26,
+      restoreAmount: 20,
+      billboardLabel: 'CELL',
+      pickupMessage: 'Emergency repair cell routed',
+      fullHealthMessage: 'Systems stable: leave the repair cell intact'
+    },
+    {
+      id: 'conduit-health-pack',
+      kind: 'health-pack',
+      label: 'Field Health Pack',
+      x: 15.5,
+      y: 5.5,
+      radius: 0.26,
+      restoreAmount: 30,
+      billboardLabel: 'PATCH',
+      pickupMessage: 'Field health pack applied',
+      fullHealthMessage: 'Vital bands full: save the patch for later',
+      requiredOpenDoorIds: ['relay-seal']
+    }
+  ],
   secrets: [
     {
       id: 'archive-cache',
@@ -565,7 +648,7 @@ export const RAYCAST_LEVEL_3: RaycastLevel = {
       x: 1.5,
       y: 8.5,
       radius: 0.24,
-      objectiveText: 'Archive cache: 25 HP restored',
+      objectiveText: 'Archive cache logged',
       billboardLabel: 'CACHE'
     }
   ],
@@ -682,6 +765,12 @@ export function isNearPoint(x: number, y: number, point: { x: number; y: number;
 export function registerRaycastSecret(collectedSecrets: Set<string>, secret: Pick<RaycastSecret, 'id'>): boolean {
   if (collectedSecrets.has(secret.id)) return false;
   collectedSecrets.add(secret.id);
+  return true;
+}
+
+export function registerRaycastPickup(collectedPickups: Set<string>, pickup: Pick<RaycastHealthPickup, 'id'>): boolean {
+  if (collectedPickups.has(pickup.id)) return false;
+  collectedPickups.add(pickup.id);
   return true;
 }
 
@@ -809,4 +898,50 @@ function hasLineOfSightToPoint(map: RaycastMap, from: { x: number; y: number }, 
   const distance = Math.hypot(to.x - from.x, to.y - from.y);
   const hit = castRay(map, from.x, from.y, angle, angle);
   return hit.distance + 0.08 >= distance;
+}
+
+export function isRaycastPointReachable(
+  level: RaycastLevel,
+  point: { x: number; y: number },
+  options?: { openDoorIds?: Iterable<string> }
+): boolean {
+  const map = cloneRaycastMap(level.map);
+  const openDoorIds = new Set(options?.openDoorIds ?? []);
+  level.doors
+    .filter((door) => openDoorIds.has(door.id))
+    .forEach((door) => openRaycastDoor(map, door));
+
+  const startX = Math.floor(level.playerStart.x);
+  const startY = Math.floor(level.playerStart.y);
+  const targetX = Math.floor(point.x);
+  const targetY = Math.floor(point.y);
+
+  if (map.grid[startY]?.[startX] !== RAYCAST_TILE.EMPTY) return false;
+  if (map.grid[targetY]?.[targetX] !== RAYCAST_TILE.EMPTY) return false;
+
+  const visited = new Set<string>();
+  const queue: Array<{ x: number; y: number }> = [{ x: startX, y: startY }];
+
+  while (queue.length > 0) {
+    const current = queue.shift();
+    if (!current) break;
+    const key = `${current.x},${current.y}`;
+    if (visited.has(key)) continue;
+    visited.add(key);
+    if (current.x === targetX && current.y === targetY) return true;
+
+    [
+      { x: current.x + 1, y: current.y },
+      { x: current.x - 1, y: current.y },
+      { x: current.x, y: current.y + 1 },
+      { x: current.x, y: current.y - 1 }
+    ].forEach((neighbor) => {
+      const cell = map.grid[neighbor.y]?.[neighbor.x];
+      if (cell === RAYCAST_TILE.EMPTY && !visited.has(`${neighbor.x},${neighbor.y}`)) {
+        queue.push(neighbor);
+      }
+    });
+  }
+
+  return false;
 }

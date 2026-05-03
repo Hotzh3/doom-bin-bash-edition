@@ -10,6 +10,17 @@ export interface RaycastOverlayHintInput {
   episodeComplete: boolean;
 }
 
+export interface RaycastDifficultyMenuCopyInput {
+  label: string;
+  summary: string;
+}
+
+export interface RaycastHelpOverlayInput {
+  difficultyLabel?: string;
+  difficultySummary?: string;
+  minimapToggleKey?: string;
+}
+
 export interface RaycastPriorityMessageInput {
   levelComplete: boolean;
   episodeComplete: boolean;
@@ -17,6 +28,7 @@ export interface RaycastPriorityMessageInput {
   playerHealth: number;
   objective: string;
   hint: string;
+  lowHealthHint?: string | null;
   combatMessage?: string;
   combatMessageActive: boolean;
   blockedHintActive: boolean;
@@ -32,6 +44,8 @@ export interface RaycastMenuCopy {
   subtitle: string;
   episodeTagline: string;
   buildTagline: string;
+  difficultyLabel: string;
+  difficultyHint: string;
   primaryAction: RaycastMenuActionCopy;
   secondaryAction: RaycastMenuActionCopy;
   helpActions: string[];
@@ -50,6 +64,7 @@ export interface RaycastMenuLayout {
   subtitleY: number;
   titleArtY: number;
   episodeTagY: number;
+  difficultyY: number;
   actionWidth: number;
   actionHeight: number;
   actionX: number;
@@ -61,16 +76,24 @@ export interface RaycastMenuLayout {
 
 export const RAYCAST_MENU_ACTION_HEIGHT = 84;
 export const RAYCAST_MENU_COMPACT_ACTION_HEIGHT = 68;
+export const RAYCAST_MENU_SHORT_ACTION_HEIGHT = 56;
 export const RAYCAST_MENU_ACTION_GAP = 20;
 export const RAYCAST_MENU_COMPACT_ACTION_GAP = 16;
+export const RAYCAST_MENU_SHORT_ACTION_GAP = 12;
 export const RAYCAST_MENU_PANEL_TO_HELP_GAP = 18;
 export const RAYCAST_MENU_COMPACT_PANEL_TO_HELP_GAP = 14;
+export const RAYCAST_MENU_SHORT_PANEL_TO_HELP_GAP = 10;
 export const RAYCAST_MENU_HELP_TO_FOOTER_GAP = 16;
 export const RAYCAST_MENU_COMPACT_HELP_TO_FOOTER_GAP = 12;
+export const RAYCAST_MENU_SHORT_HELP_TO_FOOTER_GAP = 10;
 export const RAYCAST_MENU_FOOTER_BOTTOM_PADDING = 18;
 export const RAYCAST_MENU_COMPACT_FOOTER_BOTTOM_PADDING = 16;
+export const RAYCAST_MENU_SHORT_FOOTER_BOTTOM_PADDING = 12;
 export const RAYCAST_MENU_HELP_LINE_HEIGHT = 16;
 export const RAYCAST_MENU_FOOTER_HEIGHT = 14;
+export const RAYCAST_MENU_DIFFICULTY_LABEL_OFFSET = -14;
+export const RAYCAST_MENU_DIFFICULTY_VALUE_OFFSET = 2;
+export const RAYCAST_MENU_DIFFICULTY_HINT_OFFSET = 24;
 
 export function buildRaycastEpisodeBanner(input: RaycastEpisodeBannerInput): string {
   return `EP 1 MINI EPISODE  |  LVL ${input.currentLevelNumber}/${input.totalLevels} ${input.levelName.toUpperCase()}`;
@@ -92,7 +115,17 @@ export function buildRaycastStatusMessage(levelComplete: boolean, episodeComplet
   return 'Signal lost. Press R to retry or ESC for menu.';
 }
 
-export function buildRaycastHelpOverlayText(minimapToggleKey = 'M'): string {
+export function buildRaycastDifficultyMenuLine(input: RaycastDifficultyMenuCopyInput): string {
+  return `DIFFICULTY // ${input.label.toUpperCase()} // ${input.summary.toUpperCase()}`;
+}
+
+export function buildRaycastHelpOverlayText(input: RaycastHelpOverlayInput = {}): string {
+  const minimapToggleKey = input.minimapToggleKey ?? 'M';
+  const difficultyLine =
+    input.difficultyLabel && input.difficultySummary
+      ? `DIFFICULTY // ${input.difficultyLabel.toUpperCase()} // ${input.difficultySummary}`
+      : null;
+
   return [
     'MOVE // WASD',
     'TURN // MOUSE, QE, ARROWS',
@@ -102,9 +135,12 @@ export function buildRaycastHelpOverlayText(minimapToggleKey = 'M'): string {
     'INTERACT // WALK INTO GATES, LOCKS, AND EXIT NODES',
     'RESET / MENU // R RESTART, ESC MENU',
     'DEBUG // TAB',
+    difficultyLine,
     'ARENA / 2D // AVAILABLE FROM THE MENU AS THE FALLBACK MODE',
     'H OR ? // TOGGLE THIS HELP'
-  ].join('\n');
+  ]
+    .filter((line): line is string => line !== null)
+    .join('\n');
 }
 
 export function buildRaycastPriorityMessage(input: RaycastPriorityMessageInput): RaycastPriorityMessage {
@@ -125,9 +161,10 @@ export function buildRaycastPriorityMessage(input: RaycastPriorityMessageInput):
   if (input.playerHealth <= 25) {
     return {
       text:
-        input.objective === 'REACH EXIT'
+        input.lowHealthHint ??
+        (input.objective === 'REACH EXIT'
           ? 'CRITICAL HEALTH. EXIT IS LIVE, PUSH EXTRACTION NOW.'
-          : 'CRITICAL HEALTH. BREAK CONTACT OR FORCE THE OBJECTIVE.',
+          : 'CRITICAL HEALTH. BREAK CONTACT OR FORCE THE OBJECTIVE.'),
       tone: 'critical'
     };
   }
@@ -148,7 +185,7 @@ export function buildRaycastPriorityMessage(input: RaycastPriorityMessageInput):
 
   if (input.playerHealth <= 50) {
     return {
-      text: 'LOW HEALTH. STAY MOBILE AND AVOID TRADING DAMAGE.',
+      text: input.lowHealthHint ?? 'LOW HEALTH. STAY MOBILE AND AVOID TRADING DAMAGE.',
       tone: 'warning'
     };
   }
@@ -172,6 +209,8 @@ export function getRaycastMenuCopy(): RaycastMenuCopy {
     subtitle: 'TERMINAL CORRUPTION // ORIGINAL RAYCAST ASSAULT',
     episodeTagline: 'EPISODE 01 // BREACH THE RELAY, PURGE THE NOISE',
     buildTagline: 'RAYCAST PROTOTYPE // CLEAN-ROOM UI PASS 16A',
+    difficultyLabel: 'DIFFICULTY',
+    difficultyHint: 'LEFT / RIGHT OR CLICK TO CYCLE',
     primaryAction: {
       keyHint: 'SPACE / ENTER',
       label: 'START RAYCAST / FPS',
@@ -196,13 +235,32 @@ export function getRaycastMenuCopy(): RaycastMenuCopy {
 
 export function buildRaycastMenuLayout(width: number, height: number): RaycastMenuLayout {
   const compactLayout = width < 900 || height < 520;
+  const shortLayout = width <= 720 || height <= 405;
   const centerX = width * 0.5;
   const actionWidth = Math.min(420, Math.max(320, Math.round(width * 0.42)));
-  const actionHeight = compactLayout ? RAYCAST_MENU_COMPACT_ACTION_HEIGHT : RAYCAST_MENU_ACTION_HEIGHT;
-  const actionGap = compactLayout ? RAYCAST_MENU_COMPACT_ACTION_GAP : RAYCAST_MENU_ACTION_GAP;
-  const panelToHelpGap = compactLayout ? RAYCAST_MENU_COMPACT_PANEL_TO_HELP_GAP : RAYCAST_MENU_PANEL_TO_HELP_GAP;
-  const helpToFooterGap = compactLayout ? RAYCAST_MENU_COMPACT_HELP_TO_FOOTER_GAP : RAYCAST_MENU_HELP_TO_FOOTER_GAP;
-  const footerBottomPadding = compactLayout
+  const actionHeight = shortLayout
+    ? RAYCAST_MENU_SHORT_ACTION_HEIGHT
+    : compactLayout
+      ? RAYCAST_MENU_COMPACT_ACTION_HEIGHT
+      : RAYCAST_MENU_ACTION_HEIGHT;
+  const actionGap = shortLayout
+    ? RAYCAST_MENU_SHORT_ACTION_GAP
+    : compactLayout
+      ? RAYCAST_MENU_COMPACT_ACTION_GAP
+      : RAYCAST_MENU_ACTION_GAP;
+  const panelToHelpGap = shortLayout
+    ? RAYCAST_MENU_SHORT_PANEL_TO_HELP_GAP
+    : compactLayout
+      ? RAYCAST_MENU_COMPACT_PANEL_TO_HELP_GAP
+      : RAYCAST_MENU_PANEL_TO_HELP_GAP;
+  const helpToFooterGap = shortLayout
+    ? RAYCAST_MENU_SHORT_HELP_TO_FOOTER_GAP
+    : compactLayout
+      ? RAYCAST_MENU_COMPACT_HELP_TO_FOOTER_GAP
+      : RAYCAST_MENU_HELP_TO_FOOTER_GAP;
+  const footerBottomPadding = shortLayout
+    ? RAYCAST_MENU_SHORT_FOOTER_BOTTOM_PADDING
+    : compactLayout
     ? RAYCAST_MENU_COMPACT_FOOTER_BOTTOM_PADDING
     : RAYCAST_MENU_FOOTER_BOTTOM_PADDING;
   const helpLineCount = getMenuHelpLineCount(width);
@@ -217,13 +275,20 @@ export function buildRaycastMenuLayout(width: number, height: number): RaycastMe
   const primaryActionY = unclampedPrimaryActionY - upwardShift;
   const secondaryActionY = primaryActionY + actionHeight + actionGap;
   const helpTextY = secondaryActionY + actionHeight + panelToHelpGap + helpHalfHeight;
+  const episodeTagY = Math.round(height * (shortLayout ? 0.3 : compactLayout ? 0.38 : 0.39));
+  const difficultyTopGap = shortLayout ? 2 : compactLayout ? 4 : 8;
+  const difficultyBottomGap = shortLayout ? 8 : compactLayout ? 10 : 12;
+  const minDifficultyY = episodeTagY - RAYCAST_MENU_DIFFICULTY_LABEL_OFFSET + difficultyTopGap;
+  const maxDifficultyY = primaryActionY - RAYCAST_MENU_DIFFICULTY_HINT_OFFSET - difficultyBottomGap;
+  const difficultyY = Math.max(minDifficultyY, maxDifficultyY);
 
   return {
     centerX,
-    titleY: Math.round(height * (compactLayout ? 0.14 : 0.15)),
-    subtitleY: Math.round(height * (compactLayout ? 0.21 : 0.22)),
-    titleArtY: Math.round(height * (compactLayout ? 0.31 : 0.32)),
-    episodeTagY: Math.round(height * (compactLayout ? 0.41 : 0.43)),
+    titleY: Math.round(height * (shortLayout ? 0.11 : compactLayout ? 0.13 : 0.15)),
+    subtitleY: Math.round(height * (shortLayout ? 0.17 : compactLayout ? 0.2 : 0.22)),
+    titleArtY: Math.round(height * (shortLayout ? 0.25 : compactLayout ? 0.29 : 0.32)),
+    episodeTagY,
+    difficultyY,
     actionWidth,
     actionHeight,
     actionX: centerX - actionWidth * 0.5,

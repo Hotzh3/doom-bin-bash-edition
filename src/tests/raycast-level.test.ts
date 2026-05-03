@@ -14,8 +14,10 @@ import {
   getSafeDirectorSpawnPoints,
   isNearPoint,
   openRaycastDoor,
+  registerRaycastPickup,
   registerRaycastSecret,
   getRaycastDoorRequiredKeyIds,
+  isRaycastPointReachable,
   type RaycastLevel,
   type RaycastTrigger
 } from '../game/raycast/RaycastLevel';
@@ -36,6 +38,7 @@ describe('raycast level catalog', () => {
       expect(level.keys).toHaveLength(1);
       expect(level.doors).toHaveLength(1);
       expect(level.triggers.length).toBeGreaterThanOrEqual(3);
+      expect(level.healthPickups.length).toBeGreaterThanOrEqual(2);
       expect(level.secrets).toHaveLength(1);
       expect(level.exits).toHaveLength(1);
       expect(level.initialSpawns.length).toBeGreaterThanOrEqual(4);
@@ -66,6 +69,7 @@ describe('raycast level catalog', () => {
       const points = [
         level.playerStart,
         ...level.keys,
+        ...level.healthPickups,
         ...level.secrets,
         ...level.exits,
         ...level.initialSpawns,
@@ -83,6 +87,20 @@ describe('raycast level catalog', () => {
     RAYCAST_LEVEL_CATALOG.forEach((level) => {
       level.initialSpawns.forEach((spawn) => {
         expect(Math.hypot(spawn.x - level.playerStart.x, spawn.y - level.playerStart.y)).toBeGreaterThanOrEqual(2);
+      });
+    });
+  });
+
+  it('keeps authored health pickups reachable without blocking progression', () => {
+    RAYCAST_LEVEL_CATALOG.forEach((level) => {
+      level.healthPickups.forEach((pickup) => {
+        expect(pickup.restoreAmount).toBeGreaterThan(0);
+        expect(pickup.restoreAmount).toBeLessThanOrEqual(35);
+        expect(
+          isRaycastPointReachable(level, pickup, {
+            openDoorIds: pickup.requiredOpenDoorIds ?? []
+          })
+        ).toBe(true);
       });
     });
   });
@@ -241,6 +259,15 @@ describe('raycast level progression', () => {
     expect(triggers.activateIfEntered(trigger, [{ x: trigger.x, y: trigger.y }], { isDoorOpen: () => false })).toBe(false);
     expect(triggers.activateIfEntered(trigger, [{ x: trigger.x, y: trigger.y }], { isDoorOpen: () => true })).toBe(true);
     expect(triggers.activateIfEntered(trigger, [{ x: trigger.x, y: trigger.y }], { isDoorOpen: () => true })).toBe(false);
+  });
+
+  it('consumes health pickups only once in the shared pickup registry', () => {
+    const collected = new Set<string>();
+    const pickup = RAYCAST_LEVEL.healthPickups[0];
+
+    expect(registerRaycastPickup(collected, pickup)).toBe(true);
+    expect(registerRaycastPickup(collected, pickup)).toBe(false);
+    expect(collected.has(pickup.id)).toBe(true);
   });
 
   it('keeps doorless triggers working normally', () => {

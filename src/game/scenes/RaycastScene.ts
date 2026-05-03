@@ -28,9 +28,11 @@ import {
   findRaycastZoneId,
   getRaycastExitAccess,
   getRaycastLevelById,
+  isRaycastPointReachable,
   getSafeDirectorSpawnPoints,
   isNearPoint,
   openRaycastDoor,
+  registerRaycastPickup,
   registerRaycastSecret,
   RAYCAST_LEVEL,
   type RaycastDoor,
@@ -57,6 +59,15 @@ import {
   getRaycastHealthVisualState
 } from '../raycast/RaycastHud';
 import {
+  createRaycastDifficultyDirectorConfig,
+  DEFAULT_RAYCAST_DIFFICULTY_ID,
+  getRaycastDifficultyHealthPickup,
+  getRaycastDifficultyPreset,
+  RAYCAST_DIFFICULTY_REGISTRY_KEY,
+  scaleRaycastIncomingDamage,
+  type RaycastDifficultyId
+} from '../raycast/RaycastDifficulty';
+import {
   buildRaycastEpisodeBanner,
   buildRaycastHelpOverlayText,
   buildRaycastOverlayHint,
@@ -66,11 +77,24 @@ import {
 import { RaycastPlayerController, type RaycastPlayerState } from '../raycast/RaycastPlayerController';
 import { RaycastRenderer, type RaycastBillboard } from '../raycast/RaycastRenderer';
 import { buildRaycastRunSummary } from '../raycast/RaycastRunSummary';
+import {
+  buildRaycastLowHealthWarningMessage,
+  getRaycastFeedbackActions,
+  shouldPlayRaycastLowHealthWarning,
+  type RaycastFeedbackEvent
+} from '../raycast/RaycastFeedback';
+import {
+  applyRaycastHealthPickup,
+  buildRaycastLowHealthHint,
+  RAYCAST_LOW_HEALTH_HINT_THRESHOLD,
+  RAYCAST_PLAYER_MAX_HEALTH
+} from '../raycast/RaycastItems';
 import { getBillboardColor } from '../raycast/RaycastVisualTheme';
 import { palette } from '../theme/palette';
 
 interface RaycastSceneData {
   levelId?: string;
+  difficultyId?: RaycastDifficultyId;
 }
 
 const DIRECTOR_SPAWN_TELEGRAPH_MS = 820;
@@ -100,7 +124,9 @@ export class RaycastScene extends Phaser.Scene {
   private episodeComplete = false;
   private nextLevelId: string | null = null;
   private readonly collectedSecrets = new Set<string>();
+  private readonly collectedHealthPickups = new Set<string>();
   private readonly completedEncounterBeats = new Set<string>();
+  private readonly deferredPickupHints = new Map<string, number>();
   private enemiesKilled = 0;
   private playerStationaryMs = 0;
   private lastPlayerDamageAt = 0;
@@ -152,9 +178,11 @@ export class RaycastScene extends Phaser.Scene {
   private combatMessageUntil = 0;
   private blockedHintReason: RaycastBlockedReason | null = null;
   private blockedHintUntil = 0;
+  private lastLowHealthWarningAt: number | null = null;
   private nextAmbientCueAt = 0;
   private sceneReady = false;
   private inputListenersRegistered = false;
+  private difficultyId: RaycastDifficultyId = DEFAULT_RAYCAST_DIFFICULTY_ID;
 
   private readonly handleExitToMenu = (): void => {
     if (!this.isRaycastSceneActive()) return;
@@ -163,13 +191,13 @@ export class RaycastScene extends Phaser.Scene {
 
   private readonly handleRetry = (): void => {
     if (!this.isRaycastSceneActive()) return;
-    this.scene.restart({ levelId: this.currentLevel.id });
+    this.scene.restart({ levelId: this.currentLevel.id, difficultyId: this.difficultyId });
   };
 
   private readonly handleAdvanceLevel = (): void => {
     if (!this.isRaycastSceneActive()) return;
     if (!this.levelComplete || this.episodeComplete || this.nextLevelId === null) return;
-    this.scene.restart({ levelId: this.nextLevelId });
+    this.scene.restart({ levelId: this.nextLevelId, difficultyId: this.difficultyId });
   };
 
   private readonly handleFireInput = (): void => {
@@ -219,6 +247,8 @@ export class RaycastScene extends Phaser.Scene {
   init(data: RaycastSceneData = {}): void {
     this.currentLevel = getRaycastLevelById(data.levelId);
     this.nextLevelId = getRaycastEpisodeState(this.currentLevel.id).nextLevelId;
+    this.difficultyId = getRaycastDifficultyPreset(data.difficultyId ?? this.registry.get(RAYCAST_DIFFICULTY_REGISTRY_KEY)).id;
+    this.registry.set(RAYCAST_DIFFICULTY_REGISTRY_KEY, this.difficultyId);
   }
 
   create(): void {
@@ -234,11 +264,12 @@ export class RaycastScene extends Phaser.Scene {
     this.combat = new RaycastCombatSystem();
     this.audioFeedback = new AudioFeedbackSystem();
     this.gameDirector = new GameDirector({
-      config: this.currentLevel.director.config,
+      config: createRaycastDifficultyDirectorConfig(this.currentLevel.director.config, this.difficultyId),
       spawnPoints: this.currentLevel.director.spawnPoints
     });
     this.enemies = cloneRaycastEnemies(this.currentLevel);
     const hudLayout = buildRaycastHudLayout(GAME_WIDTH, GAME_HEIGHT);
+    const difficultyPreset = getRaycastDifficultyPreset(this.difficultyId);
 
     const episodeState = getRaycastEpisodeState(this.currentLevel.id);
     this.add
@@ -401,14 +432,22 @@ export class RaycastScene extends Phaser.Scene {
       .setDepth(25)
       .setVisible(false);
     this.helpOverlayText = this.add
-      .text(GAME_WIDTH * 0.5, GAME_HEIGHT * 0.55, buildRaycastHelpOverlayText(), {
-        fontSize: '14px',
-        fontStyle: '700',
-        color: '#f4f7d0',
-        align: 'left',
-        lineSpacing: 4,
-        wordWrap: { width: 360 }
-      })
+      .text(
+        GAME_WIDTH * 0.5,
+        GAME_HEIGHT * 0.55,
+        buildRaycastHelpOverlayText({
+          difficultyLabel: difficultyPreset.label,
+          difficultySummary: difficultyPreset.inGameSummary
+        }),
+        {
+          fontSize: '14px',
+          fontStyle: '700',
+          color: '#f4f7d0',
+          align: 'left',
+          lineSpacing: 4,
+          wordWrap: { width: 360 }
+        }
+      )
       .setOrigin(0.5)
       .setDepth(25)
       .setVisible(false);
@@ -516,6 +555,7 @@ export class RaycastScene extends Phaser.Scene {
       .setDepth(10);
 
     this.sceneReady = true;
+    this.setCombatMessage(`MODE ${difficultyPreset.label.toUpperCase()} // ${difficultyPreset.inGameSummary}`);
     this.registerInputListeners();
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.cleanupSceneLifecycle, this);
     this.events.once(Phaser.Scenes.Events.DESTROY, this.cleanupSceneLifecycle, this);
@@ -545,7 +585,13 @@ export class RaycastScene extends Phaser.Scene {
     const objectiveState = this.getObjectiveState();
     const objective = buildRaycastCurrentObjective(objectiveState);
     const hint = buildRaycastHintText(objectiveState);
-    this.healthText.setText(buildRaycastHudStatusLine(this.playerHealth, this.combat.getWeaponLabel()));
+    this.healthText.setText(
+      buildRaycastHudStatusLine(
+        this.playerHealth,
+        this.combat.getWeaponLabel(),
+        getRaycastDifficultyPreset(this.difficultyId).shortLabel
+      )
+    );
     this.weaponText.setText(
       buildRaycastHudProgressLine(
         this.getKeyCount(),
@@ -587,6 +633,8 @@ export class RaycastScene extends Phaser.Scene {
     this.levelComplete = false;
     this.episodeComplete = false;
     this.collectedSecrets.clear();
+    this.collectedHealthPickups.clear();
+    this.deferredPickupHints.clear();
     this.completedEncounterBeats.clear();
     this.enemiesKilled = 0;
     this.playerStationaryMs = 0;
@@ -605,6 +653,7 @@ export class RaycastScene extends Phaser.Scene {
     this.combatMessageUntil = 0;
     this.blockedHintReason = null;
     this.blockedHintUntil = 0;
+    this.lastLowHealthWarningAt = null;
     this.weaponOverlayFlashUntil = 0;
     this.nextAmbientCueAt = 0;
     this.sceneReady = false;
@@ -862,17 +911,35 @@ export class RaycastScene extends Phaser.Scene {
 
   private damagePlayer(amount: number): void {
     if (!this.playerAlive || this.levelComplete) return;
-    this.playerHealth = Math.max(0, this.playerHealth - amount);
-    this.damageTaken += amount;
+    const previousHealth = this.playerHealth;
+    const appliedDamage = scaleRaycastIncomingDamage(amount, this.difficultyId);
+    this.playerHealth = Math.max(0, this.playerHealth - appliedDamage);
+    this.damageTaken += appliedDamage;
     this.lastPlayerDamageAt = this.time.now;
     this.cameras.main.shake(95, 0.003);
-    this.flashDamage(amount);
+    this.flashDamage(appliedDamage);
     this.audioFeedback.play('damage', 1, this.time.now);
-    this.setCombatMessage(`${RAYCAST_ATMOSPHERE.messages.damage} -${amount}`);
+    this.setCombatMessage(`${RAYCAST_ATMOSPHERE.messages.damage} -${appliedDamage}`);
     if (this.playerHealth === 0) {
       this.playerAlive = false;
       this.setCombatMessage('SIGNAL LOST');
       this.showRunCompleteOverlay('SIGNAL LOST', RAYCAST_ATMOSPHERE.warningText, false);
+      return;
+    }
+    if (
+      shouldPlayRaycastLowHealthWarning({
+        previousHealth,
+        nextHealth: this.playerHealth,
+        nowMs: this.time.now,
+        lastWarningAtMs: this.lastLowHealthWarningAt,
+        playerAlive: this.playerAlive,
+        levelComplete: this.levelComplete
+      })
+    ) {
+      this.lastLowHealthWarningAt = this.time.now;
+      this.playFeedbackEvent('lowHealthWarning');
+      this.pulseFeedback(this.playerHealth <= 25 ? 0xff5b6f : 0xffb347, 0.04, 120);
+      this.setCombatMessage(buildRaycastLowHealthWarningMessage(this.playerHealth));
     }
   }
 
@@ -925,11 +992,38 @@ export class RaycastScene extends Phaser.Scene {
     this.currentLevel.secrets.forEach((secret) => {
       if (this.collectedSecrets.has(secret.id)) return;
       if (!isNearPoint(this.player.x, this.player.y, secret)) return;
-      this.playerHealth = Math.min(100, this.playerHealth + 25);
       registerRaycastSecret(this.collectedSecrets, secret);
       this.audioFeedback.play('secret', 1, this.time.now);
       this.pulseFeedback(0x9feee2, 0.11, 180);
       this.setCombatMessage(`${RAYCAST_ATMOSPHERE.messages.secret}: ${secret.objectiveText}`);
+    });
+
+    this.currentLevel.healthPickups.forEach((pickup) => {
+      if (this.collectedHealthPickups.has(pickup.id)) return;
+      if (!isNearPoint(this.player.x, this.player.y, pickup)) return;
+
+      const result = applyRaycastHealthPickup(
+        this.playerHealth,
+        getRaycastDifficultyHealthPickup(pickup, this.difficultyId),
+        RAYCAST_PLAYER_MAX_HEALTH
+      );
+      if (!result.consumed) {
+        const lastHintAt = this.deferredPickupHints.get(pickup.id) ?? Number.NEGATIVE_INFINITY;
+        if (this.time.now - lastHintAt < 1800) return;
+        this.deferredPickupHints.set(pickup.id, this.time.now);
+        this.playFeedbackEvent('healthPickupDenied');
+        this.pulseFeedback(0xffb347, 0.035, 90);
+        this.setCombatMessage(pickup.fullHealthMessage);
+        return;
+      }
+
+      this.playerHealth = result.nextHealth;
+      registerRaycastPickup(this.collectedHealthPickups, pickup);
+      this.deferredPickupHints.delete(pickup.id);
+      this.playFeedbackEvent('healthPickup');
+      this.pulseFeedback(0xff8fb0, 0.08, 150);
+      this.cameras.main.shake(45, 0.001);
+      this.setCombatMessage(`${pickup.pickupMessage} +${result.restored} HP`);
     });
 
     this.currentLevel.exits.forEach((exit) => {
@@ -958,7 +1052,7 @@ export class RaycastScene extends Phaser.Scene {
       }
       this.levelComplete = true;
       this.episodeComplete = this.nextLevelId === null;
-      this.audioFeedback.play(this.episodeComplete ? 'episodeComplete' : 'levelComplete', 1, this.time.now);
+      this.playFeedbackEvent(this.episodeComplete ? 'episodeComplete' : 'levelComplete');
       this.pulseFeedback(this.episodeComplete ? 0xffc36b : 0x9feee2, this.episodeComplete ? 0.12 : 0.09, 260);
       this.cameras.main.shake(this.episodeComplete ? 180 : 120, this.episodeComplete ? 0.0022 : 0.0017);
       this.setCombatMessage(`${RAYCAST_ATMOSPHERE.messages.exit}: ${exit.objectiveText}`);
@@ -973,6 +1067,7 @@ export class RaycastScene extends Phaser.Scene {
   private showRunCompleteOverlay(title: string, titleColor: string, episodeComplete = false): void {
     const episodeState = getRaycastEpisodeState(this.currentLevel.id);
     const summary = buildRaycastRunSummary({
+      difficultyLabel: getRaycastDifficultyPreset(this.difficultyId).label,
       elapsedMs: this.time.now - this.runStartedAt,
       enemiesKilled: this.enemiesKilled,
       secretsFound: this.collectedSecrets.size,
@@ -1003,7 +1098,7 @@ export class RaycastScene extends Phaser.Scene {
   private tryOpenDoor(door: RaycastDoor): void {
     const result = this.doorSystem.attemptOpen(door, 0);
     if (result.reason === 'MISSING_KEY') {
-      this.audioFeedback.play('uiDeny', 1, this.time.now);
+      this.playFeedbackEvent('doorDenied');
       this.pulseFeedback(0xff5b6f, 0.05, 100);
       this.blockedHintReason = 'door-key';
       this.blockedHintUntil = this.time.now + 2600;
@@ -1015,11 +1110,16 @@ export class RaycastScene extends Phaser.Scene {
     openRaycastDoor(this.map, door);
     this.blockedHintReason = null;
     this.tryTriggerEncounterBeat((beat) => beat.doorId === door.id);
-    this.audioFeedback.play('door', 1, this.time.now);
-    this.audioFeedback.play('uiConfirm', 0.85, this.time.now + 24);
+    this.playFeedbackEvent('doorOpened');
     this.pulseFeedback(0x9feee2, 0.06, 140);
     this.cameras.main.shake(70, 0.0014);
     this.setCombatMessage(`${RAYCAST_ATMOSPHERE.messages.doorOpen}: ${door.openObjectiveText}`);
+  }
+
+  private playFeedbackEvent(event: RaycastFeedbackEvent): void {
+    getRaycastFeedbackActions(event).forEach((action) => {
+      this.audioFeedback.play(action.cue, action.intensity, this.time.now + (action.delayMs ?? 0));
+    });
   }
 
   private createLevelBillboards(): RaycastBillboard[] {
@@ -1052,6 +1152,16 @@ export class RaycastScene extends Phaser.Scene {
         label: secret.billboardLabel,
         style: 'secret' as const
       }));
+    const healthBillboards = this.currentLevel.healthPickups
+      .filter((pickup) => !this.collectedHealthPickups.has(pickup.id))
+      .map((pickup) => ({
+        x: pickup.x,
+        y: pickup.y,
+        color: getBillboardColor('health'),
+        radius: pickup.radius,
+        label: pickup.billboardLabel,
+        style: 'health' as const
+      }));
     const exitBillboards = this.currentLevel.exits.map((exit) => ({
       x: exit.x,
       y: exit.y,
@@ -1061,7 +1171,7 @@ export class RaycastScene extends Phaser.Scene {
       style: 'exit' as const
     }));
 
-    return [...keyBillboards, ...doorBillboards, ...secretBillboards, ...exitBillboards];
+    return [...keyBillboards, ...doorBillboards, ...secretBillboards, ...healthBillboards, ...exitBillboards];
   }
 
   private updatePlayerMetrics(delta: number): void {
@@ -1215,7 +1325,18 @@ export class RaycastScene extends Phaser.Scene {
     const uncollectedKeyDistances = this.currentLevel.keys
       .filter((key) => !this.keySystem.hasKey(key.id))
       .map((key) => Math.hypot(key.x - this.player.x, key.y - this.player.y));
-    return uncollectedKeyDistances.length > 0 ? Math.min(...uncollectedKeyDistances) : null;
+    const healthPickupDistances =
+      this.playerHealth <= RAYCAST_LOW_HEALTH_HINT_THRESHOLD
+        ? this.currentLevel.healthPickups
+            .filter((pickup) => !this.collectedHealthPickups.has(pickup.id))
+            .filter((pickup) => {
+              const requiredDoors = pickup.requiredOpenDoorIds ?? [];
+              return requiredDoors.every((doorId) => this.doorSystem.isOpen(doorId));
+            })
+            .map((pickup) => Math.hypot(pickup.x - this.player.x, pickup.y - this.player.y))
+        : [];
+    const allDistances = [...uncollectedKeyDistances, ...healthPickupDistances];
+    return allDistances.length > 0 ? Math.min(...allDistances) : null;
   }
 
   private getCurrentStatusMessage(): string {
@@ -1224,6 +1345,7 @@ export class RaycastScene extends Phaser.Scene {
   }
 
   private updatePriorityMessage(objective: string, hint: string, blockedHintActive: boolean): void {
+    const lowHealthHint = buildRaycastLowHealthHint(this.getNearestAvailableHealthPickupDistance(), this.playerHealth);
     const message = buildRaycastPriorityMessage({
       levelComplete: this.levelComplete,
       episodeComplete: this.episodeComplete,
@@ -1231,6 +1353,7 @@ export class RaycastScene extends Phaser.Scene {
       playerHealth: this.playerHealth,
       objective,
       hint,
+      lowHealthHint,
       combatMessage: this.time.now < this.combatMessageUntil ? this.lastCombatMessage : undefined,
       combatMessageActive: this.time.now < this.combatMessageUntil,
       blockedHintActive
@@ -1468,5 +1591,18 @@ export class RaycastScene extends Phaser.Scene {
     if (beat.directorState !== 'RECOVERY') this.pulseCorruption();
     this.setCombatMessage(beat.message);
     return true;
+  }
+
+  private getNearestAvailableHealthPickupDistance(): number | null {
+    const distances = this.currentLevel.healthPickups
+      .filter((pickup) => !this.collectedHealthPickups.has(pickup.id))
+      .filter((pickup) => {
+        const requiredDoors = pickup.requiredOpenDoorIds ?? [];
+        if (!requiredDoors.every((doorId) => this.doorSystem.isOpen(doorId))) return false;
+        return isRaycastPointReachable(this.currentLevel, pickup, { openDoorIds: requiredDoors });
+      })
+      .map((pickup) => Math.hypot(pickup.x - this.player.x, pickup.y - this.player.y));
+
+    return distances.length > 0 ? Math.min(...distances) : null;
   }
 }

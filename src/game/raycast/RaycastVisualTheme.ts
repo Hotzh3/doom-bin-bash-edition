@@ -390,13 +390,14 @@ export function sampleRaycastSurfaceContext(
 }
 
 export function getBillboardColor(
-  style: 'token' | 'gate' | 'gate-open' | 'secret' | 'exit',
+  style: 'token' | 'gate' | 'gate-open' | 'secret' | 'exit' | 'health',
   isActive = false
 ): number {
   if (style === 'token') return 0x8ff4c0;
   if (style === 'gate') return 0xff7a6d;
   if (style === 'gate-open') return isActive ? 0x9feee2 : 0x57cfa7;
   if (style === 'secret') return 0xffc56d;
+  if (style === 'health') return 0xff8fb0;
   return isActive ? 0xd2f7ff : 0x6fd8ff;
 }
 

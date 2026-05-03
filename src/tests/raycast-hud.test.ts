@@ -17,6 +17,7 @@ describe('raycast HUD', () => {
     const hud = buildRaycastHudLine({
       health: 82,
       weaponLabel: 'Shotgun',
+      difficultyLabel: 'STD',
       keyCount: 1,
       keyTotal: 1,
       secretCount: 0,
@@ -24,12 +25,13 @@ describe('raycast HUD', () => {
       objective: 'EXIT'
     });
 
-    expect(hud).toBe('HP 82/100 | WPN Shotgun | TOK 1/1 | SEC 0/1 | OBJ EXIT');
-    expect(hud.length).toBeLessThan(80);
+    expect(hud).toBe('HP 82/100 | WPN Shotgun | MODE STD | TOK 1/1 | SEC 0/1 | OBJ EXIT');
+    expect(hud.length).toBeLessThan(96);
   });
 
   it('splits the readable hub into status and progress lines', () => {
     expect(buildRaycastHudStatusLine(82, 'Shotgun')).toBe('HP 82/100 STABLE  |  WPN Shotgun');
+    expect(buildRaycastHudStatusLine(82, 'Shotgun', 'AST')).toBe('HP 82/100 STABLE  |  WPN Shotgun  |  MODE AST');
     expect(buildRaycastHudProgressLine(1, 2, 0, 1, 'Reach Exit')).toBe('TOKENS 1/2  |  SECRETS 0/1  |  OBJECTIVE EXIT');
   });
 
@@ -37,6 +39,7 @@ describe('raycast HUD', () => {
     const hud = buildRaycastHudLine({
       health: 18,
       weaponLabel: 'Pistol',
+      difficultyLabel: 'HRD',
       keyCount: 0,
       keyTotal: 1,
       secretCount: 1,
@@ -46,9 +49,10 @@ describe('raycast HUD', () => {
     });
 
     expect(hud).toContain('HP 18/100 CRIT');
+    expect(hud).toContain('MODE HRD');
     expect(hud).toContain('OBJ TOKEN');
     expect(hud).toContain('MSG CRITICAL BODY STATE');
-    expect(hud.length).toBeLessThan(92);
+    expect(hud.length).toBeLessThan(108);
   });
 
   it('keeps normal HUD free from debug internals', () => {

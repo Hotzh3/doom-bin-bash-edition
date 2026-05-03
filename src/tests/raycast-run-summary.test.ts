@@ -10,6 +10,7 @@ describe('raycast run summary', () => {
 
   it('builds final summary lines for victory and retry screens', () => {
     const summary = buildRaycastRunSummary({
+      difficultyLabel: 'Hard',
       elapsedMs: 125_900,
       enemiesKilled: 8,
       secretsFound: 1,
@@ -19,6 +20,13 @@ describe('raycast run summary', () => {
       damageTaken: 47
     });
 
-    expect(summary).toEqual(['TIME 2:05.9', 'ENEMIES KILLED 8', 'SECRETS 1/2', 'TOKENS 1/1', 'DAMAGE TAKEN 47']);
+    expect(summary).toEqual([
+      'DIFFICULTY HARD',
+      'TIME 2:05.9',
+      'ENEMIES KILLED 8',
+      'SECRETS 1/2',
+      'TOKENS 1/1',
+      'DAMAGE TAKEN 47'
+    ]);
   });
 });

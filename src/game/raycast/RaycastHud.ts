@@ -3,6 +3,7 @@ import type { EnemyKind } from '../types/game';
 export interface RaycastHudState {
   health: number;
   weaponLabel: string;
+  difficultyLabel?: string;
   keyCount: number;
   keyTotal: number;
   secretCount: number;
@@ -112,6 +113,7 @@ export function buildRaycastHudLine(state: RaycastHudState): string {
   return [
     healthLabel,
     `WPN ${state.weaponLabel}`,
+    state.difficultyLabel ? `MODE ${state.difficultyLabel}` : null,
     `TOK ${state.keyCount}/${state.keyTotal}`,
     `SEC ${state.secretCount}/${state.secretTotal}`,
     `OBJ ${formatRaycastObjectiveLabel(state.objective)}`,
@@ -130,6 +132,7 @@ export interface RaycastDebugHudState {
 export interface RaycastHudSummaryState {
   health: number;
   weaponLabel: string;
+  difficultyLabel?: string;
   keyCount: number;
   keyTotal: number;
   secretCount: number;
@@ -138,8 +141,10 @@ export interface RaycastHudSummaryState {
   criticalMessage?: string;
 }
 
-export function buildRaycastHudStatusLine(health: number, weaponLabel: string): string {
-  return `${buildRaycastPlayerHealthLine({ health })}  |  WPN ${weaponLabel}`;
+export function buildRaycastHudStatusLine(health: number, weaponLabel: string, difficultyLabel?: string): string {
+  return [buildRaycastPlayerHealthLine({ health }), `WPN ${weaponLabel}`, difficultyLabel ? `MODE ${difficultyLabel}` : null]
+    .filter((part): part is string => part !== null)
+    .join('  |  ');
 }
 
 export function buildRaycastHudProgressLine(
@@ -206,7 +211,7 @@ export function buildRaycastDebugLine(state: RaycastDebugHudState): string {
 
 export function buildRaycastHudSummary(state: RaycastHudSummaryState): string[] {
   const lines = [
-    buildRaycastHudStatusLine(state.health, state.weaponLabel),
+    buildRaycastHudStatusLine(state.health, state.weaponLabel, state.difficultyLabel),
     buildRaycastHudProgressLine(
       state.keyCount,
       state.keyTotal,
