@@ -130,6 +130,7 @@ describe('raycast visual theme', () => {
     expect(getBillboardColor('token')).toBe(0x8ff4c0);
     expect(getBillboardColor('gate')).toBe(0xff7a6d);
     expect(getBillboardColor('gate-open', true)).toBe(0x9feee2);
+    expect(getBillboardColor('health')).toBe(0xff8fb0);
     expect(getBillboardColor('exit', false)).toBe(0x6fd8ff);
   });
 

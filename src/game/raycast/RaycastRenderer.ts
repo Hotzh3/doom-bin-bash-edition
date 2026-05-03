@@ -40,7 +40,7 @@ export interface RaycastBillboard {
   color: number;
   radius: number;
   label?: string;
-  style?: 'token' | 'gate' | 'gate-open' | 'secret' | 'exit';
+  style?: 'token' | 'gate' | 'gate-open' | 'secret' | 'exit' | 'health';
 }
 
 export class RaycastRenderer {
@@ -771,6 +771,19 @@ export class RaycastRenderer {
       this.graphics.strokeCircle(projection.screenX, y, projection.size * 0.48);
       this.graphics.lineBetween(projection.screenX - projection.size * 0.38, y, projection.screenX + projection.size * 0.38, y);
       this.graphics.lineBetween(projection.screenX, y - projection.size * 0.38, projection.screenX, y + projection.size * 0.38);
+      return;
+    }
+
+    if (projection.billboard.style === 'health') {
+      this.graphics.lineStyle(2, 0xffffff, 0.58);
+      this.graphics.strokeRect(
+        projection.screenX - projection.size * 0.42,
+        y - projection.size * 0.42,
+        projection.size * 0.84,
+        projection.size * 0.84
+      );
+      this.graphics.lineBetween(projection.screenX - projection.size * 0.24, y, projection.screenX + projection.size * 0.24, y);
+      this.graphics.lineBetween(projection.screenX, y - projection.size * 0.24, projection.screenX, y + projection.size * 0.24);
       return;
     }
 

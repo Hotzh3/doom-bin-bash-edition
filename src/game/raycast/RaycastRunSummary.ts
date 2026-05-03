@@ -1,4 +1,5 @@
 export interface RaycastRunSummaryInput {
+  difficultyLabel?: string;
   elapsedMs: number;
   enemiesKilled: number;
   secretsFound: number;
@@ -20,10 +21,11 @@ export function formatRunDuration(elapsedMs: number): string {
 
 export function buildRaycastRunSummary(input: RaycastRunSummaryInput): string[] {
   return [
+    input.difficultyLabel ? `DIFFICULTY ${input.difficultyLabel.toUpperCase()}` : null,
     `TIME ${formatRunDuration(input.elapsedMs)}`,
     `ENEMIES KILLED ${input.enemiesKilled}`,
     `SECRETS ${input.secretsFound}/${input.secretTotal}`,
     `TOKENS ${input.tokensFound}/${input.tokenTotal}`,
     `DAMAGE TAKEN ${input.damageTaken}`
-  ];
+  ].filter((line): line is string => line !== null);
 }

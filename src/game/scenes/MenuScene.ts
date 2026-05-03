@@ -1,5 +1,20 @@
 import Phaser from 'phaser';
-import { buildRaycastMenuLayout, getRaycastMenuCopy } from '../raycast/RaycastPresentation';
+import { AudioFeedbackSystem } from '../systems/AudioFeedbackSystem';
+import { getRaycastFeedbackActions } from '../raycast/RaycastFeedback';
+import {
+  cycleRaycastDifficulty,
+  getRaycastDifficultyPreset,
+  RAYCAST_DIFFICULTY_REGISTRY_KEY,
+  type RaycastDifficultyId
+} from '../raycast/RaycastDifficulty';
+import {
+  buildRaycastDifficultyMenuLine,
+  buildRaycastMenuLayout,
+  getRaycastMenuCopy,
+  RAYCAST_MENU_DIFFICULTY_HINT_OFFSET,
+  RAYCAST_MENU_DIFFICULTY_LABEL_OFFSET,
+  RAYCAST_MENU_DIFFICULTY_VALUE_OFFSET
+} from '../raycast/RaycastPresentation';
 
 const MENU_BACKGROUND = 0x070b11;
 const MENU_PANEL = 0x0b1320;
@@ -14,13 +29,25 @@ const OPTIONAL_TITLE_IMAGE_REGISTRY_KEY = 'menuTitleImageKey';
 
 export class MenuScene extends Phaser.Scene {
   private inputListenersRegistered = false;
+  private selectedDifficultyId: RaycastDifficultyId = 'standard';
+  private difficultyValueText?: Phaser.GameObjects.Text;
+  private audioFeedback!: AudioFeedbackSystem;
 
   private readonly handleStartArena = (): void => {
     this.scene.start('ArenaScene');
   };
 
   private readonly handleStartRaycast = (): void => {
-    this.scene.start('RaycastScene');
+    this.playFeedbackEvent('difficultyStart');
+    this.scene.start('RaycastScene', { difficultyId: this.selectedDifficultyId });
+  };
+
+  private readonly handleDifficultyPrevious = (): void => {
+    this.setSelectedDifficulty(cycleRaycastDifficulty(this.selectedDifficultyId, -1).id);
+  };
+
+  private readonly handleDifficultyNext = (): void => {
+    this.setSelectedDifficulty(cycleRaycastDifficulty(this.selectedDifficultyId, 1).id);
   };
 
   constructor() {
@@ -32,6 +59,8 @@ export class MenuScene extends Phaser.Scene {
     const height = this.scale.height;
     const copy = getRaycastMenuCopy();
     const layout = buildRaycastMenuLayout(width, height);
+    this.selectedDifficultyId = getRaycastDifficultyPreset(this.registry.get(RAYCAST_DIFFICULTY_REGISTRY_KEY)).id;
+    this.audioFeedback = new AudioFeedbackSystem();
 
     this.cameras.main.setBackgroundColor(MENU_BACKGROUND);
 
@@ -85,6 +114,44 @@ export class MenuScene extends Phaser.Scene {
       })
       .setOrigin(0.5)
       .setDepth(8);
+
+    this.add
+      .text(layout.centerX, layout.difficultyY + RAYCAST_MENU_DIFFICULTY_LABEL_OFFSET, copy.difficultyLabel, {
+        fontFamily: 'monospace',
+        fontSize: '12px',
+        fontStyle: '700',
+        color: '#7aa4ac',
+        align: 'center'
+      })
+      .setOrigin(0.5)
+      .setDepth(8);
+
+    this.difficultyValueText = this.add
+      .text(layout.centerX, layout.difficultyY + RAYCAST_MENU_DIFFICULTY_VALUE_OFFSET, '', {
+        fontFamily: 'monospace',
+        fontSize: '14px',
+        fontStyle: '700',
+        color: MENU_CYAN_SOFT,
+        backgroundColor: '#07101acc',
+        padding: { x: 8, y: 5 },
+        align: 'center'
+      })
+      .setOrigin(0.5)
+      .setDepth(9)
+      .setInteractive({ useHandCursor: true })
+      .on(Phaser.Input.Events.POINTER_DOWN, this.handleDifficultyNext);
+
+    this.add
+      .text(layout.centerX, layout.difficultyY + RAYCAST_MENU_DIFFICULTY_HINT_OFFSET, copy.difficultyHint, {
+        fontFamily: 'monospace',
+        fontSize: '11px',
+        fontStyle: '700',
+        color: '#d7deea',
+        align: 'center'
+      })
+      .setOrigin(0.5)
+      .setDepth(8);
+    this.refreshDifficultyText();
 
     this.createActionPanel({
       x: layout.actionX,
@@ -297,6 +364,8 @@ export class MenuScene extends Phaser.Scene {
     this.input.keyboard?.once('keydown-SPACE', this.handleStartRaycast);
     this.input.keyboard?.once('keydown-ENTER', this.handleStartRaycast);
     this.input.keyboard?.once('keydown-A', this.handleStartArena);
+    this.input.keyboard?.on('keydown-LEFT', this.handleDifficultyPrevious);
+    this.input.keyboard?.on('keydown-RIGHT', this.handleDifficultyNext);
     this.inputListenersRegistered = true;
   }
 
@@ -305,6 +374,32 @@ export class MenuScene extends Phaser.Scene {
     this.input.keyboard?.off('keydown-SPACE', this.handleStartRaycast);
     this.input.keyboard?.off('keydown-ENTER', this.handleStartRaycast);
     this.input.keyboard?.off('keydown-A', this.handleStartArena);
+    this.input.keyboard?.off('keydown-LEFT', this.handleDifficultyPrevious);
+    this.input.keyboard?.off('keydown-RIGHT', this.handleDifficultyNext);
     this.inputListenersRegistered = false;
+  }
+
+  private setSelectedDifficulty(difficultyId: RaycastDifficultyId): void {
+    if (difficultyId === this.selectedDifficultyId) return;
+    this.selectedDifficultyId = difficultyId;
+    this.registry.set(RAYCAST_DIFFICULTY_REGISTRY_KEY, difficultyId);
+    this.playFeedbackEvent('difficultySelect');
+    this.refreshDifficultyText();
+  }
+
+  private refreshDifficultyText(): void {
+    const preset = getRaycastDifficultyPreset(this.selectedDifficultyId);
+    this.difficultyValueText?.setText(
+      buildRaycastDifficultyMenuLine({
+        label: preset.label,
+        summary: preset.menuSummary
+      })
+    );
+  }
+
+  private playFeedbackEvent(event: 'difficultySelect' | 'difficultyStart'): void {
+    getRaycastFeedbackActions(event).forEach((action) => {
+      this.audioFeedback.play(action.cue, action.intensity, this.time.now + (action.delayMs ?? 0));
+    });
   }
 }
