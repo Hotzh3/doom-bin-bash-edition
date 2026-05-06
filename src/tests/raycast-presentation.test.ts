@@ -100,7 +100,7 @@ describe('raycast presentation helpers', () => {
     expect(help).toContain('MAP // M');
     expect(help).toContain('INTERACT // WALK INTO GATES, LOCKS, AND EXIT NODES');
     expect(help).toContain('DIFFICULTY // ASSIST // SOFTER DAMAGE // SLOWER PRESSURE // STRONGER REPAIRS');
-    expect(help).toContain('ARENA / 2D // AVAILABLE FROM THE MENU AS THE FALLBACK MODE');
+    expect(help).toContain('TITLE MENU // 2D: SPACE OR A');
     expect(help).toContain('H OR ? // TOGGLE THIS HELP');
   });
 
@@ -209,20 +209,22 @@ describe('raycast presentation helpers', () => {
     });
   });
 
-  it('marks the raycast episode as primary and arena as secondary in the menu copy', () => {
+  it('keeps the menu copy compact with explicit mode keys', () => {
     const copy = getRaycastMenuCopy();
 
-    expect(copy.title).toBe('BIN BASH EDITION');
-    expect(copy.subtitle).toContain('TERMINAL CORRUPTION');
-    expect(copy.episodeTagline).toContain('EPISODE 01');
+    expect(copy.title).toBe('HELL ARENA TERMINAL');
+    expect(copy.subtitle).toContain('BIN BASH');
+    expect(copy.episodeTagline).toBe('');
+    expect(copy.buildTagline).toBe('');
     expect(copy.difficultyLabel).toBe('DIFFICULTY');
-    expect(copy.difficultyHint).toBe('LEFT / RIGHT OR CLICK TO CYCLE');
-    expect(copy.primaryAction.keyHint).toBe('SPACE / ENTER');
-    expect(copy.primaryAction.label).toBe('START RAYCAST / FPS');
-    expect(copy.secondaryAction.keyHint).toBe('A');
-    expect(copy.secondaryAction.label).toBe('OPEN ARENA / 2D');
-    expect(copy.helpActions).toContain('FIRE // F, SPACE, CLICK');
-    expect(copy.footerHint).toBe('CLICK A PANEL OR PRESS A KEY TO DEPLOY');
+    expect(copy.difficultyHint).toBe('LEFT / RIGHT');
+    expect(copy.primaryAction.keyHint).toBe('SPACE / A');
+    expect(copy.primaryAction.label).toBe('2D ARENA');
+    expect(copy.secondaryAction.keyHint).toBe('R / ENTER');
+    expect(copy.secondaryAction.label).toBe('RAYCAST (FPS)');
+    expect(copy.helpActions).toContain('2D — SPACE OR A');
+    expect(copy.helpActions).toContain('RAYCAST — R OR ENTER');
+    expect(copy.footerHint).toBe('CLICK A MODE OR USE THE KEYS');
   });
 
   it('keeps the 960x540 menu layout clear between the secondary panel, help text, and footer', () => {

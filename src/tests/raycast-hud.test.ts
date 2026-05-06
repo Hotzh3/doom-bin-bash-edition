@@ -7,12 +7,18 @@ import {
   buildRaycastHudProgressLine,
   buildRaycastHudStatusLine,
   buildRaycastMinimapLegendLine,
+  buildRaycastScoreHudLine,
   buildRaycastPlayerHealthLine,
   formatRaycastObjectiveLabel,
   getRaycastHealthVisualState
 } from '../game/raycast/RaycastHud';
 
 describe('raycast HUD', () => {
+  it('formats score and high score for the HUD strip', () => {
+    expect(buildRaycastScoreHudLine(1240, 900)).toBe('SCORE 1240  |  HI 900');
+    expect(buildRaycastScoreHudLine(-3, -1)).toBe('SCORE 0  |  HI 0');
+  });
+
   it('builds a compact readable status line', () => {
     const hud = buildRaycastHudLine({
       health: 82,

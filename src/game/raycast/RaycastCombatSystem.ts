@@ -7,12 +7,14 @@ import { isRaycastEnemyTelegraphing, isRaycastEnemyWindingUp, type RaycastEnemy 
 import type { RaycastPlayerState } from './RaycastPlayerController';
 import type { ProjectileSpawn, WeaponKind } from '../systems/WeaponTypes';
 import { formatRaycastEnemyKindLabel } from './RaycastHud';
+import type { EnemyKind } from '../types/game';
 
 export interface RaycastCombatResult {
   fired: boolean;
   hitEnemy: RaycastEnemy | null;
   killed: boolean;
   killCount: number;
+  killedEnemyKinds: EnemyKind[];
   splashHitCount: number;
   wallDistance: number;
   totalDamage: number;
@@ -56,6 +58,7 @@ export class RaycastCombatSystem {
         hitEnemy: null,
         killed: false,
         killCount: 0,
+        killedEnemyKinds: [],
         splashHitCount: 0,
         wallDistance,
         totalDamage: 0,
@@ -75,6 +78,7 @@ export class RaycastCombatSystem {
         hitEnemy: null,
         killed: false,
         killCount: 0,
+        killedEnemyKinds: [],
         splashHitCount: 0,
         wallDistance,
         totalDamage: 0,
@@ -84,11 +88,14 @@ export class RaycastCombatSystem {
       };
     }
 
+    const killedEnemyKinds = impacts.flatMap((impact) => impact.killedEnemyKinds);
+
     return {
       fired: true,
       hitEnemy: impacts[0].enemy,
       killed: impacts.some((impact) => impact.killed),
       killCount: impacts.reduce((total, impact) => total + impact.killCount, 0),
+      killedEnemyKinds,
       splashHitCount: impacts.reduce((total, impact) => total + impact.splashHitCount, 0),
       wallDistance,
       totalDamage: impacts.reduce((total, impact) => total + impact.damage, 0),
@@ -115,11 +122,15 @@ export class RaycastCombatSystem {
     target.hitFlashUntil = time + HIT_FLASH_MS;
     if (directKilled) target.deathBurstUntil = time + DEATH_BURST_MS;
     const splashImpacts = this.applyExplosionSplash(target, projectile, enemies, time);
+    const killedEnemyKinds: EnemyKind[] = [];
+    if (directKilled) killedEnemyKinds.push(target.kind);
+    killedEnemyKinds.push(...splashImpacts.killedKinds);
     return {
       enemy: target,
       damage: projectile.damage + splashImpacts.damage,
       killed: directKilled || splashImpacts.killCount > 0,
       killCount: (directKilled ? 1 : 0) + splashImpacts.killCount,
+      killedEnemyKinds,
       splashHitCount: splashImpacts.hitCount
     };
   }
@@ -129,13 +140,14 @@ export class RaycastCombatSystem {
     projectile: ProjectileSpawn,
     enemies: RaycastEnemy[],
     time: number
-  ): { damage: number; killCount: number; hitCount: number } {
-    if (projectile.explosionRadius <= 0) return { damage: 0, killCount: 0, hitCount: 0 };
+  ): { damage: number; killCount: number; hitCount: number; killedKinds: EnemyKind[] } {
+    if (projectile.explosionRadius <= 0) return { damage: 0, killCount: 0, hitCount: 0, killedKinds: [] };
 
     const radius = projectile.explosionRadius / GRID_SCALE;
     let damage = 0;
     let killCount = 0;
     let hitCount = 0;
+    const killedKinds: EnemyKind[] = [];
     enemies.forEach((enemy) => {
       if (!enemy.alive || enemy.id === originEnemy.id) return;
       const distance = Math.hypot(enemy.x - originEnemy.x, enemy.y - originEnemy.y);
@@ -147,12 +159,13 @@ export class RaycastCombatSystem {
       if (applyDamage(enemy, splashDamage)) {
         enemy.deathBurstUntil = time + DEATH_BURST_MS;
         killCount += 1;
+        killedKinds.push(enemy.kind);
       }
       enemy.hitFlashUntil = time + HIT_FLASH_MS;
       damage += splashDamage;
     });
 
-    return { damage, killCount, hitCount };
+    return { damage, killCount, hitCount, killedKinds };
   }
 }
 
@@ -161,6 +174,7 @@ interface RaycastProjectileImpact {
   damage: number;
   killed: boolean;
   killCount: number;
+  killedEnemyKinds: EnemyKind[];
   splashHitCount: number;
 }
 

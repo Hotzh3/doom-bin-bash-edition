@@ -101,43 +101,43 @@ const DEFAULT_THEME: RaycastZoneTheme = {
 export const RAYCAST_ZONE_THEMES: Record<RaycastZoneThemeId, RaycastZoneTheme> = {
   'corrupted-metal': {
     id: 'corrupted-metal',
-    accentColor: 0x5d748d,
-    patternColor: 0xb6c4db,
-    floorColor: 0x081019,
-    ceilingColor: 0x04070d,
-    signalColor: 0xffc56d
+    accentColor: 0x667f9c,
+    patternColor: 0xc5d2e4,
+    floorColor: 0x0a121d,
+    ceilingColor: 0x050912,
+    signalColor: 0xffd084
   },
   'void-stone': {
     id: 'void-stone',
-    accentColor: 0x6a6876,
-    patternColor: 0xc8c2d5,
-    floorColor: 0x09080f,
-    ceilingColor: 0x04040a,
-    signalColor: 0xa9a2c4
+    accentColor: 0x756f84,
+    patternColor: 0xd7cde3,
+    floorColor: 0x0c0a13,
+    ceilingColor: 0x05040b,
+    signalColor: 0xc0b6de
   },
   'warning-amber': {
     id: 'warning-amber',
-    accentColor: 0xc26d2f,
-    patternColor: 0xffda81,
-    floorColor: 0x120d08,
-    ceilingColor: 0x0a0603,
-    signalColor: 0xffe08d
+    accentColor: 0xd27a35,
+    patternColor: 0xffe4a2,
+    floorColor: 0x161008,
+    ceilingColor: 0x0c0703,
+    signalColor: 0xffe6a6
   },
   'toxic-green': {
     id: 'toxic-green',
-    accentColor: 0x1f8c69,
-    patternColor: 0xa8ffd4,
-    floorColor: 0x07120f,
-    ceilingColor: 0x030906,
-    signalColor: 0x8ff4c0
+    accentColor: 0x249770,
+    patternColor: 0xb7ffe0,
+    floorColor: 0x081510,
+    ceilingColor: 0x031009,
+    signalColor: 0x97ffd1
   },
   'exit-portal': {
     id: 'exit-portal',
-    accentColor: 0x2a9bc2,
-    patternColor: 0xd2f7ff,
-    floorColor: 0x07111a,
-    ceilingColor: 0x02070d,
-    signalColor: 0x9feee2
+    accentColor: 0x37abd5,
+    patternColor: 0xe0fbff,
+    floorColor: 0x07131d,
+    ceilingColor: 0x020a10,
+    signalColor: 0xb6fff3
   }
 };
 
@@ -230,13 +230,23 @@ export function getRaycastGroundVisualStyle(surface: Pick<RaycastSurfaceContext,
     };
   }
 
+  if (surface.landmark === 'key') {
+    return {
+      floorPattern: 'grid-cells',
+      ceilingPattern: 'crossbars',
+      floorGlowColor: blendThemeColor(surface.theme.signalColor, surface.theme.patternColor, 0.42),
+      floorBandAlpha: 0.14,
+      cellStride: 18
+    };
+  }
+
   if (surface.landmark === 'gate' || surface.landmark === 'ambush') {
     return {
       floorPattern: 'hazard-lattice',
       ceilingPattern: 'crossbars',
       floorGlowColor: blendThemeColor(surface.theme.signalColor, 0xff7a6d, 0.34),
-      floorBandAlpha: 0.12,
-      cellStride: 18
+      floorBandAlpha: 0.14,
+      cellStride: 16
     };
   }
 
@@ -245,8 +255,8 @@ export function getRaycastGroundVisualStyle(surface: Pick<RaycastSurfaceContext,
       floorPattern: 'noise-cells',
       ceilingPattern: 'void-noise',
       floorGlowColor: blendThemeColor(surface.theme.signalColor, 0x8ff4c0, 0.4),
-      floorBandAlpha: 0.1,
-      cellStride: 16
+      floorBandAlpha: 0.12,
+      cellStride: 15
     };
   }
 
@@ -255,8 +265,8 @@ export function getRaycastGroundVisualStyle(surface: Pick<RaycastSurfaceContext,
       floorPattern: 'grid-cells',
       ceilingPattern: 'void-noise',
       floorGlowColor: blendThemeColor(surface.theme.patternColor, 0xa9a2c4, 0.3),
-      floorBandAlpha: 0.08,
-      cellStride: 22
+      floorBandAlpha: 0.1,
+      cellStride: 20
     };
   }
 
@@ -274,25 +284,25 @@ export function getRaycastEnemyVisualStyle(kind: EnemyKind, color: number): Rayc
     return {
       silhouette: 'juggernaut',
       outlineColor: 0x1b0906,
-      accentColor: blendThemeColor(color, 0xffd38b, 0.32),
+      accentColor: blendThemeColor(color, 0xffde9d, 0.38),
       eyeColor: 0xfff2b3,
-      coreColor: 0xff9a4f,
+      coreColor: 0xffaa5e,
       hornStyle: 'ram',
       role: 'heavy',
-      windupColor: 0xff8b5c
+      windupColor: 0xff9c63
     };
   }
 
   if (kind === 'STALKER') {
     return {
       silhouette: 'phantom',
-      outlineColor: 0x030b09,
-      accentColor: blendThemeColor(color, 0xa8ffd4, 0.3),
-      eyeColor: 0xe2fff3,
-      coreColor: 0x77f6be,
+      outlineColor: 0x020d0a,
+      accentColor: blendThemeColor(color, 0x9fffd9, 0.38),
+      eyeColor: 0xf1fff9,
+      coreColor: 0x63f1bc,
       hornStyle: 'glitch-spikes',
       role: 'flanker',
-      windupColor: 0x8ff4c0
+      windupColor: 0x7ff6cf
     };
   }
 
@@ -300,24 +310,24 @@ export function getRaycastEnemyVisualStyle(kind: EnemyKind, color: number): Rayc
     return {
       silhouette: 'sentinel',
       outlineColor: 0x061019,
-      accentColor: blendThemeColor(color, 0xd2f7ff, 0.34),
-      eyeColor: 0xf4fdff,
-      coreColor: 0x9feee2,
+      accentColor: blendThemeColor(color, 0xe2fbff, 0.42),
+      eyeColor: 0xffffff,
+      coreColor: 0x8fe6ff,
       hornStyle: 'antenna',
       role: 'artillery',
-      windupColor: 0xd2f7ff
+      windupColor: 0xbef5ff
     };
   }
 
   return {
     silhouette: 'raider',
-    outlineColor: 0x18070a,
-    accentColor: blendThemeColor(color, 0xffc2b1, 0.26),
-    eyeColor: 0xffefe0,
-    coreColor: 0xff7a6d,
-    hornStyle: 'ram',
+    outlineColor: 0x1c0708,
+    accentColor: blendThemeColor(color, 0xffb492, 0.22),
+    eyeColor: 0xfff1df,
+    coreColor: 0xff6f61,
+    hornStyle: 'none',
     role: 'pressure',
-    windupColor: 0xffb277
+    windupColor: 0xffa45e
   };
 }
 

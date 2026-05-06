@@ -1,3 +1,4 @@
+import type { EnemyKind } from '../types/game';
 import { getRaycastDoorRequiredKeyIds, type RaycastLevel } from './RaycastLevel';
 import { RAYCAST_TILE, type RaycastMap } from './RaycastMap';
 
@@ -6,6 +7,13 @@ export interface RaycastMinimapDoorState {
   tileX: number;
   tileY: number;
   isOpen: boolean;
+}
+
+export interface RaycastMinimapEnemyBlip {
+  id: string;
+  kind: EnemyKind;
+  x: number;
+  y: number;
 }
 
 export interface RaycastMinimapState {
@@ -19,6 +27,8 @@ export interface RaycastMinimapState {
   collectedKeyIds: Iterable<string>;
   openDoorIds: Iterable<string>;
   collectedSecretIds: Iterable<string>;
+  /** Live enemies only; omit or pass empty to omit blips. */
+  enemies?: Iterable<RaycastMinimapEnemyBlip>;
 }
 
 export interface RaycastMinimapCell {
@@ -41,6 +51,7 @@ export interface RaycastMinimapModel {
   height: number;
   cells: RaycastMinimapCell[];
   markers: RaycastMinimapMarker[];
+  enemyBlips: RaycastMinimapEnemyBlip[];
 }
 
 export function buildRaycastMinimapModel(state: RaycastMinimapState): RaycastMinimapModel {
@@ -100,10 +111,21 @@ export function buildRaycastMinimapModel(state: RaycastMinimapState): RaycastMin
     }))
   ];
 
+  const enemyBlips = state.enemies ? Array.from(state.enemies) : [];
+
   return {
     width: state.map.grid[0]?.length ?? 0,
     height: state.map.grid.length,
     cells,
-    markers
+    markers,
+    enemyBlips
   };
+}
+
+/** Red-family markers for minimap differentiation (enemy dots). */
+export function getRaycastMinimapEnemyDotStyle(kind: EnemyKind): { fill: number; radiusMul: number; ring: number } {
+  if (kind === 'BRUTE') return { fill: 0xff2244, radiusMul: 1.35, ring: 0xff8899 };
+  if (kind === 'STALKER') return { fill: 0xff5533, radiusMul: 0.82, ring: 0xffaa88 };
+  if (kind === 'RANGED') return { fill: 0xff3366, radiusMul: 1.0, ring: 0xff88aa };
+  return { fill: 0xff4444, radiusMul: 0.92, ring: 0xffbbbb };
 }

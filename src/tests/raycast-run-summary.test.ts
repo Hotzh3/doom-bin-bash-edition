@@ -29,4 +29,21 @@ describe('raycast run summary', () => {
       'DAMAGE TAKEN 47'
     ]);
   });
+
+  it('includes score lines when provided', () => {
+    const summary = buildRaycastRunSummary({
+      elapsedMs: 10_000,
+      enemiesKilled: 2,
+      score: 350,
+      highScore: 1200,
+      secretsFound: 0,
+      secretTotal: 1,
+      tokensFound: 0,
+      tokenTotal: 1,
+      damageTaken: 10
+    });
+
+    expect(summary).toContain('SCORE 350');
+    expect(summary).toContain('HIGH SCORE 1200');
+  });
 });

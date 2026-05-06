@@ -136,7 +136,7 @@ export function buildRaycastHelpOverlayText(input: RaycastHelpOverlayInput = {})
     'RESET / MENU // R RESTART, ESC MENU',
     'DEBUG // TAB',
     difficultyLine,
-    'ARENA / 2D // AVAILABLE FROM THE MENU AS THE FALLBACK MODE',
+    'TITLE MENU // 2D: SPACE OR A  |  RAYCAST: R OR ENTER',
     'H OR ? // TOGGLE THIS HELP'
   ]
     .filter((line): line is string => line !== null)
@@ -205,31 +205,24 @@ export function buildRaycastPriorityMessage(input: RaycastPriorityMessageInput):
 
 export function getRaycastMenuCopy(): RaycastMenuCopy {
   return {
-    title: 'BIN BASH EDITION',
-    subtitle: 'TERMINAL CORRUPTION // ORIGINAL RAYCAST ASSAULT',
-    episodeTagline: 'EPISODE 01 // BREACH THE RELAY, PURGE THE NOISE',
-    buildTagline: 'RAYCAST PROTOTYPE // CLEAN-ROOM UI PASS 16A',
+    title: 'HELL ARENA TERMINAL',
+    subtitle: 'BIN BASH EDITION',
+    episodeTagline: '',
+    buildTagline: '',
     difficultyLabel: 'DIFFICULTY',
-    difficultyHint: 'LEFT / RIGHT OR CLICK TO CYCLE',
+    difficultyHint: 'LEFT / RIGHT',
     primaryAction: {
-      keyHint: 'SPACE / ENTER',
-      label: 'START RAYCAST / FPS',
-      detail: 'Primary mode. Launch the original first-person mini episode.'
+      keyHint: 'SPACE / A',
+      label: '2D ARENA',
+      detail: 'Local multiplayer sandbox.'
     },
     secondaryAction: {
-      keyHint: 'A',
-      label: 'OPEN ARENA / 2D',
-      detail: 'Preserved 2D sandbox. Keep the classic systems and combat loop.'
+      keyHint: 'R / ENTER',
+      label: 'RAYCAST (FPS)',
+      detail: 'First-person episode.'
     },
-    helpActions: [
-      'MOVE // WASD',
-      'TURN // MOUSE, QE, ARROWS',
-      'FIRE // F, SPACE, CLICK',
-      'WEAPONS // 1, 2, 3',
-      'MAP // M',
-      'MENU // ESC'
-    ],
-    footerHint: 'CLICK A PANEL OR PRESS A KEY TO DEPLOY'
+    helpActions: ['2D — SPACE OR A', 'RAYCAST — R OR ENTER', 'DIFFICULTY — LEFT / RIGHT'],
+    footerHint: 'CLICK A MODE OR USE THE KEYS'
   };
 }
 

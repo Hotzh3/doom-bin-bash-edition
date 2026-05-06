@@ -24,8 +24,6 @@ const MENU_CYAN_SOFT = '#9feee2';
 const MENU_EMBER = 0xffb347;
 const MENU_ROSE = 0xff8f7a;
 const MENU_TEXT = '#d7deea';
-const OPTIONAL_TITLE_IMAGE_KEY = 'menuTitleImage';
-const OPTIONAL_TITLE_IMAGE_REGISTRY_KEY = 'menuTitleImageKey';
 
 export class MenuScene extends Phaser.Scene {
   private inputListenersRegistered = false;
@@ -67,17 +65,7 @@ export class MenuScene extends Phaser.Scene {
     this.drawBackdrop(width, height);
     this.drawTitleFrame(width, height, layout.titleArtY);
 
-    const titleImageKey = this.resolveOptionalTitleImageKey();
-    if (titleImageKey) {
-      this.add
-        .image(layout.centerX, layout.titleArtY, titleImageKey)
-        .setOrigin(0.5)
-        .setDisplaySize(Math.min(width * 0.52, 440), 140)
-        .setAlpha(0.78)
-        .setDepth(4);
-    } else {
-      this.drawProceduralTitleArt(layout.centerX, layout.titleArtY, width);
-    }
+    this.drawProceduralTitleArt(layout.centerX, layout.titleArtY, width);
 
     this.add
       .text(layout.centerX, layout.titleY, copy.title, {
@@ -103,17 +91,20 @@ export class MenuScene extends Phaser.Scene {
       .setOrigin(0.5)
       .setDepth(8);
 
-    this.add
-      .text(layout.centerX, layout.episodeTagY, `${copy.episodeTagline}\n${copy.buildTagline}`, {
-        fontFamily: 'monospace',
-        fontSize: '14px',
-        fontStyle: '700',
-        color: '#f8d8a8',
-        align: 'center',
-        lineSpacing: 6
-      })
-      .setOrigin(0.5)
-      .setDepth(8);
+    const metaLines = [copy.episodeTagline, copy.buildTagline].filter((line) => line.trim().length > 0).join('\n');
+    if (metaLines.length > 0) {
+      this.add
+        .text(layout.centerX, layout.episodeTagY, metaLines, {
+          fontFamily: 'monospace',
+          fontSize: '14px',
+          fontStyle: '700',
+          color: '#f8d8a8',
+          align: 'center',
+          lineSpacing: 6
+        })
+        .setOrigin(0.5)
+        .setDepth(8);
+    }
 
     this.add
       .text(layout.centerX, layout.difficultyY + RAYCAST_MENU_DIFFICULTY_LABEL_OFFSET, copy.difficultyLabel, {
@@ -164,7 +155,7 @@ export class MenuScene extends Phaser.Scene {
       fillColor: MENU_PANEL,
       strokeColor: MENU_CYAN,
       accentColor: MENU_CYAN_SOFT,
-      onActivate: this.handleStartRaycast
+      onActivate: this.handleStartArena
     });
 
     this.createActionPanel({
@@ -178,7 +169,7 @@ export class MenuScene extends Phaser.Scene {
       fillColor: MENU_PANEL_ALT,
       strokeColor: MENU_EMBER,
       accentColor: '#ffd7a1',
-      onActivate: this.handleStartArena
+      onActivate: this.handleStartRaycast
     });
 
     this.add
@@ -254,7 +245,7 @@ export class MenuScene extends Phaser.Scene {
   }
 
   private drawProceduralTitleArt(centerX: number, centerY: number, width: number): void {
-    const graphics = this.add.graphics().setDepth(5);
+    const graphics = this.add.graphics().setDepth(5).setAlpha(0);
     const stripWidth = Math.min(width * 0.44, 420);
     const stripHeight = 16;
 
@@ -267,8 +258,8 @@ export class MenuScene extends Phaser.Scene {
     graphics.fillStyle(0x04070b, 0.9);
     graphics.fillRoundedRect(centerX - stripWidth * 0.42, centerY - 34, stripWidth * 0.84, 70, 6);
 
-    this.add
-      .text(centerX, centerY - 4, 'SYS//BIN_BASH.EXE', {
+    const titleText = this.add
+      .text(centerX, centerY - 4, 'HELL ARENA', {
         fontFamily: 'monospace',
         fontSize: '28px',
         fontStyle: '700',
@@ -277,17 +268,45 @@ export class MenuScene extends Phaser.Scene {
         strokeThickness: 5
       })
       .setOrigin(0.5)
-      .setDepth(6);
+      .setDepth(6)
+      .setAlpha(0)
+      .setScale(0.98);
 
-    this.add
-      .text(centerX, centerY + 28, 'SIGNAL JAMMED // READY TO BREACH', {
+    const subtitleText = this.add
+      .text(centerX, centerY + 28, 'BIN BASH', {
         fontFamily: 'monospace',
         fontSize: '12px',
         fontStyle: '700',
         color: '#7aa4ac'
       })
       .setOrigin(0.5)
-      .setDepth(6);
+      .setDepth(6)
+      .setAlpha(0)
+      .setY(centerY + 32);
+
+    this.tweens.add({
+      targets: [graphics, titleText, subtitleText],
+      alpha: { from: 0, to: 1 },
+      duration: 360,
+      ease: 'Sine.easeOut'
+    });
+
+    this.tweens.add({
+      targets: titleText,
+      scaleX: { from: 0.98, to: 1 },
+      scaleY: { from: 0.98, to: 1 },
+      y: { from: centerY - 8, to: centerY - 4 },
+      duration: 420,
+      ease: 'Sine.easeOut'
+    });
+
+    this.tweens.add({
+      targets: subtitleText,
+      y: { from: centerY + 32, to: centerY + 28 },
+      delay: 90,
+      duration: 320,
+      ease: 'Sine.easeOut'
+    });
   }
 
   private createActionPanel(config: {
@@ -351,19 +370,12 @@ export class MenuScene extends Phaser.Scene {
       .on(Phaser.Input.Events.POINTER_DOWN, config.onActivate);
   }
 
-  private resolveOptionalTitleImageKey(): string | null {
-    const preferredKey = this.registry.get(OPTIONAL_TITLE_IMAGE_REGISTRY_KEY);
-    if (typeof preferredKey === 'string' && preferredKey.length > 0 && this.textures.exists(preferredKey)) {
-      return preferredKey;
-    }
-    return this.textures.exists(OPTIONAL_TITLE_IMAGE_KEY) ? OPTIONAL_TITLE_IMAGE_KEY : null;
-  }
-
   private registerInputListeners(): void {
     if (this.inputListenersRegistered) this.cleanupInputListeners();
-    this.input.keyboard?.once('keydown-SPACE', this.handleStartRaycast);
-    this.input.keyboard?.once('keydown-ENTER', this.handleStartRaycast);
+    this.input.keyboard?.once('keydown-SPACE', this.handleStartArena);
     this.input.keyboard?.once('keydown-A', this.handleStartArena);
+    this.input.keyboard?.once('keydown-R', this.handleStartRaycast);
+    this.input.keyboard?.once('keydown-ENTER', this.handleStartRaycast);
     this.input.keyboard?.on('keydown-LEFT', this.handleDifficultyPrevious);
     this.input.keyboard?.on('keydown-RIGHT', this.handleDifficultyNext);
     this.inputListenersRegistered = true;
@@ -371,9 +383,10 @@ export class MenuScene extends Phaser.Scene {
 
   private cleanupInputListeners(): void {
     if (!this.inputListenersRegistered) return;
-    this.input.keyboard?.off('keydown-SPACE', this.handleStartRaycast);
-    this.input.keyboard?.off('keydown-ENTER', this.handleStartRaycast);
+    this.input.keyboard?.off('keydown-SPACE', this.handleStartArena);
     this.input.keyboard?.off('keydown-A', this.handleStartArena);
+    this.input.keyboard?.off('keydown-R', this.handleStartRaycast);
+    this.input.keyboard?.off('keydown-ENTER', this.handleStartRaycast);
     this.input.keyboard?.off('keydown-LEFT', this.handleDifficultyPrevious);
     this.input.keyboard?.off('keydown-RIGHT', this.handleDifficultyNext);
     this.inputListenersRegistered = false;

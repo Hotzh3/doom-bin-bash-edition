@@ -4,6 +4,12 @@ import type { MovementVector } from '../systems/MovementSystem';
 import { castRay, type RaycastMap } from './RaycastMap';
 import { collides } from './RaycastMovement';
 import { isRaycastEnemyTelegraphing, type RaycastEnemy } from './RaycastEnemy';
+import {
+  advancePatrolWaypointIndex,
+  RAYCAST_ALERT_AFTER_LOSS_MS,
+  RAYCAST_ALERT_ARRIVE_EPSILON,
+  RAYCAST_PATROL_WAYPOINT_EPSILON
+} from './RaycastPatrol';
 
 const GRID_SCALE = 100;
 const PROJECTILE_RADIUS = 0.08;
@@ -73,9 +79,44 @@ export function updateRaycastEnemies(
       config
     });
 
+    if (decision.action !== 'IDLE') {
+      enemy.lastKnownPlayerX = player.x;
+      enemy.lastKnownPlayerY = player.y;
+    }
+    if (enemy.wasCombatActiveLastTick && decision.action === 'IDLE') {
+      enemy.alertUntilTime = time + RAYCAST_ALERT_AFTER_LOSS_MS;
+    }
+    enemy.wasCombatActiveLastTick = decision.action !== 'IDLE';
+
     if (decision.action === 'IDLE') {
       enemy.attackWindupStartedAt = 0;
       enemy.attackWindupUntil = 0;
+
+      if (time < enemy.alertUntilTime) {
+        const distLK = Math.hypot(enemy.lastKnownPlayerX - enemy.x, enemy.lastKnownPlayerY - enemy.y);
+        if (distLK < RAYCAST_ALERT_ARRIVE_EPSILON) {
+          enemy.alertUntilTime = 0;
+        } else {
+          const alertSpeed = (config.speed / GRID_SCALE) * 0.5;
+          moveEnemy(
+            map,
+            enemy,
+            getDirection(enemy, { x: enemy.lastKnownPlayerX, y: enemy.lastKnownPlayerY }),
+            alertSpeed,
+            deltaMs
+          );
+        }
+        return;
+      }
+
+      const patrolSpeed = (config.speed / GRID_SCALE) * 0.38;
+      const wps = enemy.patrolWaypoints;
+      if (wps.length > 0) {
+        const wp = wps[enemy.patrolWaypointIndex];
+        moveEnemy(map, enemy, getDirection(enemy, wp), patrolSpeed, deltaMs);
+        const reached = Math.hypot(wp.x - enemy.x, wp.y - enemy.y) < RAYCAST_PATROL_WAYPOINT_EPSILON;
+        enemy.patrolWaypointIndex = advancePatrolWaypointIndex(enemy.patrolWaypointIndex, wps.length, reached);
+      }
       return;
     }
 
