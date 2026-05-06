@@ -165,6 +165,12 @@ export function buildRaycastMinimapLegendLine(minimapToggleKey = 'M'): string {
   return `MAP ${minimapToggleKey}  |  KEY token  LOCK closed gate  OPEN clear gate  EXIT exfil`;
 }
 
+export function buildRaycastScoreHudLine(score: number, highScore: number): string {
+  const safeScore = Math.max(0, Math.floor(score));
+  const safeHi = Math.max(0, Math.floor(highScore));
+  return `SCORE ${safeScore}  |  HI ${safeHi}`;
+}
+
 export function buildRaycastHudLayout(width: number, height: number): RaycastHudLayout {
   const compactTopRightCluster = width <= 960 || height <= 540;
   const hudRightX = width - 16;

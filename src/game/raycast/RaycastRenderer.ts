@@ -237,6 +237,8 @@ export class RaycastRenderer {
         this.graphics.fillCircle(projection.screenX, height * 0.5, projection.size);
         this.graphics.lineStyle(2, 0xffffff, 0.45);
         this.graphics.strokeCircle(projection.screenX, height * 0.5, projection.size);
+        this.graphics.lineStyle(1, haloColor, isOpenGate ? 0.42 : 0.34);
+        this.graphics.strokeCircle(projection.screenX, height * 0.5, projection.size * 0.62);
 
         if (projection.billboard.label) {
           this.graphics.fillStyle(0x020408, 0.8);
@@ -258,8 +260,9 @@ export class RaycastRenderer {
     if (weapon === 'PISTOL') {
       this.graphics.fillStyle(0x020408, 0.7);
       this.graphics.fillRect(centerX - 44, baseY - 78, 88, 84);
-      this.graphics.fillStyle(weaponColor, 0.96);
+      this.graphics.fillGradientStyle(weaponColor, weaponColor, 0x152028, 0x152028, 0.96);
       this.graphics.fillRect(centerX - 16, baseY - 76, 32, 56);
+      this.graphics.fillStyle(weaponColor, 0.96);
       this.graphics.fillRect(centerX - 12, baseY - 110, 24, 38);
       this.graphics.fillStyle(trimColor, 0.85);
       this.graphics.fillRect(centerX - 6, baseY - 126, 12, 18);
@@ -267,6 +270,8 @@ export class RaycastRenderer {
       this.graphics.fillRect(centerX - 11, baseY - 42, 22, 28);
       this.graphics.fillStyle(0xffffff, 0.12);
       this.graphics.fillRect(centerX - 12, baseY - 70, 24, 4);
+      this.graphics.fillStyle(trimColor, 0.38);
+      this.graphics.fillRect(centerX - 5, baseY - 52, 10, 14);
     } else if (weapon === 'SHOTGUN') {
       this.graphics.fillStyle(0x020408, 0.72);
       this.graphics.fillRect(centerX - 118, baseY - 82, 236, 86);
@@ -558,6 +563,11 @@ export class RaycastRenderer {
       this.graphics.lineBetween(x + width, y + wallHeight * 0.3, x, y + wallHeight * 0.38);
     }
 
+    const edgeShade = this.blendColors(0x020408, atmosphere.fogColor, 0.55);
+    this.graphics.lineStyle(1, edgeShade, 0.12 + (1 - shade) * 0.14);
+    this.graphics.lineBetween(x, y, x, y + wallHeight);
+    this.graphics.lineBetween(x + Math.max(1, width - 1), y, x + Math.max(1, width - 1), y + wallHeight);
+
     if (surface.landmark === 'exit' && column % 13 === 0) {
       this.graphics.lineStyle(2, signalColor, alpha + 0.14 + pulseAlpha);
       this.graphics.strokeCircle(x + width * 0.5, y + wallHeight * 0.32, Math.max(2, width * 0.7));
@@ -622,6 +632,7 @@ export class RaycastRenderer {
       );
       this.graphics.fillStyle(accentColor, 0.22 * visibility);
       this.graphics.fillEllipse(projection.screenX, bodyTop + projection.size * 0.42, projection.size * 0.54, projection.size * 0.14);
+      this.drawEnemyHeadAccent(projection.screenX, bodyTop + projection.size * 0.08, projection.size, visibility, style, accentColor);
       this.graphics.fillStyle(style.coreColor, 0.72 * visibility);
       this.graphics.fillCircle(projection.screenX, bodyTop + projection.size * 0.56, projection.size * 0.11);
       this.graphics.fillStyle(style.eyeColor, 0.98 * visibility);
@@ -665,6 +676,7 @@ export class RaycastRenderer {
       this.graphics.lineBetween(projection.screenX, bodyTop + projection.size * 0.16, projection.screenX, bodyTop + projection.size * 0.86);
       this.graphics.lineBetween(projection.screenX - projection.size * 0.16, centerY + projection.size * 0.1, projection.screenX - projection.size * 0.3, centerY + projection.size * 0.42);
       this.graphics.lineBetween(projection.screenX + projection.size * 0.16, centerY + projection.size * 0.1, projection.screenX + projection.size * 0.3, centerY + projection.size * 0.42);
+      this.drawEnemyHeadAccent(projection.screenX, bodyTop + projection.size * 0.1, projection.size, visibility, style, accentColor);
       this.graphics.fillStyle(style.eyeColor, 0.92 * visibility);
       this.graphics.fillCircle(projection.screenX - projection.size * 0.05, bodyTop + projection.size * 0.22, projection.size * 0.03);
       this.graphics.fillCircle(projection.screenX + projection.size * 0.05, bodyTop + projection.size * 0.22, projection.size * 0.03);
@@ -686,6 +698,7 @@ export class RaycastRenderer {
       );
       this.graphics.lineStyle(2, accentColor, 0.4 * visibility);
       this.graphics.strokeCircle(projection.screenX, bodyTop + projection.size * 0.18, projection.size * 0.24);
+      this.drawEnemyHeadAccent(projection.screenX, bodyTop + projection.size * 0.02, projection.size, visibility, style, accentColor);
       this.graphics.lineBetween(bodyLeft + projection.size * 0.4, bodyTop + projection.size * 0.02, bodyLeft + projection.size * 0.34, bodyTop - projection.size * 0.16);
       this.graphics.lineBetween(bodyLeft + projection.size * 0.6, bodyTop + projection.size * 0.02, bodyLeft + projection.size * 0.66, bodyTop - projection.size * 0.16);
       this.graphics.fillStyle(style.coreColor, 0.68 * visibility);
@@ -723,10 +736,46 @@ export class RaycastRenderer {
     this.graphics.fillStyle(style.coreColor, 0.5 * visibility);
     this.graphics.fillCircle(projection.screenX, bodyTop + projection.size * 0.54, projection.size * 0.08);
     this.graphics.lineStyle(2, accentColor, 0.3 * visibility);
+    this.drawEnemyHeadAccent(projection.screenX, bodyTop + projection.size * 0.12, projection.size, visibility, style, accentColor);
     this.graphics.lineBetween(bodyLeft + projection.size * 0.26, bodyTop + projection.size * 0.72, bodyLeft + projection.size * 0.74, bodyTop + projection.size * 0.72);
     this.graphics.fillStyle(style.eyeColor, 0.94 * visibility);
     this.graphics.fillCircle(bodyLeft + projection.size * 0.42, bodyTop + projection.size * 0.22, projection.size * 0.03);
     this.graphics.fillCircle(bodyLeft + projection.size * 0.58, bodyTop + projection.size * 0.22, projection.size * 0.03);
+  }
+
+  private drawEnemyHeadAccent(
+    centerX: number,
+    headY: number,
+    size: number,
+    visibility: number,
+    style: ReturnType<typeof getRaycastEnemyVisualStyle>,
+    accentColor: number
+  ): void {
+    this.graphics.lineStyle(2, accentColor, 0.44 * visibility);
+
+    if (style.hornStyle === 'ram') {
+      this.graphics.lineBetween(centerX - size * 0.08, headY, centerX - size * 0.26, headY - size * 0.16);
+      this.graphics.lineBetween(centerX + size * 0.08, headY, centerX + size * 0.26, headY - size * 0.16);
+      return;
+    }
+
+    if (style.hornStyle === 'antenna') {
+      this.graphics.lineBetween(centerX, headY + size * 0.03, centerX, headY - size * 0.22);
+      this.graphics.lineBetween(centerX - size * 0.08, headY - size * 0.03, centerX - size * 0.14, headY - size * 0.15);
+      this.graphics.lineBetween(centerX + size * 0.08, headY - size * 0.03, centerX + size * 0.14, headY - size * 0.15);
+      this.graphics.fillStyle(style.eyeColor, 0.72 * visibility);
+      this.graphics.fillCircle(centerX, headY - size * 0.24, Math.max(1.5, size * 0.022));
+      return;
+    }
+
+    if (style.hornStyle === 'glitch-spikes') {
+      this.graphics.lineBetween(centerX - size * 0.14, headY + size * 0.02, centerX - size * 0.2, headY - size * 0.14);
+      this.graphics.lineBetween(centerX, headY + size * 0.04, centerX, headY - size * 0.18);
+      this.graphics.lineBetween(centerX + size * 0.14, headY + size * 0.02, centerX + size * 0.2, headY - size * 0.14);
+      return;
+    }
+
+    this.graphics.lineBetween(centerX - size * 0.12, headY, centerX + size * 0.12, headY);
   }
 
   private drawBillboardGlyph(projection: BillboardProjection, height: number): void {

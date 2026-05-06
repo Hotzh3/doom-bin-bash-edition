@@ -1,6 +1,7 @@
 import { getEnemyConfig } from '../entities/enemyConfig';
 import type { EnemyKind } from '../types/game';
 import { RAYCAST_LEVEL, type RaycastEnemySpawn, type RaycastLevel } from './RaycastLevel';
+import { buildRaycastPatrolWaypoints, type PatrolWaypoint } from './RaycastPatrol';
 
 export interface RaycastEnemy {
   id: string;
@@ -19,6 +20,14 @@ export interface RaycastEnemy {
   attackWindupUntil: number;
   hitFlashUntil: number;
   deathBurstUntil: number;
+  patrolWaypoints: PatrolWaypoint[];
+  patrolWaypointIndex: number;
+  /** While `time < alertUntilTime`, enemy searches toward last known player position. */
+  alertUntilTime: number;
+  lastKnownPlayerX: number;
+  lastKnownPlayerY: number;
+  /** Tracks prior tick combat (CHASE / ATTACK / RETREAT) for alert transition. */
+  wasCombatActiveLastTick: boolean;
 }
 
 export function cloneRaycastEnemies(level: RaycastLevel = RAYCAST_LEVEL): RaycastEnemy[] {
@@ -27,11 +36,13 @@ export function cloneRaycastEnemies(level: RaycastLevel = RAYCAST_LEVEL): Raycas
 
 export function createRaycastEnemy(spawn: RaycastEnemySpawn): RaycastEnemy {
   const config = getEnemyConfig(spawn.kind, 'raycast');
+  const homeX = spawn.x;
+  const homeY = spawn.y;
   return {
     id: spawn.id,
     kind: spawn.kind,
-    x: spawn.x,
-    y: spawn.y,
+    x: homeX,
+    y: homeY,
     health: config.health,
     maxHealth: config.health,
     alive: true,
@@ -43,7 +54,13 @@ export function createRaycastEnemy(spawn: RaycastEnemySpawn): RaycastEnemy {
     attackWindupStartedAt: 0,
     attackWindupUntil: 0,
     hitFlashUntil: 0,
-    deathBurstUntil: 0
+    deathBurstUntil: 0,
+    patrolWaypoints: buildRaycastPatrolWaypoints(homeX, homeY, spawn.id),
+    patrolWaypointIndex: 0,
+    alertUntilTime: 0,
+    lastKnownPlayerX: homeX,
+    lastKnownPlayerY: homeY,
+    wasCombatActiveLastTick: false
   };
 }
 

@@ -6,6 +6,8 @@ import {
   RAYCAST_LEVEL,
   RAYCAST_LEVEL_2,
   RAYCAST_LEVEL_3,
+  RAYCAST_LEVEL_4,
+  RAYCAST_LEVEL_5,
   RAYCAST_LEVEL_CATALOG,
   cloneRaycastMap,
   findRaycastZoneId,
@@ -25,12 +27,14 @@ import { RAYCAST_ATMOSPHERE } from '../game/raycast/RaycastAtmosphere';
 import { RAYCAST_TILE, type RaycastMap } from '../game/raycast/RaycastMap';
 
 describe('raycast level catalog', () => {
-  it('includes three levels with unique ids and stable ordering', () => {
-    expect(RAYCAST_LEVEL_CATALOG).toHaveLength(3);
-    expect(new Set(RAYCAST_LEVEL_CATALOG.map((level) => level.id)).size).toBe(3);
+  it('includes five levels with unique ids and stable ordering', () => {
+    expect(RAYCAST_LEVEL_CATALOG).toHaveLength(5);
+    expect(new Set(RAYCAST_LEVEL_CATALOG.map((level) => level.id)).size).toBe(5);
     expect(getRaycastLevelIndex(RAYCAST_LEVEL.id)).toBe(0);
     expect(getRaycastLevelIndex(RAYCAST_LEVEL_2.id)).toBe(1);
     expect(getRaycastLevelIndex(RAYCAST_LEVEL_3.id)).toBe(2);
+    expect(getRaycastLevelIndex(RAYCAST_LEVEL_4.id)).toBe(3);
+    expect(getRaycastLevelIndex(RAYCAST_LEVEL_5.id)).toBe(4);
   });
 
   it('defines required route objects and valid map references for each level', () => {
@@ -91,6 +95,23 @@ describe('raycast level catalog', () => {
     });
   });
 
+  it('authors distinct late-episode encounter mixes for the spiral climb and finale lockdown', () => {
+    const level4SpiralBreak = RAYCAST_LEVEL_4.triggers.find((trigger) => trigger.id === 'spiral-break');
+    const level4CrownCrossfire = RAYCAST_LEVEL_4.triggers.find((trigger) => trigger.id === 'crown-crossfire');
+    const level5HeartBreach = RAYCAST_LEVEL_5.triggers.find((trigger) => trigger.id === 'heart-breach');
+    const level5BossLockdown = RAYCAST_LEVEL_5.triggers.find((trigger) => trigger.id === 'boss-lockdown');
+
+    expect(RAYCAST_LEVEL_4.initialSpawns.filter((spawn) => spawn.kind === 'RANGED')).toHaveLength(2);
+    expect(RAYCAST_LEVEL_4.initialSpawns.some((spawn) => spawn.kind === 'BRUTE')).toBe(false);
+    expect(level4SpiralBreak?.spawns.filter((spawn) => spawn.kind === 'RANGED')).toHaveLength(2);
+    expect(level4CrownCrossfire?.spawns.filter((spawn) => spawn.kind === 'STALKER')).toHaveLength(2);
+
+    expect(RAYCAST_LEVEL_5.initialSpawns.filter((spawn) => spawn.kind === 'BRUTE')).toHaveLength(2);
+    expect(RAYCAST_LEVEL_5.initialSpawns.filter((spawn) => spawn.kind === 'RANGED')).toHaveLength(2);
+    expect(level5HeartBreach?.spawns.map((spawn) => spawn.kind)).toEqual(['RANGED', 'BRUTE', 'GRUNT']);
+    expect(level5BossLockdown?.spawns.filter((spawn) => spawn.kind === 'BRUTE')).toHaveLength(2);
+  });
+
   it('keeps authored health pickups reachable without blocking progression', () => {
     RAYCAST_LEVEL_CATALOG.forEach((level) => {
       level.healthPickups.forEach((pickup) => {
@@ -141,6 +162,18 @@ describe('raycast level progression', () => {
       activatedTriggerIds: [],
       livingEnemyCount: 0
     });
+    const level4Blocked = getRaycastExitAccess(RAYCAST_LEVEL_4, {
+      collectedKeyIds: [],
+      openDoorIds: [],
+      activatedTriggerIds: [],
+      livingEnemyCount: 0
+    });
+    const level5Blocked = getRaycastExitAccess(RAYCAST_LEVEL_5, {
+      collectedKeyIds: [],
+      openDoorIds: [],
+      activatedTriggerIds: [],
+      livingEnemyCount: 0
+    });
 
     expect(level1Blocked).toEqual({
       allowed: false,
@@ -159,6 +192,18 @@ describe('raycast level progression', () => {
       reason: 'TOKEN_REQUIRED',
       message: 'TOKEN REQUIRED',
       missingKeyIds: ['amber-core']
+    });
+    expect(level4Blocked).toEqual({
+      allowed: false,
+      reason: 'TOKEN_REQUIRED',
+      message: 'TOKEN REQUIRED',
+      missingKeyIds: ['prism-shard']
+    });
+    expect(level5Blocked).toEqual({
+      allowed: false,
+      reason: 'TOKEN_REQUIRED',
+      message: 'TOKEN REQUIRED',
+      missingKeyIds: ['heart-sigil']
     });
   });
 
@@ -186,6 +231,24 @@ describe('raycast level progression', () => {
         collectedKeyIds: ['amber-core'],
         openDoorIds: ['relay-seal'],
         activatedTriggerIds: ['conduit-surge', 'relay-lockdown'],
+        livingEnemyCount: 0
+      }).allowed
+    ).toBe(true);
+
+    expect(
+      getRaycastExitAccess(RAYCAST_LEVEL_4, {
+        collectedKeyIds: ['prism-shard'],
+        openDoorIds: ['vault-seal'],
+        activatedTriggerIds: ['spiral-break', 'crown-crossfire'],
+        livingEnemyCount: 0
+      }).allowed
+    ).toBe(true);
+
+    expect(
+      getRaycastExitAccess(RAYCAST_LEVEL_5, {
+        collectedKeyIds: ['heart-sigil'],
+        openDoorIds: ['heart-seal-door'],
+        activatedTriggerIds: ['heart-breach', 'boss-lockdown'],
         livingEnemyCount: 0
       }).allowed
     ).toBe(true);
@@ -234,6 +297,19 @@ describe('raycast level progression', () => {
         openDoorIds: ['rust-gate'],
         activatedTriggerIds: ['gate-ambush', 'lateral-pressure'],
         livingEnemyCount: 2
+      })
+    ).toEqual({
+      allowed: false,
+      reason: 'SIGNAL_LOCKED',
+      message: 'SIGNAL LOCKED'
+    });
+
+    expect(
+      getRaycastExitAccess(RAYCAST_LEVEL_5, {
+        collectedKeyIds: ['heart-sigil'],
+        openDoorIds: ['heart-seal-door'],
+        activatedTriggerIds: ['heart-breach', 'boss-lockdown'],
+        livingEnemyCount: 1
       })
     ).toEqual({
       allowed: false,
@@ -315,14 +391,20 @@ describe('raycast level route safety', () => {
     expect(findRaycastZoneId(RAYCAST_LEVEL, RAYCAST_LEVEL.playerStart.x, RAYCAST_LEVEL.playerStart.y)).toBe('start');
     expect(findRaycastZoneId(RAYCAST_LEVEL_2, RAYCAST_LEVEL_2.playerStart.x, RAYCAST_LEVEL_2.playerStart.y)).toBe('start');
     expect(findRaycastZoneId(RAYCAST_LEVEL_3, RAYCAST_LEVEL_3.playerStart.x, RAYCAST_LEVEL_3.playerStart.y)).toBe('start');
+    expect(findRaycastZoneId(RAYCAST_LEVEL_4, RAYCAST_LEVEL_4.playerStart.x, RAYCAST_LEVEL_4.playerStart.y)).toBe('start');
+    expect(findRaycastZoneId(RAYCAST_LEVEL_5, RAYCAST_LEVEL_5.playerStart.x, RAYCAST_LEVEL_5.playerStart.y)).toBe('start');
 
     const level1Spawns = getSafeDirectorSpawnPoints(RAYCAST_LEVEL, RAYCAST_LEVEL.playerStart, 'start');
     const level2Spawns = getSafeDirectorSpawnPoints(RAYCAST_LEVEL_2, RAYCAST_LEVEL_2.playerStart, 'start');
     const level3Spawns = getSafeDirectorSpawnPoints(RAYCAST_LEVEL_3, RAYCAST_LEVEL_3.playerStart, 'start');
+    const level4Spawns = getSafeDirectorSpawnPoints(RAYCAST_LEVEL_4, RAYCAST_LEVEL_4.playerStart, 'start');
+    const level5Spawns = getSafeDirectorSpawnPoints(RAYCAST_LEVEL_5, RAYCAST_LEVEL_5.playerStart, 'start');
 
     expect(level1Spawns.length).toBeGreaterThan(0);
     expect(level2Spawns.length).toBeGreaterThan(0);
     expect(level3Spawns.length).toBeGreaterThan(0);
+    expect(level4Spawns.length).toBeGreaterThan(0);
+    expect(level5Spawns.length).toBeGreaterThan(0);
   });
 
   it('keeps level 1 critical route and arena behind the gate', () => {
@@ -360,6 +442,30 @@ describe('raycast level route safety', () => {
     expect(hasGridPath(RAYCAST_LEVEL_3.map, RAYCAST_LEVEL_3.playerStart, exit)).toBe(false);
     expect(hasGridPath(openedMap, RAYCAST_LEVEL_3.playerStart, exit)).toBe(true);
     expect(hasGridPath(RAYCAST_LEVEL_3.map, RAYCAST_LEVEL_3.playerStart, RAYCAST_LEVEL_3.secrets[0])).toBe(true);
+  });
+
+  it('keeps level 4 key reachable early and exit locked behind the vault seal', () => {
+    const key = RAYCAST_LEVEL_4.keys[0];
+    const exit = RAYCAST_LEVEL_4.exits[0];
+    const openedMap = cloneRaycastMap(RAYCAST_LEVEL_4.map);
+    openRaycastDoor(openedMap, RAYCAST_LEVEL_4.doors[0]);
+
+    expect(hasGridPath(RAYCAST_LEVEL_4.map, RAYCAST_LEVEL_4.playerStart, key)).toBe(true);
+    expect(hasGridPath(RAYCAST_LEVEL_4.map, RAYCAST_LEVEL_4.playerStart, exit)).toBe(false);
+    expect(hasGridPath(openedMap, RAYCAST_LEVEL_4.playerStart, exit)).toBe(true);
+    expect(hasGridPath(RAYCAST_LEVEL_4.map, RAYCAST_LEVEL_4.playerStart, RAYCAST_LEVEL_4.secrets[0])).toBe(true);
+  });
+
+  it('keeps level 5 key reachable early and exit locked behind the heart seal', () => {
+    const key = RAYCAST_LEVEL_5.keys[0];
+    const exit = RAYCAST_LEVEL_5.exits[0];
+    const openedMap = cloneRaycastMap(RAYCAST_LEVEL_5.map);
+    openRaycastDoor(openedMap, RAYCAST_LEVEL_5.doors[0]);
+
+    expect(hasGridPath(RAYCAST_LEVEL_5.map, RAYCAST_LEVEL_5.playerStart, key)).toBe(true);
+    expect(hasGridPath(RAYCAST_LEVEL_5.map, RAYCAST_LEVEL_5.playerStart, exit)).toBe(false);
+    expect(hasGridPath(openedMap, RAYCAST_LEVEL_5.playerStart, exit)).toBe(true);
+    expect(hasGridPath(RAYCAST_LEVEL_5.map, RAYCAST_LEVEL_5.playerStart, RAYCAST_LEVEL_5.secrets[0])).toBe(true);
   });
 
   it('validates catalog progression metadata for exits, keys, doors, triggers, and secrets', () => {
@@ -483,6 +589,8 @@ describe('raycast level route safety', () => {
     expect(RAYCAST_LEVEL.keys[0].pickupObjectiveText).toContain('return to gateway');
     expect(RAYCAST_LEVEL_2.keys[0].pickupObjectiveText).toContain('breach the furnace gate');
     expect(RAYCAST_LEVEL_3.keys[0].pickupObjectiveText).toContain('break the relay seal');
+    expect(RAYCAST_LEVEL_4.keys[0].pickupObjectiveText).toContain('cut through the spiral gate');
+    expect(RAYCAST_LEVEL_5.keys[0].pickupObjectiveText).toContain('open the heart seal');
   });
 
   it('keeps escalating director pressure across the episode', () => {
@@ -497,6 +605,15 @@ describe('raycast level route safety', () => {
     expect(RAYCAST_LEVEL_3.director.config.maxEnemiesAlive).toBe(5);
     expect(RAYCAST_LEVEL_3.director.config.maxTotalSpawns).toBe(11);
     expect(RAYCAST_LEVEL_3.director.config.buildUpSpawnCooldownMs).toBeLessThan(RAYCAST_LEVEL_3.director.config.baseSpawnCooldownMs ?? 0);
+
+    expect(RAYCAST_LEVEL_4.director.config.maxEnemiesAlive).toBe(6);
+    expect(RAYCAST_LEVEL_4.director.config.maxTotalSpawns).toBe(12);
+    expect(RAYCAST_LEVEL_4.director.config.buildUpSpawnCooldownMs).toBeLessThan(RAYCAST_LEVEL_4.director.config.baseSpawnCooldownMs ?? 0);
+
+    expect(RAYCAST_LEVEL_5.director.config.maxEnemiesAlive).toBe(6);
+    expect(RAYCAST_LEVEL_5.director.config.maxTotalSpawns).toBe(14);
+    expect(RAYCAST_LEVEL_5.progression.requireCombatClear).toBe(true);
+    expect(RAYCAST_LEVEL_5.director.config.buildUpSpawnCooldownMs).toBeLessThan(RAYCAST_LEVEL_5.director.config.baseSpawnCooldownMs ?? 0);
   });
 });
 

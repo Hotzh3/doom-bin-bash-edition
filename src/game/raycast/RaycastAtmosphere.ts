@@ -133,9 +133,9 @@ export function getAtmosphereForDirector(state: DirectorState | null, intensity:
   }
 
   return {
-    ambientDarkness: 0.265,
-    fogStart: 3.9,
-    fogEnd: 9.6,
+    ambientDarkness: 0.262,
+    fogStart: 3.85,
+    fogEnd: 10.4,
     fogColor: RAYCAST_ATMOSPHERE.fogColor,
     corruptionTint: RAYCAST_ATMOSPHERE.corruptionTint,
     corruptionAlpha: 0.038 + pressure * 0.025,
@@ -147,7 +147,8 @@ export function getAtmosphereForDirector(state: DirectorState | null, intensity:
 export function calculateFogShade(distance: number, options: RaycastAtmosphereRenderOptions): number {
   const fogRange = Math.max(0.001, options.fogEnd - options.fogStart);
   const fogAmount = Math.max(0, Math.min(1, (distance - options.fogStart) / fogRange));
-  return Math.max(options.ambientDarkness, 1 - fogAmount);
+  const eased = fogAmount * 0.93;
+  return Math.max(options.ambientDarkness, 1 - eased);
 }
 
 export function calculateEnemyVisibility(distance: number, options: RaycastAtmosphereRenderOptions): number {

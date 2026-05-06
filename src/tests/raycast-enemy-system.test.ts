@@ -24,6 +24,23 @@ describe('raycast enemy system', () => {
     expect(hasLineOfSight(RAYCAST_MAP, { x: 1.5, y: 10.5 }, { x: 8, y: 10.5 })).toBe(false);
   });
 
+  it('advances patrol waypoints when the player is beyond detection range', () => {
+    const enemy = createRaycastEnemy({ id: 'far-patrol', kind: 'GRUNT', x: 1.5, y: 7.5 });
+
+    updateRaycastEnemies(RAYCAST_MAP, [enemy], { x: 1.5, y: 22.0, alive: true }, 1000, 16);
+
+    expect(enemy.patrolWaypointIndex).toBeGreaterThanOrEqual(1);
+
+    let t = 1016;
+    for (let i = 0; i < 40; i += 1) {
+      updateRaycastEnemies(RAYCAST_MAP, [enemy], { x: 1.5, y: 22.0, alive: true }, t, 40);
+      t += 40;
+    }
+
+    expect(Math.hypot(enemy.x - 1.5, enemy.y - 7.5)).toBeGreaterThan(0.01);
+    expect(collides(RAYCAST_MAP, enemy.x, enemy.y, enemy.radius)).toBe(false);
+  });
+
   it('moves melee enemies toward the player without crossing walls', () => {
     const enemy = createRaycastEnemy({ id: 'grunt', kind: 'GRUNT', x: 1.5, y: 7.5 });
     const startY = enemy.y;

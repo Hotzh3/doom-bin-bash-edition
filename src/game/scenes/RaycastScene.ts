@@ -40,7 +40,9 @@ import {
   type RaycastLevel
 } from '../raycast/RaycastLevel';
 import { getRaycastEpisodeState } from '../raycast/RaycastEpisode';
-import { buildRaycastMinimapModel } from '../raycast/RaycastMinimap';
+import { buildRaycastMinimapModel, getRaycastMinimapEnemyDotStyle } from '../raycast/RaycastMinimap';
+import { registerRaycastOptionalAssets } from '../raycast/raycastAssetHooks';
+import { addRaycastKillScore, readRaycastHighScore, writeRaycastHighScoreIfBetter } from '../raycast/RaycastScore';
 import { castRay, RAYCAST_PLAYER_START, type RaycastMap } from '../raycast/RaycastMap';
 import {
   buildRaycastCurrentObjective,
@@ -56,6 +58,7 @@ import {
   buildRaycastHudProgressLine,
   buildRaycastHudStatusLine,
   buildRaycastMinimapLegendLine,
+  buildRaycastScoreHudLine,
   getRaycastHealthVisualState
 } from '../raycast/RaycastHud';
 import {
@@ -95,6 +98,8 @@ import { palette } from '../theme/palette';
 interface RaycastSceneData {
   levelId?: string;
   difficultyId?: RaycastDifficultyId;
+  /** Carry cumulative score when advancing to the next map in an episode. */
+  carryScore?: number;
 }
 
 const DIRECTOR_SPAWN_TELEGRAPH_MS = 820;
@@ -128,6 +133,8 @@ export class RaycastScene extends Phaser.Scene {
   private readonly completedEncounterBeats = new Set<string>();
   private readonly deferredPickupHints = new Map<string, number>();
   private enemiesKilled = 0;
+  private runScore = 0;
+  private carriedScoreFromEpisode = 0;
   private playerStationaryMs = 0;
   private lastPlayerDamageAt = 0;
   private lastPlayerPosition: { x: number; y: number } = { x: RAYCAST_PLAYER_START.x, y: RAYCAST_PLAYER_START.y };
@@ -150,6 +157,7 @@ export class RaycastScene extends Phaser.Scene {
   private objectiveText!: Phaser.GameObjects.Text;
   private hintText!: Phaser.GameObjects.Text;
   private instructionText!: Phaser.GameObjects.Text;
+  private scoreHudText!: Phaser.GameObjects.Text;
   private minimapFrame!: Phaser.GameObjects.Rectangle;
   private minimapTitleText!: Phaser.GameObjects.Text;
   private helpOverlayFrame!: Phaser.GameObjects.Rectangle;
@@ -197,7 +205,11 @@ export class RaycastScene extends Phaser.Scene {
   private readonly handleAdvanceLevel = (): void => {
     if (!this.isRaycastSceneActive()) return;
     if (!this.levelComplete || this.episodeComplete || this.nextLevelId === null) return;
-    this.scene.restart({ levelId: this.nextLevelId, difficultyId: this.difficultyId });
+    this.scene.restart({
+      levelId: this.nextLevelId,
+      difficultyId: this.difficultyId,
+      carryScore: this.runScore
+    });
   };
 
   private readonly handleFireInput = (): void => {
@@ -249,9 +261,11 @@ export class RaycastScene extends Phaser.Scene {
     this.nextLevelId = getRaycastEpisodeState(this.currentLevel.id).nextLevelId;
     this.difficultyId = getRaycastDifficultyPreset(data.difficultyId ?? this.registry.get(RAYCAST_DIFFICULTY_REGISTRY_KEY)).id;
     this.registry.set(RAYCAST_DIFFICULTY_REGISTRY_KEY, this.difficultyId);
+    this.carriedScoreFromEpisode = data.carryScore ?? 0;
   }
 
   create(): void {
+    registerRaycastOptionalAssets(this);
     this.resetRuntimeState();
     this.cameras.main.setBackgroundColor('#05070c');
     this.map = cloneRaycastMap(this.currentLevel.map);
@@ -289,6 +303,16 @@ export class RaycastScene extends Phaser.Scene {
           padding: { x: 8, y: 5 }
         }
       )
+      .setDepth(10);
+
+    this.scoreHudText = this.add
+      .text(16, 34, buildRaycastScoreHudLine(this.runScore, readRaycastHighScore()), {
+        fontSize: '12px',
+        fontStyle: '700',
+        color: palette.accent.terminalText,
+        backgroundColor: RAYCAST_ATMOSPHERE.hudPanel,
+        padding: { x: 8, y: 4 }
+      })
       .setDepth(10);
 
     this.crosshair = this.add
@@ -601,6 +625,7 @@ export class RaycastScene extends Phaser.Scene {
         objective
       )
     );
+    this.scoreHudText.setText(buildRaycastScoreHudLine(this.runScore, readRaycastHighScore()));
     this.objectiveText.setText(`OBJECTIVE // ${objective}`);
     this.hintText.setText(`HINT // ${hint}`);
     this.instructionText.setText(`${buildRaycastMinimapLegendLine()}  |  H/? HELP`);
@@ -637,6 +662,8 @@ export class RaycastScene extends Phaser.Scene {
     this.deferredPickupHints.clear();
     this.completedEncounterBeats.clear();
     this.enemiesKilled = 0;
+    this.runScore = this.carriedScoreFromEpisode;
+    this.carriedScoreFromEpisode = 0;
     this.playerStationaryMs = 0;
     this.lastPlayerDamageAt = this.time.now;
     this.lastPlayerPosition = { x: this.currentLevel.playerStart.x, y: this.currentLevel.playerStart.y };
@@ -756,6 +783,9 @@ export class RaycastScene extends Phaser.Scene {
     }
 
     this.enemiesKilled += result.killCount;
+    if (result.killedEnemyKinds.length > 0) {
+      this.runScore = addRaycastKillScore(this.runScore, result.killedEnemyKinds);
+    }
     const splashImpact = result.weaponKind === 'LAUNCHER' && result.splashHitCount > 0;
     if (splashImpact) {
       this.audioFeedback.play('splash', 1, this.time.now);
@@ -1065,11 +1095,15 @@ export class RaycastScene extends Phaser.Scene {
   }
 
   private showRunCompleteOverlay(title: string, titleColor: string, episodeComplete = false): void {
+    writeRaycastHighScoreIfBetter(this.runScore);
+    const highScore = readRaycastHighScore();
     const episodeState = getRaycastEpisodeState(this.currentLevel.id);
     const summary = buildRaycastRunSummary({
       difficultyLabel: getRaycastDifficultyPreset(this.difficultyId).label,
       elapsedMs: this.time.now - this.runStartedAt,
       enemiesKilled: this.enemiesKilled,
+      score: this.runScore,
+      highScore,
       secretsFound: this.collectedSecrets.size,
       secretTotal: this.currentLevel.secrets.length,
       tokensFound: this.getKeyCount(),
@@ -1422,7 +1456,15 @@ export class RaycastScene extends Phaser.Scene {
       player: this.player,
       collectedKeyIds: this.currentLevel.keys.filter((key) => this.keySystem.hasKey(key.id)).map((key) => key.id),
       openDoorIds: this.currentLevel.doors.filter((door) => this.doorSystem.isOpen(door.id)).map((door) => door.id),
-      collectedSecretIds: this.collectedSecrets
+      collectedSecretIds: this.collectedSecrets,
+      enemies: this.enemies
+        .filter((enemy) => enemy.alive)
+        .map((enemy) => ({
+          id: enemy.id,
+          kind: enemy.kind,
+          x: enemy.x,
+          y: enemy.y
+        }))
     });
     const hudLayout = buildRaycastHudLayout(GAME_WIDTH, GAME_HEIGHT);
     const panelWidth = hudLayout.minimapPanelWidth;
@@ -1441,23 +1483,10 @@ export class RaycastScene extends Phaser.Scene {
     });
 
     model.markers
-      .filter((marker) => marker.active)
+      .filter((marker) => marker.active && marker.kind !== 'player')
       .forEach((marker) => {
         const px = offsetX + marker.x * tileSize;
         const py = offsetY + marker.y * tileSize;
-        if (marker.kind === 'player') {
-          this.minimapGraphics.fillStyle(0xfff29e, 1);
-          this.minimapGraphics.fillCircle(px, py, Math.max(2, tileSize * 0.3));
-          const dirX = Math.cos(marker.angle ?? 0) * tileSize * 0.7;
-          const dirY = Math.sin(marker.angle ?? 0) * tileSize * 0.7;
-          this.minimapGraphics.lineStyle(2, 0xfff29e, 0.95);
-          this.minimapGraphics.beginPath();
-          this.minimapGraphics.moveTo(px, py);
-          this.minimapGraphics.lineTo(px + dirX, py + dirY);
-          this.minimapGraphics.strokePath();
-          return;
-        }
-
         const color =
           marker.kind === 'key'
             ? 0x9feee2
@@ -1467,6 +1496,46 @@ export class RaycastScene extends Phaser.Scene {
         this.minimapGraphics.fillStyle(color, 0.95);
         this.minimapGraphics.fillRect(px - 2, py - 2, Math.max(4, tileSize - 2), Math.max(4, tileSize - 2));
       });
+
+    model.enemyBlips.forEach((enemy) => {
+      const px = offsetX + enemy.x * tileSize;
+      const py = offsetY + enemy.y * tileSize;
+      const style = getRaycastMinimapEnemyDotStyle(enemy.kind);
+      const baseR = Math.max(1.8, tileSize * 0.22 * style.radiusMul);
+      this.minimapGraphics.lineStyle(1, style.ring, 0.88);
+      this.minimapGraphics.strokeCircle(px, py, baseR + 1.1);
+      this.minimapGraphics.fillStyle(style.fill, 1);
+      if (enemy.kind === 'STALKER') {
+        const s = baseR * 1.25;
+        this.minimapGraphics.fillTriangle(px, py - s, px - s * 0.92, py + s * 0.62, px + s * 0.92, py + s * 0.62);
+      } else if (enemy.kind === 'RANGED') {
+        this.minimapGraphics.fillCircle(px, py, baseR);
+        this.minimapGraphics.fillStyle(0xfff7fb, 0.55);
+        this.minimapGraphics.fillCircle(px, py, Math.max(1, baseR * 0.38));
+      } else {
+        this.minimapGraphics.fillCircle(px, py, baseR);
+      }
+    });
+
+    const playerMarker = model.markers.find((marker) => marker.kind === 'player' && marker.active);
+    if (playerMarker) {
+      const px = offsetX + playerMarker.x * tileSize;
+      const py = offsetY + playerMarker.y * tileSize;
+      const bodyR = Math.max(2.6, tileSize * 0.34);
+      this.minimapGraphics.lineStyle(2, 0x1a0805, 1);
+      this.minimapGraphics.strokeCircle(px, py, bodyR + 1.4);
+      this.minimapGraphics.fillStyle(0xfffdf5, 1);
+      this.minimapGraphics.fillCircle(px, py, bodyR);
+      this.minimapGraphics.fillStyle(0xffe8a8, 1);
+      this.minimapGraphics.fillCircle(px, py, Math.max(1.6, tileSize * 0.14));
+      const dirX = Math.cos(playerMarker.angle ?? 0) * tileSize * 0.82;
+      const dirY = Math.sin(playerMarker.angle ?? 0) * tileSize * 0.82;
+      this.minimapGraphics.lineStyle(3, 0xfff29e, 0.98);
+      this.minimapGraphics.beginPath();
+      this.minimapGraphics.moveTo(px, py);
+      this.minimapGraphics.lineTo(px + dirX, py + dirY);
+      this.minimapGraphics.strokePath();
+    }
 
     const labeledMarkers = model.markers.filter((marker) => this.shouldRenderMinimapMarkerLabel(marker));
     labeledMarkers.slice(0, this.minimapMarkerLabels.length).forEach((marker, index) => {

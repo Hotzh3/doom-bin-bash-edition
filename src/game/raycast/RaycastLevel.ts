@@ -736,7 +736,437 @@ export const RAYCAST_LEVEL_3: RaycastLevel = {
   }
 };
 
-export const RAYCAST_LEVEL_CATALOG: RaycastLevel[] = [RAYCAST_LEVEL_1, RAYCAST_LEVEL_2, RAYCAST_LEVEL_3];
+export const RAYCAST_LEVEL_4: RaycastLevel = {
+  id: 'shard-vault',
+  name: 'Shard Vault Spiral',
+  map: RAYCAST_MAP_LEVEL_3,
+  playerStart: RAYCAST_PLAYER_START_LEVEL_3,
+  zones: [
+    { id: 'start', x: 5.0, y: 13.1, width: 7.2, height: 1.6, visualTheme: 'corrupted-metal' },
+    { id: 'drain-loop', x: 1.2, y: 9.0, width: 5.2, height: 3.4, visualTheme: 'void-stone' },
+    { id: 'vault', x: 1.1, y: 1.4, width: 5.6, height: 5.0, visualTheme: 'toxic-green', landmark: 'key' },
+    { id: 'secret', x: 1.1, y: 7.8, width: 2.2, height: 1.4, visualTheme: 'void-stone', landmark: 'secret' },
+    { id: 'shard-gate', x: 9.1, y: 6.2, width: 2.0, height: 2.0, visualTheme: 'warning-amber', landmark: 'gate' },
+    { id: 'spiral-threshold', x: 11.0, y: 5.8, width: 2.2, height: 2.2, visualTheme: 'warning-amber', landmark: 'ambush' },
+    { id: 'upper-spiral', x: 11.0, y: 1.2, width: 7.0, height: 10.2, visualTheme: 'toxic-green' },
+    { id: 'crown-approach', x: 13.2, y: 1.0, width: 4.2, height: 2.4, visualTheme: 'exit-portal', landmark: 'exit' }
+  ],
+  keys: [
+    {
+      id: 'prism-shard',
+      label: 'Prism Shard',
+      x: 5.5,
+      y: 3.5,
+      radius: 0.28,
+      unlocksDoorId: 'vault-seal',
+      pickupObjectiveText: 'Shard routed: cut through the spiral gate',
+      billboardLabel: 'SHARD'
+    }
+  ],
+  doors: [
+    {
+      id: 'vault-seal',
+      tileX: 10,
+      tileY: 7,
+      x: 10.5,
+      y: 7.5,
+      width: 1,
+      height: 1,
+      keyId: 'prism-shard',
+      killsRequired: 0,
+      openObjectiveText: 'Vault seal fractured',
+      lockedObjectiveText: 'Seal intact: prism shard required',
+      billboardLabel: 'SEAL'
+    }
+  ],
+  triggers: [
+    {
+      id: 'spiral-break',
+      x: 11.2,
+      y: 6.2,
+      width: 1.6,
+      height: 1.6,
+      once: true,
+      doorId: 'vault-seal',
+      objectiveText: 'Spiral breach: keep climbing',
+      activationText: 'Spiral breach: hunters converging',
+      spawns: [
+        { x: 11.5, y: 3.5, kind: 'RANGED' },
+        { x: 15.5, y: 5.5, kind: 'STALKER' },
+        { x: 17.5, y: 1.5, kind: 'RANGED' }
+      ]
+    },
+    {
+      id: 'crown-crossfire',
+      x: 14.2,
+      y: 1.2,
+      width: 2.4,
+      height: 1.8,
+      once: true,
+      doorId: 'vault-seal',
+      objectiveText: 'Crown lane collapsing from below',
+      activationText: 'Shard crown lit: lower flankers cutting upward',
+      spawns: [
+        { x: 17.5, y: 7.5, kind: 'STALKER' },
+        { x: 15.5, y: 9.5, kind: 'GRUNT' },
+        { x: 13.5, y: 9.5, kind: 'STALKER' }
+      ]
+    },
+    {
+      id: 'drain-cache-stir',
+      x: 1.2,
+      y: 8.0,
+      width: 1.6,
+      height: 1.0,
+      once: true,
+      objectiveText: 'Drain cache disturbed',
+      activationText: 'Drain echo: flankers spilling in',
+      spawns: [
+        { x: 3.5, y: 9.5, kind: 'STALKER' },
+        { x: 5.5, y: 11.5, kind: 'STALKER' }
+      ]
+    }
+  ],
+  healthPickups: [
+    {
+      id: 'drain-repair-cell',
+      kind: 'repair-cell',
+      label: 'Emergency Repair Cell',
+      x: 5.5,
+      y: 13.5,
+      radius: 0.26,
+      restoreAmount: 20,
+      billboardLabel: 'CELL',
+      pickupMessage: 'Emergency repair cell routed',
+      fullHealthMessage: 'Systems stable: leave the repair cell intact'
+    },
+    {
+      id: 'spiral-health-pack',
+      kind: 'health-pack',
+      label: 'Field Health Pack',
+      x: 15.5,
+      y: 5.5,
+      radius: 0.26,
+      restoreAmount: 30,
+      billboardLabel: 'PATCH',
+      pickupMessage: 'Field health pack applied',
+      fullHealthMessage: 'Vital bands full: save the patch for later',
+      requiredOpenDoorIds: ['vault-seal']
+    }
+  ],
+  secrets: [
+    {
+      id: 'drain-cache',
+      label: 'Drain Cache',
+      x: 1.5,
+      y: 8.5,
+      radius: 0.24,
+      objectiveText: 'Drain cache logged',
+      billboardLabel: 'CACHE'
+    }
+  ],
+  exits: [
+    {
+      id: 'vault-exit',
+      x: 16.5,
+      y: 1.5,
+      radius: 0.35,
+      objectiveText: 'Shard spiral collapsed',
+      billboardLabel: 'EXIT'
+    }
+  ],
+  initialSpawns: [
+    { id: 'drain-loop-watch', kind: 'GRUNT', x: 3.5, y: 9.5 },
+    { id: 'vault-guard', kind: 'STALKER', x: 5.5, y: 4.5 },
+    { id: 'spiral-rifle-a', kind: 'RANGED', x: 11.5, y: 3.5 },
+    { id: 'spiral-rifle-b', kind: 'RANGED', x: 17.5, y: 7.5 },
+    { id: 'spiral-shadow', kind: 'STALKER', x: 13.5, y: 9.5 }
+  ],
+  encounterBeats: [
+    {
+      id: 'vault-warning',
+      zoneId: 'vault',
+      message: 'Vault shimmer ahead: secure the prism shard'
+    },
+    {
+      id: 'seal-prep',
+      doorId: 'vault-seal',
+      message: 'Vault seal weakening: spiral defenders massing'
+    },
+    {
+      id: 'spiral-break-beat',
+      triggerId: 'spiral-break',
+      message: 'Spiral breach active: break the upper crossfire before it cages you'
+    },
+    {
+      id: 'crown-crossfire-beat',
+      triggerId: 'crown-crossfire',
+      message: 'Crown lane collapsing: cut through the flankers and keep climbing'
+    },
+    {
+      id: 'vault-recovery',
+      directorState: 'RECOVERY',
+      requiresTriggerId: 'crown-crossfire',
+      message: 'Pressure buckling: use the recovery window before the finale'
+    }
+  ],
+  progression: {
+    requiredExitKeyIds: ['prism-shard'],
+    requiredExitDoorIds: ['vault-seal'],
+    requiredExitTriggerIds: ['spiral-break', 'crown-crossfire'],
+    blockedExitMessage: 'SPIRAL ACTIVE: VAULT UNCLEARED'
+  },
+  director: {
+    enabled: true,
+    config: {
+      maxEnemiesAlive: 6,
+      maxTotalSpawns: 12,
+      openingSpawnCount: 0,
+      baseSpawnCooldownMs: 4700,
+      buildUpSpawnCooldownMs: 3600,
+      ambushSpawnCooldownMs: 1900,
+      highIntensitySpawnCooldownMs: 3000,
+      recoveryDurationMs: 4200,
+      ambushDurationMs: 6400,
+      highIntensityDurationMs: 9600,
+      buildUpAfterMs: 5800,
+      idlePressureMs: 1600,
+      dominanceNoDamageMs: 7800,
+      lowHealthThreshold: 35,
+      comfortableHealthThreshold: 65,
+      debugEnabled: true
+    },
+    spawnPoints: [
+      { id: 'start-flank', zoneId: 'start', x: 5.5, y: 13.5, minPlayerDistance: 2.2 },
+      { id: 'drain-loop-left', zoneId: 'drain-loop', x: 3.5, y: 9.5, minPlayerDistance: 1.8 },
+      { id: 'vault-inner', zoneId: 'vault', x: 5.5, y: 4.5, minPlayerDistance: 1.8 },
+      { id: 'seal-anchor', zoneId: 'shard-gate', x: 9.5, y: 7.5, minPlayerDistance: 1.8 },
+      { id: 'spiral-ranged', zoneId: 'spiral-threshold', x: 11.5, y: 3.5, minPlayerDistance: 2.0 },
+      { id: 'spiral-mid', zoneId: 'upper-spiral', x: 15.5, y: 5.5, minPlayerDistance: 2.0 },
+      { id: 'spiral-lower', zoneId: 'upper-spiral', x: 15.5, y: 9.5, minPlayerDistance: 2.1 },
+      { id: 'crown-rear', zoneId: 'crown-approach', x: 17.5, y: 1.5, minPlayerDistance: 2.3 }
+    ]
+  }
+};
+
+export const RAYCAST_LEVEL_5: RaycastLevel = {
+  id: 'relay-heart',
+  name: 'Relay Heart Finale',
+  map: RAYCAST_MAP_LEVEL_3,
+  playerStart: RAYCAST_PLAYER_START_LEVEL_3,
+  zones: [
+    { id: 'start', x: 5.0, y: 13.1, width: 7.2, height: 1.6, visualTheme: 'corrupted-metal' },
+    { id: 'sump-loop', x: 1.2, y: 9.0, width: 5.2, height: 3.4, visualTheme: 'void-stone' },
+    { id: 'heart-archive', x: 1.1, y: 1.4, width: 5.6, height: 5.0, visualTheme: 'toxic-green', landmark: 'key' },
+    { id: 'secret', x: 1.1, y: 7.8, width: 2.2, height: 1.4, visualTheme: 'void-stone', landmark: 'secret' },
+    { id: 'heart-seal', x: 9.1, y: 6.2, width: 2.0, height: 2.0, visualTheme: 'warning-amber', landmark: 'gate' },
+    { id: 'throne-threshold', x: 11.0, y: 5.8, width: 2.2, height: 2.2, visualTheme: 'warning-amber', landmark: 'ambush' },
+    { id: 'throne-ring', x: 11.0, y: 1.2, width: 7.0, height: 10.2, visualTheme: 'toxic-green', landmark: 'ambush' },
+    { id: 'final-exit', x: 13.2, y: 1.0, width: 4.2, height: 2.4, visualTheme: 'exit-portal', landmark: 'exit' }
+  ],
+  keys: [
+    {
+      id: 'heart-sigil',
+      label: 'Heart Sigil',
+      x: 5.5,
+      y: 3.5,
+      radius: 0.28,
+      unlocksDoorId: 'heart-seal-door',
+      pickupObjectiveText: 'Sigil routed: open the heart seal',
+      billboardLabel: 'SIGIL'
+    }
+  ],
+  doors: [
+    {
+      id: 'heart-seal-door',
+      tileX: 10,
+      tileY: 7,
+      x: 10.5,
+      y: 7.5,
+      width: 1,
+      height: 1,
+      keyId: 'heart-sigil',
+      killsRequired: 0,
+      openObjectiveText: 'Heart seal split open',
+      lockedObjectiveText: 'Heart seal intact: sigil required',
+      billboardLabel: 'HEART'
+    }
+  ],
+  triggers: [
+    {
+      id: 'heart-breach',
+      x: 11.2,
+      y: 6.2,
+      width: 1.6,
+      height: 1.6,
+      once: true,
+      doorId: 'heart-seal-door',
+      objectiveText: 'Push into the heart chamber',
+      activationText: 'Heart breach: throne guardians awake',
+      spawns: [
+        { x: 11.5, y: 3.5, kind: 'RANGED' },
+        { x: 15.5, y: 5.5, kind: 'BRUTE' },
+        { x: 17.5, y: 7.5, kind: 'GRUNT' }
+      ]
+    },
+    {
+      id: 'boss-lockdown',
+      x: 14.2,
+      y: 1.2,
+      width: 2.4,
+      height: 1.8,
+      once: true,
+      doorId: 'heart-seal-door',
+      objectiveText: 'Final relay core engaged',
+      activationText: 'Relay heart exposed: purge the final defenders',
+      spawns: [
+        { x: 17.5, y: 1.5, kind: 'RANGED' },
+        { x: 15.5, y: 9.5, kind: 'BRUTE' },
+        { x: 13.5, y: 9.5, kind: 'BRUTE' },
+        { x: 15.5, y: 5.5, kind: 'GRUNT' }
+      ]
+    },
+    {
+      id: 'sump-cache-stir',
+      x: 1.2,
+      y: 8.0,
+      width: 1.6,
+      height: 1.0,
+      once: true,
+      objectiveText: 'Sump cache disturbed',
+      activationText: 'Sump echo: rear flank inbound',
+      spawns: [
+        { x: 3.5, y: 9.5, kind: 'STALKER' },
+        { x: 5.5, y: 11.5, kind: 'STALKER' }
+      ]
+    }
+  ],
+  healthPickups: [
+    {
+      id: 'sump-repair-cell',
+      kind: 'repair-cell',
+      label: 'Emergency Repair Cell',
+      x: 5.5,
+      y: 13.5,
+      radius: 0.26,
+      restoreAmount: 20,
+      billboardLabel: 'CELL',
+      pickupMessage: 'Emergency repair cell routed',
+      fullHealthMessage: 'Systems stable: leave the repair cell intact'
+    },
+    {
+      id: 'throne-health-pack',
+      kind: 'health-pack',
+      label: 'Field Health Pack',
+      x: 15.5,
+      y: 5.5,
+      radius: 0.26,
+      restoreAmount: 30,
+      billboardLabel: 'PATCH',
+      pickupMessage: 'Field health pack applied',
+      fullHealthMessage: 'Vital bands full: save the patch for later',
+      requiredOpenDoorIds: ['heart-seal-door']
+    }
+  ],
+  secrets: [
+    {
+      id: 'sump-cache',
+      label: 'Sump Cache',
+      x: 1.5,
+      y: 8.5,
+      radius: 0.24,
+      objectiveText: 'Sump cache logged',
+      billboardLabel: 'CACHE'
+    }
+  ],
+  exits: [
+    {
+      id: 'heart-exit',
+      x: 16.5,
+      y: 1.5,
+      radius: 0.35,
+      objectiveText: 'Relay heart extinguished',
+      billboardLabel: 'EXIT'
+    }
+  ],
+  initialSpawns: [
+    { id: 'sump-watch', kind: 'STALKER', x: 3.5, y: 9.5 },
+    { id: 'archive-guard', kind: 'GRUNT', x: 5.5, y: 4.5 },
+    { id: 'threshold-rifle', kind: 'RANGED', x: 11.5, y: 3.5 },
+    { id: 'throne-brute-a', kind: 'BRUTE', x: 15.5, y: 5.5 },
+    { id: 'throne-brute-b', kind: 'BRUTE', x: 15.5, y: 9.5 },
+    { id: 'exit-sniper', kind: 'RANGED', x: 17.5, y: 1.5 }
+  ],
+  encounterBeats: [
+    {
+      id: 'heart-warning',
+      zoneId: 'heart-archive',
+      message: 'Heart chamber ahead: secure the sigil and prepare for the finale'
+    },
+    {
+      id: 'heart-seal-prep',
+      doorId: 'heart-seal-door',
+      message: 'Heart seal cracking: the throne ring is waking up'
+    },
+    {
+      id: 'heart-breach-beat',
+      triggerId: 'heart-breach',
+      message: 'Guardians engaged: crack the front line and force the relay heart open'
+    },
+    {
+      id: 'boss-lockdown-beat',
+      triggerId: 'boss-lockdown',
+      message: 'Final relay core online: break the lockdown ring and kill everything holding the exit'
+    },
+    {
+      id: 'final-recovery',
+      directorState: 'RECOVERY',
+      requiresTriggerId: 'boss-lockdown',
+      message: 'The heart flickers: finish the purge and claim the exit'
+    }
+  ],
+  progression: {
+    requiredExitKeyIds: ['heart-sigil'],
+    requiredExitDoorIds: ['heart-seal-door'],
+    requiredExitTriggerIds: ['heart-breach', 'boss-lockdown'],
+    requireCombatClear: true,
+    blockedExitMessage: 'RELAY HEART ACTIVE: FINAL PURGE INCOMPLETE'
+  },
+  director: {
+    enabled: true,
+    config: {
+      maxEnemiesAlive: 6,
+      maxTotalSpawns: 14,
+      openingSpawnCount: 0,
+      baseSpawnCooldownMs: 4400,
+      buildUpSpawnCooldownMs: 3300,
+      ambushSpawnCooldownMs: 1750,
+      highIntensitySpawnCooldownMs: 2800,
+      recoveryDurationMs: 3600,
+      ambushDurationMs: 7000,
+      highIntensityDurationMs: 11000,
+      buildUpAfterMs: 5200,
+      idlePressureMs: 1500,
+      dominanceNoDamageMs: 7200,
+      lowHealthThreshold: 35,
+      comfortableHealthThreshold: 65,
+      debugEnabled: true
+    },
+    spawnPoints: [
+      { id: 'start-flank', zoneId: 'start', x: 5.5, y: 13.5, minPlayerDistance: 2.2 },
+      { id: 'sump-left', zoneId: 'sump-loop', x: 3.5, y: 9.5, minPlayerDistance: 1.8 },
+      { id: 'archive-inner', zoneId: 'heart-archive', x: 5.5, y: 4.5, minPlayerDistance: 1.8 },
+      { id: 'heart-anchor', zoneId: 'heart-seal', x: 9.5, y: 7.5, minPlayerDistance: 1.8 },
+      { id: 'threshold-ranged', zoneId: 'throne-threshold', x: 11.5, y: 3.5, minPlayerDistance: 2.0 },
+      { id: 'throne-mid', zoneId: 'throne-ring', x: 15.5, y: 5.5, minPlayerDistance: 2.0 },
+      { id: 'throne-lower', zoneId: 'throne-ring', x: 15.5, y: 9.5, minPlayerDistance: 2.1 },
+      { id: 'throne-rear', zoneId: 'throne-ring', x: 17.5, y: 7.5, minPlayerDistance: 2.2 },
+      { id: 'exit-rear', zoneId: 'final-exit', x: 17.5, y: 1.5, minPlayerDistance: 2.3 }
+    ]
+  }
+};
+
+export const RAYCAST_LEVEL_CATALOG: RaycastLevel[] = [RAYCAST_LEVEL_1, RAYCAST_LEVEL_2, RAYCAST_LEVEL_3, RAYCAST_LEVEL_4, RAYCAST_LEVEL_5];
 export const RAYCAST_LEVEL = RAYCAST_LEVEL_1;
 
 export function getRaycastLevelById(levelId: string | null | undefined): RaycastLevel {

@@ -18,9 +18,29 @@ describe('raycast minimap model', () => {
     expect(model.cells.some((cell) => cell.kind === 'wall')).toBe(true);
     expect(model.cells.some((cell) => cell.kind === 'floor')).toBe(true);
     expect(model.cells.some((cell) => cell.kind === 'door')).toBe(true);
+    expect(model.enemyBlips).toEqual([]);
     expect(model.markers).toContainEqual(
       expect.objectContaining({ kind: 'player', angle: -Math.PI / 2, label: 'YOU', active: true })
     );
+  });
+
+  it('lists live enemies as map blips without revealing secrets', () => {
+    const model = buildRaycastMinimapModel({
+      map: RAYCAST_LEVEL.map,
+      level: RAYCAST_LEVEL,
+      player: { x: 3.5, y: 10.5, angle: 0 },
+      collectedKeyIds: [],
+      openDoorIds: [],
+      collectedSecretIds: [],
+      enemies: [
+        { id: 'a', kind: 'GRUNT', x: 4.2, y: 10.1 },
+        { id: 'b', kind: 'BRUTE', x: 6.1, y: 11.4 }
+      ]
+    });
+
+    expect(model.enemyBlips).toHaveLength(2);
+    expect(model.enemyBlips.some((b) => b.kind === 'GRUNT')).toBe(true);
+    expect(model.markers.some((m) => m.label === 'HIDDEN')).toBe(false);
   });
 
   it('updates key and door markers from progression state without revealing secrets', () => {
@@ -62,5 +82,6 @@ describe('raycast minimap model', () => {
     expect(openModel.markers).toContainEqual(expect.objectContaining({ kind: 'exit', label: 'EXIT', active: true }));
     expect(openModel.markers.some((marker) => marker.label === 'HIDDEN')).toBe(false);
     expect(openModel.cells.some((cell) => cell.kind === 'door')).toBe(false);
+    expect(openModel.enemyBlips).toEqual([]);
   });
 });

@@ -6,28 +6,40 @@ import {
   normalizeAngle
 } from '../game/raycast/RaycastCombatSystem';
 import type { RaycastEnemy } from '../game/raycast/RaycastEnemy';
+import { buildRaycastPatrolWaypoints } from '../game/raycast/RaycastPatrol';
 import { RAYCAST_MAP, type RaycastMap } from '../game/raycast/RaycastMap';
 import type { RaycastPlayerState } from '../game/raycast/RaycastPlayerController';
 
-const createEnemy = (overrides: Partial<RaycastEnemy> = {}): RaycastEnemy => ({
-  id: 'test-enemy',
-  kind: 'GRUNT',
-  x: 3,
-  y: 2,
-  health: 13,
-  maxHealth: 13,
-  alive: true,
-  radius: 0.3,
-  color: 0xff4f5f,
-  lastAttack: Number.NEGATIVE_INFINITY,
-  spawnTelegraphStartedAt: 0,
-  spawnTelegraphUntil: 0,
-  attackWindupStartedAt: 0,
-  attackWindupUntil: 0,
-  hitFlashUntil: 0,
-  deathBurstUntil: 0,
-  ...overrides
-});
+const createEnemy = (overrides: Partial<RaycastEnemy> = {}): RaycastEnemy => {
+  const id = overrides.id ?? 'test-enemy';
+  const x = overrides.x ?? 3;
+  const y = overrides.y ?? 2;
+  return {
+    id,
+    kind: 'GRUNT',
+    x,
+    y,
+    health: 13,
+    maxHealth: 13,
+    alive: true,
+    radius: 0.3,
+    color: 0xff4f5f,
+    lastAttack: Number.NEGATIVE_INFINITY,
+    spawnTelegraphStartedAt: 0,
+    spawnTelegraphUntil: 0,
+    attackWindupStartedAt: 0,
+    attackWindupUntil: 0,
+    hitFlashUntil: 0,
+    deathBurstUntil: 0,
+    patrolWaypoints: buildRaycastPatrolWaypoints(x, y, id),
+    patrolWaypointIndex: 0,
+    alertUntilTime: 0,
+    lastKnownPlayerX: x,
+    lastKnownPlayerY: y,
+    wasCombatActiveLastTick: false,
+    ...overrides
+  };
+};
 
 const player: RaycastPlayerState = {
   x: 2.4,
@@ -143,6 +155,8 @@ describe('raycast combat', () => {
     expect(shot.fired).toBe(true);
     expect([left, center, right].filter((enemy) => !enemy.alive)).toHaveLength(3);
     expect(shot.killCount).toBe(3);
+    expect(shot.killedEnemyKinds).toHaveLength(3);
+    expect(shot.killedEnemyKinds.every((k) => k === 'GRUNT')).toBe(true);
   });
 
   it('applies launcher splash damage around a direct hit', () => {
@@ -161,5 +175,6 @@ describe('raycast combat', () => {
     expect(far.alive).toBe(true);
     expect(shot.killCount).toBe(2);
     expect(shot.splashHitCount).toBe(1);
+    expect([...shot.killedEnemyKinds].sort()).toEqual(['GRUNT', 'GRUNT']);
   });
 });
