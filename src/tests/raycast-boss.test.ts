@@ -7,6 +7,7 @@ import {
   damageRaycastBoss,
   getRaycastBossPhaseLabel,
   syncRaycastBossPhase,
+  tickRaycastBossMovement,
   tickRaycastBossVolleys,
   type RaycastBossConfig
 } from '../game/raycast/RaycastBoss';
@@ -65,6 +66,26 @@ describe('raycast boss', () => {
     expect(boss.pendingVolleyAt).toBeGreaterThan(t0);
     const shots = tickRaycastBossVolleys(boss, { x: 2.5, y: 7.5, alive: true }, boss.pendingVolleyAt + 1);
     expect(shots.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('fires stronger volleys when player stays stationary', () => {
+    const boss = createRaycastBossState(CONFIG, 0);
+    boss.phase = 2;
+    boss.nextVolleyReadyAt = 0;
+    const t0 = 4000;
+    tickRaycastBossVolleys(boss, { x: 2.5, y: 7.5, alive: true, stationaryMs: 1200 }, t0);
+    const shots = tickRaycastBossVolleys(boss, { x: 2.5, y: 7.5, alive: true, stationaryMs: 1200 }, boss.pendingVolleyAt + 1);
+    expect(shots.length).toBe(5);
+  });
+
+  it('moves in the arena without clipping into walls', () => {
+    const boss = createRaycastBossState(CONFIG, 0);
+    const before = { x: boss.x, y: boss.y };
+    tickRaycastBossMovement(boss, RAYCAST_MAP_BOSS, { x: 2.5, y: 7.5, alive: true }, 1000, 1000);
+    expect(Math.hypot(boss.x - before.x, boss.y - before.y)).toBeGreaterThan(0.05);
+    expect(Math.floor(boss.x)).toBeGreaterThanOrEqual(0);
+    expect(Math.floor(boss.y)).toBeGreaterThanOrEqual(0);
+    expect(RAYCAST_MAP_BOSS.grid[Math.floor(boss.y)]?.[Math.floor(boss.x)]).toBe(0);
   });
 
   it('dies and awards flat clear score hook', () => {

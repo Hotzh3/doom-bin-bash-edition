@@ -17,10 +17,12 @@ describe('raycast presentation helpers', () => {
     const arena = getPrologueCopy('arena');
 
     expect(ray.lines).toHaveLength(4);
-    expect(ray.lines[0]).toContain('corrupted system');
+    expect(ray.lines[0]).toContain('dead signal');
+    expect(ray.lines[1]).toContain('buried system woke up');
+    expect(ray.lines[2]).toContain('Five sectors');
     expect(ray.continueLine).toContain('A');
     expect(arena.lines).toHaveLength(3);
-    expect(arena.lines[0]).toContain('Combat simulation');
+    expect(arena.lines[0]).toContain('Simulation uplink');
     expect(arena.continueLine).toContain('B');
     expect(ray.backLine).toContain('ESC');
     expect(arena.backLine).toContain('ESC');
