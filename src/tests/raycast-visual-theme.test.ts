@@ -72,7 +72,7 @@ describe('raycast visual theme', () => {
     expect(getRaycastWallVisualStyle(4, gateSurface)).toMatchObject({
       pattern: 'locked-warning-frame',
       pulseSignal: true,
-      signalColor: 0xff7a6d
+      signalColor: 0xe83048
     });
     expect(getRaycastWallVisualStyle(1, exitSurface)).toMatchObject({
       pattern: 'exit-glow',
@@ -105,10 +105,10 @@ describe('raycast visual theme', () => {
   });
 
   it('assigns distinct enemy silhouettes and role accents per enemy kind', () => {
-    const gruntStyle = getRaycastEnemyVisualStyle('GRUNT', 0xff6c62);
-    const bruteStyle = getRaycastEnemyVisualStyle('BRUTE', 0xffb05c);
-    const stalkerStyle = getRaycastEnemyVisualStyle('STALKER', 0x67f0b5);
-    const rangedStyle = getRaycastEnemyVisualStyle('RANGED', 0x7edbff);
+    const gruntStyle = getRaycastEnemyVisualStyle('GRUNT', 0xff5c42);
+    const bruteStyle = getRaycastEnemyVisualStyle('BRUTE', 0xffa64d);
+    const stalkerStyle = getRaycastEnemyVisualStyle('STALKER', 0x54e898);
+    const rangedStyle = getRaycastEnemyVisualStyle('RANGED', 0x5cefef);
 
     expect(gruntStyle).toMatchObject({
       silhouette: 'raider',
@@ -135,18 +135,18 @@ describe('raycast visual theme', () => {
   });
 
   it('defines unmistakable billboard colors for stateful interactables', () => {
-    expect(getBillboardColor('token')).toBe(0x8ff4c0);
-    expect(getBillboardColor('gate')).toBe(0xff7a6d);
-    expect(getBillboardColor('gate-open', true)).toBe(0x9feee2);
-    expect(getBillboardColor('health')).toBe(0xff8fb0);
-    expect(getBillboardColor('exit', false)).toBe(0x6fd8ff);
+    expect(getBillboardColor('token')).toBe(0x72f298);
+    expect(getBillboardColor('gate')).toBe(0xdc2840);
+    expect(getBillboardColor('gate-open', true)).toBe(0x58f2e4);
+    expect(getBillboardColor('health')).toBe(0xff7098);
+    expect(getBillboardColor('exit', false)).toBe(0x48b0c8);
   });
 
   it('exposes the authored zone palette accents', () => {
-    expect(getRaycastZoneTheme('corrupted-metal').accentColor).toBe(0x667f9c);
-    expect(getRaycastZoneTheme('void-stone').accentColor).toBe(0x756f84);
-    expect(getRaycastZoneTheme('warning-amber').accentColor).toBe(0xd27a35);
-    expect(getRaycastZoneTheme('toxic-green').accentColor).toBe(0x249770);
-    expect(getRaycastZoneTheme('exit-portal').accentColor).toBe(0x37abd5);
+    expect(getRaycastZoneTheme('corrupted-metal').accentColor).toBe(0x556080);
+    expect(getRaycastZoneTheme('void-stone').accentColor).toBe(0x5a4a68);
+    expect(getRaycastZoneTheme('warning-amber').accentColor).toBe(0xc86828);
+    expect(getRaycastZoneTheme('toxic-green').accentColor).toBe(0x1c8050);
+    expect(getRaycastZoneTheme('exit-portal').accentColor).toBe(0x2898a8);
   });
 });

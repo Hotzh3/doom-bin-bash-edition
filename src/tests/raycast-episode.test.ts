@@ -1,53 +1,62 @@
 import { describe, expect, it } from 'vitest';
 import { getRaycastEpisodeState } from '../game/raycast/RaycastEpisode';
-import { RAYCAST_LEVEL, RAYCAST_LEVEL_2, RAYCAST_LEVEL_3, RAYCAST_LEVEL_4, RAYCAST_LEVEL_5 } from '../game/raycast/RaycastLevel';
+import {
+  RAYCAST_LEVEL,
+  RAYCAST_LEVEL_2,
+  RAYCAST_LEVEL_3,
+  RAYCAST_LEVEL_4,
+  RAYCAST_LEVEL_5,
+  RAYCAST_LEVEL_BOSS
+} from '../game/raycast/RaycastLevel';
 
 describe('raycast episode progression', () => {
-  it('advances level 1 into level 2', () => {
+  it('advances through five story sectors into the boss map', () => {
     expect(getRaycastEpisodeState(RAYCAST_LEVEL.id)).toEqual({
       currentLevelId: RAYCAST_LEVEL.id,
       currentLevelNumber: 1,
-      totalLevels: 5,
+      totalLevels: 6,
       nextLevelId: RAYCAST_LEVEL_2.id,
       isFinalLevel: false
     });
-  });
 
-  it('advances level 2 into level 3', () => {
     expect(getRaycastEpisodeState(RAYCAST_LEVEL_2.id)).toEqual({
       currentLevelId: RAYCAST_LEVEL_2.id,
       currentLevelNumber: 2,
-      totalLevels: 5,
+      totalLevels: 6,
       nextLevelId: RAYCAST_LEVEL_3.id,
       isFinalLevel: false
     });
-  });
 
-  it('advances level 3 into level 4', () => {
     expect(getRaycastEpisodeState(RAYCAST_LEVEL_3.id)).toEqual({
       currentLevelId: RAYCAST_LEVEL_3.id,
       currentLevelNumber: 3,
-      totalLevels: 5,
+      totalLevels: 6,
       nextLevelId: RAYCAST_LEVEL_4.id,
       isFinalLevel: false
     });
-  });
 
-  it('advances level 4 into level 5', () => {
     expect(getRaycastEpisodeState(RAYCAST_LEVEL_4.id)).toEqual({
       currentLevelId: RAYCAST_LEVEL_4.id,
       currentLevelNumber: 4,
-      totalLevels: 5,
+      totalLevels: 6,
       nextLevelId: RAYCAST_LEVEL_5.id,
+      isFinalLevel: false
+    });
+
+    expect(getRaycastEpisodeState(RAYCAST_LEVEL_5.id)).toEqual({
+      currentLevelId: RAYCAST_LEVEL_5.id,
+      currentLevelNumber: 5,
+      totalLevels: 6,
+      nextLevelId: RAYCAST_LEVEL_BOSS.id,
       isFinalLevel: false
     });
   });
 
-  it('marks level 5 as the final level', () => {
-    expect(getRaycastEpisodeState(RAYCAST_LEVEL_5.id)).toEqual({
-      currentLevelId: RAYCAST_LEVEL_5.id,
-      currentLevelNumber: 5,
-      totalLevels: 5,
+  it('marks the boss arena as the finale with no further catalog entry', () => {
+    expect(getRaycastEpisodeState(RAYCAST_LEVEL_BOSS.id)).toEqual({
+      currentLevelId: RAYCAST_LEVEL_BOSS.id,
+      currentLevelNumber: 6,
+      totalLevels: 6,
       nextLevelId: null,
       isFinalLevel: true
     });

@@ -1,4 +1,5 @@
 import type { DirectorState } from '../systems/DirectorState';
+import { RAYCAST_CSS, RAYCAST_PALETTE } from './RaycastPalette';
 
 export interface RaycastAtmosphereRenderOptions {
   ambientDarkness: number;
@@ -12,32 +13,32 @@ export interface RaycastAtmosphereRenderOptions {
 }
 
 export const RAYCAST_ATMOSPHERE = {
-  voidColor: 0x000207,
-  floorColor: 0x03070d,
-  fogColor: 0x00030a,
-  corruptionTint: 0x46102f,
-  criticalTint: 0x6f0f1f,
-  muzzleFlash: 0xfff29e,
-  damageFlash: 0xff2348,
-  projectileHalo: 0xfff0a8,
-  pickupHalo: 0x9feee2,
-  enemyOutline: 0x070a10,
-  hudPanel: '#03070dcc',
-  debugText: '#6ca99f',
-  systemText: '#9feee2',
-  warningText: '#ff5b6f',
-  keyText: '#fff0c2',
+  voidColor: RAYCAST_PALETTE.voidBlack,
+  floorColor: RAYCAST_PALETTE.floorVoid,
+  fogColor: RAYCAST_PALETTE.fogVoid,
+  corruptionTint: RAYCAST_PALETTE.corruptVeil,
+  criticalTint: RAYCAST_PALETTE.criticalVeil,
+  muzzleFlash: RAYCAST_PALETTE.muzzleWarm,
+  damageFlash: RAYCAST_PALETTE.damageFlash,
+  projectileHalo: RAYCAST_PALETTE.projectileHalo,
+  pickupHalo: RAYCAST_PALETTE.pickupHalo,
+  enemyOutline: RAYCAST_PALETTE.enemyOutline,
+  hudPanel: RAYCAST_CSS.hudPanel,
+  debugText: RAYCAST_CSS.debugText,
+  systemText: RAYCAST_CSS.systemText,
+  warningText: RAYCAST_CSS.warningText,
+  keyText: RAYCAST_CSS.keyText,
   wallColors: {
-    1: 0x26344d,
-    2: 0x6d1f37,
-    3: 0x0f6d67,
-    4: 0xaa5a2a
+    1: RAYCAST_PALETTE.wallSteel,
+    2: RAYCAST_PALETTE.wallCrimson,
+    3: RAYCAST_PALETTE.wallOxide,
+    4: RAYCAST_PALETTE.wallRust
   },
   wallPatternColors: {
-    1: 0x5f7190,
-    2: 0xff5b6f,
-    3: 0x9feee2,
-    4: 0xffc36b
+    1: RAYCAST_PALETTE.patternSteel,
+    2: RAYCAST_PALETTE.patternCrimson,
+    3: RAYCAST_PALETTE.patternOxide,
+    4: RAYCAST_PALETTE.patternRust
   },
   sectorDarkness: {
     1: 0.82,

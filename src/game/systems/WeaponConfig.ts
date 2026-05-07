@@ -1,3 +1,4 @@
+import { RAYCAST_PALETTE } from '../raycast/RaycastPalette';
 import type { BalanceProfile } from '../types/BalanceProfile';
 import type { WeaponConfig, WeaponKind } from './WeaponTypes';
 
@@ -64,7 +65,13 @@ function freezeWeaponConfig(config: WeaponConfig): WeaponConfig {
 }
 
 export const ARENA_WEAPON_CONFIG = cloneWeaponConfigRecord(BASE_WEAPON_CONFIG);
-export const RAYCAST_WEAPON_CONFIG = cloneWeaponConfigRecord(BASE_WEAPON_CONFIG);
+export const RAYCAST_WEAPON_CONFIG = cloneWeaponConfigRecord({
+  ...BASE_WEAPON_CONFIG,
+  LAUNCHER: {
+    ...BASE_WEAPON_CONFIG.LAUNCHER,
+    projectileTint: RAYCAST_PALETTE.plasmaBright
+  }
+});
 
 export const WEAPON_CONFIG = ARENA_WEAPON_CONFIG;
 

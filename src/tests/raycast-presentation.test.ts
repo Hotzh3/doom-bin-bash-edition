@@ -7,10 +7,25 @@ import {
   buildRaycastOverlayHint,
   buildRaycastPriorityMessage,
   buildRaycastStatusMessage,
-  getMainMenuCopy
+  getMainMenuCopy,
+  getPrologueCopy
 } from '../game/raycast/RaycastPresentation';
 
 describe('raycast presentation helpers', () => {
+  it('exposes boot prologue copy for raycast and arena paths', () => {
+    const ray = getPrologueCopy('raycast');
+    const arena = getPrologueCopy('arena');
+
+    expect(ray.lines).toHaveLength(4);
+    expect(ray.lines[0]).toContain('corrupted system');
+    expect(ray.continueLine).toContain('A');
+    expect(arena.lines).toHaveLength(3);
+    expect(arena.lines[0]).toContain('Combat simulation');
+    expect(arena.continueLine).toContain('B');
+    expect(ray.backLine).toContain('ESC');
+    expect(arena.backLine).toContain('ESC');
+  });
+
   it('builds a banner that presents the mini episode and controls', () => {
     const banner = buildRaycastEpisodeBanner({
       currentLevelNumber: 2,
@@ -30,7 +45,7 @@ describe('raycast presentation helpers', () => {
         canAdvance: true,
         episodeComplete: false
       })
-    ).toBe('N NEXT LEVEL  |  R RESTART L1  |  ESC MENU');
+    ).toBe('N CONTINUE  |  R RESTART SECTOR  |  ESC MENU');
 
     expect(
       buildRaycastOverlayHint({
@@ -39,12 +54,26 @@ describe('raycast presentation helpers', () => {
         episodeComplete: true
       })
     ).toBe('R REPLAY FINALE  |  ESC MENU');
+
+    expect(
+      buildRaycastOverlayHint({
+        currentLevelNumber: 6,
+        canAdvance: false,
+        episodeComplete: true,
+        finaleBossCleared: true
+      })
+    ).toBe('W WORLD 2 (LOCKED)  |  R REPLAY BOSS  |  ESC MENU');
   });
 
   it('builds status copy for play, clear, and death states', () => {
     expect(buildRaycastStatusMessage(false, false, true)).toBe('Sweep the sector. Keep moving.');
-    expect(buildRaycastStatusMessage(true, false, true)).toBe('Level clear. Press N for next level, R to replay, or ESC for menu.');
+    expect(buildRaycastStatusMessage(true, false, true)).toBe(
+      'Sector clear. Press N to continue, R to replay, or ESC for menu.'
+    );
     expect(buildRaycastStatusMessage(true, true, true)).toBe('Episode clear. Press R to replay the finale or ESC for menu.');
+    expect(buildRaycastStatusMessage(true, true, true, true)).toBe(
+      'Boss purged. W for World 2 signal, R to replay boss, ESC for menu.'
+    );
     expect(buildRaycastStatusMessage(false, false, false)).toBe('Signal lost. Press R to retry or ESC for menu.');
   });
 

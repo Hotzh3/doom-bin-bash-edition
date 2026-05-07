@@ -1,5 +1,6 @@
 import type { RectArea } from '../level/arenaLayout';
 import type { EnemyKind } from '../types/game';
+import { RAYCAST_PALETTE } from './RaycastPalette';
 
 export type RaycastZoneThemeId =
   | 'corrupted-metal'
@@ -91,53 +92,53 @@ export interface RaycastEnemyVisualStyle {
 
 const DEFAULT_THEME: RaycastZoneTheme = {
   id: 'corrupted-metal',
-  accentColor: 0x4f617d,
-  patternColor: 0xa4b3cf,
-  floorColor: 0x071019,
-  ceilingColor: 0x03060c,
-  signalColor: 0xffc56d
+  accentColor: 0x455a72,
+  patternColor: 0x9cabb8,
+  floorColor: 0x060910,
+  ceilingColor: 0x020408,
+  signalColor: RAYCAST_PALETTE.amberSoft
 };
 
 export const RAYCAST_ZONE_THEMES: Record<RaycastZoneThemeId, RaycastZoneTheme> = {
   'corrupted-metal': {
     id: 'corrupted-metal',
-    accentColor: 0x667f9c,
-    patternColor: 0xc5d2e4,
-    floorColor: 0x0a121d,
-    ceilingColor: 0x050912,
-    signalColor: 0xffd084
+    accentColor: 0x556080,
+    patternColor: 0xb0bec8,
+    floorColor: 0x080c14,
+    ceilingColor: 0x03060c,
+    signalColor: RAYCAST_PALETTE.amberSoft
   },
   'void-stone': {
     id: 'void-stone',
-    accentColor: 0x756f84,
-    patternColor: 0xd7cde3,
-    floorColor: 0x0c0a13,
-    ceilingColor: 0x05040b,
-    signalColor: 0xc0b6de
+    accentColor: 0x5a4a68,
+    patternColor: 0xc4b8d8,
+    floorColor: 0x0a0810,
+    ceilingColor: 0x040308,
+    signalColor: RAYCAST_PALETTE.corruptMist
   },
   'warning-amber': {
     id: 'warning-amber',
-    accentColor: 0xd27a35,
-    patternColor: 0xffe4a2,
-    floorColor: 0x161008,
-    ceilingColor: 0x0c0703,
-    signalColor: 0xffe6a6
+    accentColor: 0xc86828,
+    patternColor: 0xffe0a0,
+    floorColor: 0x120c06,
+    ceilingColor: 0x080502,
+    signalColor: RAYCAST_PALETTE.amberWarn
   },
   'toxic-green': {
     id: 'toxic-green',
-    accentColor: 0x249770,
-    patternColor: 0xb7ffe0,
-    floorColor: 0x081510,
-    ceilingColor: 0x031009,
-    signalColor: 0x97ffd1
+    accentColor: 0x1c8050,
+    patternColor: 0xa8f0c8,
+    floorColor: 0x06120c,
+    ceilingColor: 0x020a06,
+    signalColor: RAYCAST_PALETTE.toxicMid
   },
   'exit-portal': {
     id: 'exit-portal',
-    accentColor: 0x37abd5,
-    patternColor: 0xe0fbff,
-    floorColor: 0x07131d,
-    ceilingColor: 0x020a10,
-    signalColor: 0xb6fff3
+    accentColor: 0x2898a8,
+    patternColor: 0xd8fcff,
+    floorColor: 0x051018,
+    ceilingColor: 0x020810,
+    signalColor: RAYCAST_PALETTE.plasmaBright
   }
 };
 
@@ -175,9 +176,9 @@ export function getRaycastWallVisualStyle(wallType: number, surface: RaycastSurf
   if (wallType === 4 || surface.landmark === 'gate') {
     return {
       pattern: 'locked-warning-frame',
-      detailColor: blendThemeColor(surface.theme.patternColor, 0xffcf7c, 0.48),
-      secondaryColor: blendThemeColor(surface.theme.accentColor, 0x2b1208, 0.2),
-      signalColor: 0xff7a6d,
+      detailColor: blendThemeColor(surface.theme.patternColor, RAYCAST_PALETTE.telegraphAmber, 0.48),
+      secondaryColor: blendThemeColor(surface.theme.accentColor, RAYCAST_PALETTE.rustWall, 0.2),
+      signalColor: RAYCAST_PALETTE.gateSignal,
       trimMix: 0.62,
       panelStride: 10,
       pulseSignal: true
@@ -199,7 +200,7 @@ export function getRaycastWallVisualStyle(wallType: number, surface: RaycastSurf
   if (wallType === 3) {
     return {
       pattern: 'data-noise-cells',
-      detailColor: blendThemeColor(surface.theme.patternColor, 0x8ff4c0, 0.18),
+      detailColor: blendThemeColor(surface.theme.patternColor, RAYCAST_PALETTE.toxicGlow, 0.18),
       secondaryColor: blendThemeColor(surface.theme.accentColor, 0x091419, 0.28),
       signalColor: surface.theme.signalColor,
       trimMix: 0.5,
@@ -244,7 +245,7 @@ export function getRaycastGroundVisualStyle(surface: Pick<RaycastSurfaceContext,
     return {
       floorPattern: 'hazard-lattice',
       ceilingPattern: 'crossbars',
-      floorGlowColor: blendThemeColor(surface.theme.signalColor, 0xff7a6d, 0.34),
+      floorGlowColor: blendThemeColor(surface.theme.signalColor, RAYCAST_PALETTE.gateSignal, 0.34),
       floorBandAlpha: 0.14,
       cellStride: 16
     };
@@ -254,7 +255,7 @@ export function getRaycastGroundVisualStyle(surface: Pick<RaycastSurfaceContext,
     return {
       floorPattern: 'noise-cells',
       ceilingPattern: 'void-noise',
-      floorGlowColor: blendThemeColor(surface.theme.signalColor, 0x8ff4c0, 0.4),
+      floorGlowColor: blendThemeColor(surface.theme.signalColor, RAYCAST_PALETTE.toxicGlow, 0.4),
       floorBandAlpha: 0.12,
       cellStride: 15
     };
@@ -264,7 +265,7 @@ export function getRaycastGroundVisualStyle(surface: Pick<RaycastSurfaceContext,
     return {
       floorPattern: 'grid-cells',
       ceilingPattern: 'void-noise',
-      floorGlowColor: blendThemeColor(surface.theme.patternColor, 0xa9a2c4, 0.3),
+      floorGlowColor: blendThemeColor(surface.theme.patternColor, RAYCAST_PALETTE.corruptMist, 0.3),
       floorBandAlpha: 0.1,
       cellStride: 20
     };
@@ -283,51 +284,51 @@ export function getRaycastEnemyVisualStyle(kind: EnemyKind, color: number): Rayc
   if (kind === 'BRUTE') {
     return {
       silhouette: 'juggernaut',
-      outlineColor: 0x1b0906,
-      accentColor: blendThemeColor(color, 0xffde9d, 0.38),
-      eyeColor: 0xfff2b3,
-      coreColor: 0xffaa5e,
+      outlineColor: 0x120502,
+      accentColor: blendThemeColor(color, RAYCAST_PALETTE.amberSoft, 0.38),
+      eyeColor: RAYCAST_PALETTE.amberWarn,
+      coreColor: RAYCAST_PALETTE.rustBright,
       hornStyle: 'ram',
       role: 'heavy',
-      windupColor: 0xff9c63
+      windupColor: RAYCAST_PALETTE.patternRust
     };
   }
 
   if (kind === 'STALKER') {
     return {
       silhouette: 'phantom',
-      outlineColor: 0x020d0a,
-      accentColor: blendThemeColor(color, 0x9fffd9, 0.38),
-      eyeColor: 0xf1fff9,
-      coreColor: 0x63f1bc,
+      outlineColor: 0x010806,
+      accentColor: blendThemeColor(color, RAYCAST_PALETTE.toxicGlow, 0.38),
+      eyeColor: RAYCAST_PALETTE.boneBright,
+      coreColor: RAYCAST_PALETTE.toxicMid,
       hornStyle: 'glitch-spikes',
       role: 'flanker',
-      windupColor: 0x7ff6cf
+      windupColor: RAYCAST_PALETTE.patternOxide
     };
   }
 
   if (kind === 'RANGED') {
     return {
       silhouette: 'sentinel',
-      outlineColor: 0x061019,
-      accentColor: blendThemeColor(color, 0xe2fbff, 0.42),
-      eyeColor: 0xffffff,
-      coreColor: 0x8fe6ff,
+      outlineColor: 0x040810,
+      accentColor: blendThemeColor(color, RAYCAST_PALETTE.plasmaBright, 0.42),
+      eyeColor: RAYCAST_PALETTE.boneBright,
+      coreColor: RAYCAST_PALETTE.plasmaMid,
       hornStyle: 'antenna',
       role: 'artillery',
-      windupColor: 0xbef5ff
+      windupColor: RAYCAST_PALETTE.plasmaBright
     };
   }
 
   return {
     silhouette: 'raider',
-    outlineColor: 0x1c0708,
-    accentColor: blendThemeColor(color, 0xffb492, 0.22),
-    eyeColor: 0xfff1df,
-    coreColor: 0xff6f61,
+    outlineColor: 0x140304,
+    accentColor: blendThemeColor(color, RAYCAST_PALETTE.telegraphRose, 0.22),
+    eyeColor: RAYCAST_PALETTE.boneBright,
+    coreColor: RAYCAST_PALETTE.bloodGate,
     hornStyle: 'none',
     role: 'pressure',
-    windupColor: 0xffa45e
+    windupColor: RAYCAST_PALETTE.patternRust
   };
 }
 
@@ -403,12 +404,12 @@ export function getBillboardColor(
   style: 'token' | 'gate' | 'gate-open' | 'secret' | 'exit' | 'health',
   isActive = false
 ): number {
-  if (style === 'token') return 0x8ff4c0;
-  if (style === 'gate') return 0xff7a6d;
-  if (style === 'gate-open') return isActive ? 0x9feee2 : 0x57cfa7;
-  if (style === 'secret') return 0xffc56d;
-  if (style === 'health') return 0xff8fb0;
-  return isActive ? 0xd2f7ff : 0x6fd8ff;
+  if (style === 'token') return RAYCAST_PALETTE.toxicGlow;
+  if (style === 'gate') return RAYCAST_PALETTE.bloodGate;
+  if (style === 'gate-open') return isActive ? RAYCAST_PALETTE.plasmaBright : RAYCAST_PALETTE.plasmaMid;
+  if (style === 'secret') return RAYCAST_PALETTE.amberWarn;
+  if (style === 'health') return 0xff7098;
+  return isActive ? 0xa8fcff : 0x48b0c8;
 }
 
 function blendThemeColor(baseColor: number, blendColor: number, amount: number): number {

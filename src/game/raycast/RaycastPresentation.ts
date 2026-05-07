@@ -8,6 +8,8 @@ export interface RaycastOverlayHintInput {
   currentLevelNumber: number;
   canAdvance: boolean;
   episodeComplete: boolean;
+  /** Episode finale (boss) cleared — World 2 placeholder available. */
+  finaleBossCleared?: boolean;
 }
 
 export interface RaycastDifficultyMenuCopyInput {
@@ -24,6 +26,7 @@ export interface RaycastHelpOverlayInput {
 export interface RaycastPriorityMessageInput {
   levelComplete: boolean;
   episodeComplete: boolean;
+  finaleBossCleared?: boolean;
   playerAlive: boolean;
   playerHealth: number;
   objective: string;
@@ -60,16 +63,27 @@ export function buildRaycastEpisodeBanner(input: RaycastEpisodeBannerInput): str
 }
 
 export function buildRaycastOverlayHint(input: RaycastOverlayHintInput): string {
+  if (input.episodeComplete && input.finaleBossCleared) {
+    return 'W WORLD 2 (LOCKED)  |  R REPLAY BOSS  |  ESC MENU';
+  }
   if (input.episodeComplete) return 'R REPLAY FINALE  |  ESC MENU';
-  if (input.canAdvance) return `N NEXT LEVEL  |  R RESTART L${input.currentLevelNumber}  |  ESC MENU`;
-  return `R RESTART L${input.currentLevelNumber}  |  ESC MENU`;
+  if (input.canAdvance) return `N CONTINUE  |  R RESTART SECTOR  |  ESC MENU`;
+  return `R RESTART SECTOR  |  ESC MENU`;
 }
 
-export function buildRaycastStatusMessage(levelComplete: boolean, episodeComplete: boolean, playerAlive: boolean): string {
+export function buildRaycastStatusMessage(
+  levelComplete: boolean,
+  episodeComplete: boolean,
+  playerAlive: boolean,
+  finaleBossCleared = false
+): string {
   if (levelComplete) {
+    if (episodeComplete && finaleBossCleared) {
+      return 'Boss purged. W for World 2 signal, R to replay boss, ESC for menu.';
+    }
     return episodeComplete
       ? 'Episode clear. Press R to replay the finale or ESC for menu.'
-      : 'Level clear. Press N for next level, R to replay, or ESC for menu.';
+      : 'Sector clear. Press N to continue, R to replay, or ESC for menu.';
   }
   if (playerAlive) return 'Sweep the sector. Keep moving.';
   return 'Signal lost. Press R to retry or ESC for menu.';
@@ -113,7 +127,7 @@ export function buildRaycastPriorityMessage(input: RaycastPriorityMessageInput):
 
   if (input.levelComplete) {
     return {
-      text: buildRaycastStatusMessage(true, input.episodeComplete, true),
+      text: buildRaycastStatusMessage(true, input.episodeComplete, true, Boolean(input.finaleBossCleared)),
       tone: 'info'
     };
   }
@@ -168,6 +182,40 @@ export function getMainMenuCopy(): MainMenuCopy {
     title: 'DOOM BIN BASH EDITION',
     press3d: 'Press A: 3D Mode',
     press2d: 'Press B: 2D Mode'
+  };
+}
+
+export type PrologueGameMode = 'raycast' | 'arena';
+
+export interface PrologueCopy {
+  lines: string[];
+  continueLine: string;
+  backLine: string;
+}
+
+/** Terminal-style prologue shown after choosing 3D or 2D from the boot menu. */
+export function getPrologueCopy(mode: PrologueGameMode): PrologueCopy {
+  if (mode === 'raycast') {
+    return {
+      lines: [
+        'You wake inside a corrupted system beneath the dead terminal.',
+        'Five sectors stand between you and the core.',
+        'The system is hunting you.',
+        'Keep moving.'
+      ],
+      continueLine: '// CONTINUE // SPACE  |  ENTER  |  A',
+      backLine: '// BACK // ESC'
+    };
+  }
+
+  return {
+    lines: [
+      'Combat simulation loaded.',
+      'Two operators enter the arena.',
+      'Survive the corruption protocol.'
+    ],
+    continueLine: '// CONTINUE // SPACE  |  ENTER  |  B',
+    backLine: '// BACK // ESC'
   };
 }
 
