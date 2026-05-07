@@ -9,6 +9,12 @@ describe('raycast atmosphere', () => {
     expect(calculateFogShade(30, atmosphere)).toBe(atmosphere.ambientDarkness);
   });
 
+  it('eases fog falloff so mid-range depth reads clearly', () => {
+    const atmosphere = getAtmosphereForDirector('CALM', 2);
+    expect(calculateFogShade(4, atmosphere)).toBeGreaterThan(calculateFogShade(8, atmosphere));
+    expect(calculateFogShade(8, atmosphere)).toBeGreaterThan(calculateFogShade(30, atmosphere));
+  });
+
   it('raises corruption tint during intense director states', () => {
     const exploration = getAtmosphereForDirector('CALM', 1);
     const buildUp = getAtmosphereForDirector('WATCHING', 3);

@@ -110,14 +110,19 @@ export const RAYCAST_LEVEL_1: RaycastLevel = {
   playerStart: RAYCAST_PLAYER_START_LEVEL_1,
   zones: [
     { id: 'start', x: 2.5, y: 12.3, width: 3.2, height: 1.4, visualTheme: 'corrupted-metal' },
-    { id: 'narrow-hall', x: 3.0, y: 9.2, width: 4.8, height: 4.8, visualTheme: 'void-stone' },
+    { id: 'narrow-hall', x: 3.0, y: 9.2, width: 4.8, height: 5.2, visualTheme: 'void-stone' },
     { id: 'first-contact', x: 3.8, y: 7.5, width: 3.8, height: 1.8, visualTheme: 'warning-amber' },
     { id: 'key-area', x: 4.5, y: 3.8, width: 3.4, height: 2.8, visualTheme: 'toxic-green', landmark: 'key' },
     { id: 'locked-door', x: 8.0, y: 7.5, width: 2.0, height: 1.8, visualTheme: 'warning-amber', landmark: 'gate' },
+    { id: 'service-mezzanine', x: 17.8, y: 9.4, width: 6.2, height: 3.2, visualTheme: 'void-stone' },
     { id: 'ambush', x: 10.4, y: 7.8, width: 3.2, height: 2.0, visualTheme: 'warning-amber', landmark: 'ambush' },
     { id: 'combat-arena', x: 14.8, y: 9.6, width: 4.2, height: 5.2, visualTheme: 'toxic-green', landmark: 'ambush' },
     { id: 'side-pressure', x: 11.8, y: 10.5, width: 5.2, height: 3.0, visualTheme: 'corrupted-metal' },
+    { id: 'east-terrace', x: 18.2, y: 8.8, width: 9.2, height: 5.4, visualTheme: 'toxic-green' },
+    { id: 'east-sleeve', x: 22.2, y: 3.8, width: 5.4, height: 10.2, visualTheme: 'warning-amber' },
+    { id: 'east-overlook', x: 23.8, y: 2.2, width: 3.6, height: 4.2, visualTheme: 'void-stone' },
     { id: 'secret', x: 6.1, y: 12.3, width: 2.6, height: 1.4, visualTheme: 'void-stone', landmark: 'secret' },
+    { id: 'south-catacombs', x: 3.2, y: 14.5, width: 13.2, height: 3.4, visualTheme: 'corrupted-metal' },
     { id: 'exit', x: 16.2, y: 2.2, width: 1.8, height: 2.4, visualTheme: 'exit-portal', landmark: 'exit' }
   ],
   keys: [
@@ -146,6 +151,20 @@ export const RAYCAST_LEVEL_1: RaycastLevel = {
       openObjectiveText: 'Gateway open: combat node exposed',
       lockedObjectiveText: 'Firewall sealed: access token required',
       billboardLabel: 'SEALED'
+    },
+    {
+      id: 'service-shutter',
+      tileX: 20,
+      tileY: 10,
+      x: 20.5,
+      y: 10.5,
+      width: 1,
+      height: 1,
+      keyId: 'rust-key',
+      killsRequired: 0,
+      openObjectiveText: 'Service shutter lifted: east sleeve aligned',
+      lockedObjectiveText: 'Maintenance shutter: route token required',
+      billboardLabel: 'LOCKED'
     }
   ],
   triggers: [
@@ -182,6 +201,37 @@ export const RAYCAST_LEVEL_1: RaycastLevel = {
       ]
     },
     {
+      id: 'east-overlook',
+      x: 21.5,
+      y: 10.5,
+      width: 5.4,
+      height: 3.4,
+      once: true,
+      doorId: 'rust-gate',
+      objectiveText: 'East annex sweep logged',
+      activationText: 'Overlook breach: east sleeve awake',
+      spawns: [
+        { x: 22.5, y: 10.5, kind: 'RANGED' },
+        { x: 24.5, y: 11.5, kind: 'STALKER' },
+        { x: 20.5, y: 11.5, kind: 'GRUNT' }
+      ]
+    },
+    {
+      id: 'south-drain',
+      x: 9.5,
+      y: 15.5,
+      width: 5.4,
+      height: 2.2,
+      once: true,
+      objectiveText: 'Catacomb drain disturbed',
+      activationText: 'Drain surge: bottom-feeders inbound',
+      spawns: [
+        { x: 7.5, y: 14.5, kind: 'GRUNT' },
+        { x: 11.5, y: 15.5, kind: 'STALKER' },
+        { x: 13.5, y: 15.5, kind: 'GRUNT' }
+      ]
+    },
+    {
       id: 'secret-cache-pressure',
       x: 6.1,
       y: 12.3,
@@ -194,6 +244,21 @@ export const RAYCAST_LEVEL_1: RaycastLevel = {
       spawns: [
         { x: 3.5, y: 9.5, kind: 'STALKER' },
         { x: 7.5, y: 11.5, kind: 'GRUNT' }
+      ]
+    },
+    {
+      id: 'service-cut',
+      x: 19.6,
+      y: 10.6,
+      width: 2.4,
+      height: 1.4,
+      once: true,
+      doorId: 'service-shutter',
+      objectiveText: 'Service sleeve intersected',
+      activationText: 'Maintenance hatch stressed: reroute signals',
+      spawns: [
+        { x: 21.5, y: 11.5, kind: 'GRUNT' },
+        { x: 24.5, y: 11.5, kind: 'STALKER' }
       ]
     }
   ],
@@ -222,6 +287,31 @@ export const RAYCAST_LEVEL_1: RaycastLevel = {
       pickupMessage: 'Field health pack applied',
       fullHealthMessage: 'Vital bands full: save the patch for later',
       requiredOpenDoorIds: ['rust-gate']
+    },
+    {
+      id: 'east-buffer-patch',
+      kind: 'health-pack',
+      label: 'Annex Buffer Patch',
+      x: 22.5,
+      y: 9.5,
+      radius: 0.26,
+      restoreAmount: 22,
+      billboardLabel: 'BUFFER',
+      pickupMessage: 'Annex buffer patch absorbed',
+      fullHealthMessage: 'Signal stable: skip the spare patch',
+      requiredOpenDoorIds: ['rust-gate', 'service-shutter']
+    },
+    {
+      id: 'south-repair-node',
+      kind: 'repair-cell',
+      label: 'Drain Repair Node',
+      x: 12.5,
+      y: 15.5,
+      radius: 0.26,
+      restoreAmount: 18,
+      billboardLabel: 'DRAIN',
+      pickupMessage: 'Drain repair node stabilized',
+      fullHealthMessage: 'Routing clean: leave the drain cell'
     }
   ],
   secrets: [
@@ -233,6 +323,24 @@ export const RAYCAST_LEVEL_1: RaycastLevel = {
       radius: 0.24,
       objectiveText: 'Hidden cache logged',
       billboardLabel: 'HIDDEN'
+    },
+    {
+      id: 'shard-overlook',
+      label: 'Shard Niche',
+      x: 25.5,
+      y: 4.5,
+      radius: 0.24,
+      objectiveText: 'East niche mapped',
+      billboardLabel: 'NICHE'
+    },
+    {
+      id: 'pit-archive',
+      label: 'Drain Archive',
+      x: 14.5,
+      y: 15.5,
+      radius: 0.24,
+      objectiveText: 'Drain archive indexed',
+      billboardLabel: 'ARCHIVE'
     }
   ],
   exits: [
@@ -249,7 +357,9 @@ export const RAYCAST_LEVEL_1: RaycastLevel = {
     { id: 'first-contact-grunt', kind: 'GRUNT', x: 3.5, y: 7.5 },
     { id: 'key-guard-stalker', kind: 'STALKER', x: 5.5, y: 3.5 },
     { id: 'arena-sleeper-brute', kind: 'BRUTE', x: 14.5, y: 9.5 },
-    { id: 'exit-ranged-lookout', kind: 'RANGED', x: 16.5, y: 5.5 }
+    { id: 'exit-ranged-lookout', kind: 'RANGED', x: 16.5, y: 5.5 },
+    { id: 'east-wing-grunt', kind: 'GRUNT', x: 24.5, y: 10.5 },
+    { id: 'south-skulk-stalker', kind: 'STALKER', x: 10.5, y: 15.5 }
   ],
   encounterBeats: [
     {
@@ -272,12 +382,22 @@ export const RAYCAST_LEVEL_1: RaycastLevel = {
       directorState: 'RECOVERY',
       requiresTriggerId: 'gate-ambush',
       message: 'Node staggered: take the recovery window'
+    },
+    {
+      id: 'east-wing-note',
+      zoneId: 'east-terrace',
+      message: 'East annex opens: mind the service shutter loop'
+    },
+    {
+      id: 'south-backtrack',
+      zoneId: 'south-catacombs',
+      message: 'Drain loop detected — map routes home through the catacombs'
     }
   ],
   progression: {
     requiredExitKeyIds: ['rust-key'],
-    requiredExitDoorIds: ['rust-gate'],
-    requiredExitTriggerIds: ['gate-ambush', 'lateral-pressure'],
+    requiredExitDoorIds: ['rust-gate', 'service-shutter'],
+    requiredExitTriggerIds: ['gate-ambush', 'lateral-pressure', 'east-overlook'],
     blockedExitMessage: 'ACCESS DENIED: NODE INCOMPLETE'
   },
   director: {
@@ -309,6 +429,9 @@ export const RAYCAST_LEVEL_1: RaycastLevel = {
       { id: 'arena-lower', zoneId: 'combat-arena', x: 14.5, y: 11.5, minPlayerDistance: 1.8 },
       { id: 'arena-ranged-perch', zoneId: 'combat-arena', x: 16.5, y: 7.5, minPlayerDistance: 2.2 },
       { id: 'side-loop-pressure', zoneId: 'side-pressure', x: 9.5, y: 11.5, minPlayerDistance: 2.0 },
+      { id: 'east-terrace-west', zoneId: 'east-terrace', x: 21.5, y: 11.5, minPlayerDistance: 2.0 },
+      { id: 'east-sleeve-north', zoneId: 'east-sleeve', x: 24.5, y: 5.5, minPlayerDistance: 2.2 },
+      { id: 'south-catacombs-mid', zoneId: 'south-catacombs', x: 9.5, y: 15.5, minPlayerDistance: 2.0 },
       { id: 'exit-pressure', zoneId: 'exit', x: 16.5, y: 3.5, minPlayerDistance: 2.0 }
     ]
   }

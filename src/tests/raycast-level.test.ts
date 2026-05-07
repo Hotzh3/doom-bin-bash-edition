@@ -40,10 +40,10 @@ describe('raycast level catalog', () => {
   it('defines required route objects and valid map references for each level', () => {
     RAYCAST_LEVEL_CATALOG.forEach((level) => {
       expect(level.keys).toHaveLength(1);
-      expect(level.doors).toHaveLength(1);
+      expect(level.doors.length).toBeGreaterThanOrEqual(1);
       expect(level.triggers.length).toBeGreaterThanOrEqual(3);
       expect(level.healthPickups.length).toBeGreaterThanOrEqual(2);
-      expect(level.secrets).toHaveLength(1);
+      expect(level.secrets.length).toBeGreaterThanOrEqual(1);
       expect(level.exits).toHaveLength(1);
       expect(level.initialSpawns.length).toBeGreaterThanOrEqual(4);
       expect(level.director.enabled).toBe(true);
@@ -64,6 +64,7 @@ describe('raycast level catalog', () => {
         expect(door.tileX).toBeGreaterThanOrEqual(0);
         expect(door.tileX).toBeLessThan(level.map.grid[door.tileY].length);
         expect(level.map.grid[door.tileY][door.tileX]).toBe(RAYCAST_TILE.LOCKED_DOOR);
+        expect(level.keys.some((key) => key.id === door.keyId)).toBe(true);
       });
     });
   });
@@ -211,8 +212,8 @@ describe('raycast level progression', () => {
     expect(
       getRaycastExitAccess(RAYCAST_LEVEL, {
         collectedKeyIds: ['rust-key'],
-        openDoorIds: ['rust-gate'],
-        activatedTriggerIds: ['gate-ambush', 'lateral-pressure'],
+        openDoorIds: ['rust-gate', 'service-shutter'],
+        activatedTriggerIds: ['gate-ambush', 'lateral-pressure', 'east-overlook'],
         livingEnemyCount: 0
       }).allowed
     ).toBe(true);
@@ -266,13 +267,13 @@ describe('raycast level progression', () => {
       allowed: false,
       reason: 'ACCESS_DENIED',
       message: 'ACCESS DENIED: NODE INCOMPLETE',
-      missingDoorIds: ['rust-gate']
+      missingDoorIds: ['rust-gate', 'service-shutter']
     });
 
     expect(
       getRaycastExitAccess(RAYCAST_LEVEL, {
         collectedKeyIds: ['rust-key'],
-        openDoorIds: ['rust-gate'],
+        openDoorIds: ['rust-gate', 'service-shutter'],
         activatedTriggerIds: ['gate-ambush'],
         livingEnemyCount: 0
       })
@@ -280,7 +281,7 @@ describe('raycast level progression', () => {
       allowed: false,
       reason: 'TRIGGER_REQUIRED',
       message: 'TRIGGER REQUIRED',
-      missingTriggerIds: ['lateral-pressure']
+      missingTriggerIds: ['lateral-pressure', 'east-overlook']
     });
 
     const combatLockedLevel: RaycastLevel = {
@@ -294,8 +295,8 @@ describe('raycast level progression', () => {
     expect(
       getRaycastExitAccess(combatLockedLevel, {
         collectedKeyIds: ['rust-key'],
-        openDoorIds: ['rust-gate'],
-        activatedTriggerIds: ['gate-ambush', 'lateral-pressure'],
+        openDoorIds: ['rust-gate', 'service-shutter'],
+        activatedTriggerIds: ['gate-ambush', 'lateral-pressure', 'east-overlook'],
         livingEnemyCount: 2
       })
     ).toEqual({
@@ -412,12 +413,20 @@ describe('raycast level route safety', () => {
     const exit = RAYCAST_LEVEL.exits[0];
     const arena = { x: 14.5, y: 9.5 };
     const openedMap = cloneRaycastMap(RAYCAST_LEVEL.map);
-    openRaycastDoor(openedMap, RAYCAST_LEVEL.doors[0]);
+    RAYCAST_LEVEL.doors.forEach((door) => openRaycastDoor(openedMap, door));
 
     expect(hasGridPath(RAYCAST_LEVEL.map, RAYCAST_LEVEL.playerStart, key)).toBe(true);
     expect(hasGridPath(RAYCAST_LEVEL.map, RAYCAST_LEVEL.playerStart, exit)).toBe(false);
     expect(hasGridPath(openedMap, RAYCAST_LEVEL.playerStart, arena)).toBe(true);
     expect(hasGridPath(openedMap, RAYCAST_LEVEL.playerStart, exit)).toBe(true);
+  });
+
+  it('expands episode 1 footprint without breaking spawn anchors', () => {
+    expect(RAYCAST_LEVEL.map.grid[0].length).toBeGreaterThanOrEqual(26);
+    expect(RAYCAST_LEVEL.map.grid.length).toBeGreaterThanOrEqual(16);
+    expect(RAYCAST_LEVEL.doors.map((d) => d.id)).toEqual(['rust-gate', 'service-shutter']);
+    expect(RAYCAST_LEVEL.triggers.some((t) => t.id === 'east-overlook')).toBe(true);
+    expect(RAYCAST_LEVEL.secrets.some((s) => s.id === 'shard-overlook')).toBe(true);
   });
 
   it('keeps level 2 key reachable early and exit locked behind the breach gate', () => {

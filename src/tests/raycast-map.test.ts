@@ -28,10 +28,10 @@ describe('raycast map', () => {
     expect(hit.correctedDistance).toBeCloseTo(hit.distance);
   });
 
-  it('places the locked door on the map where level data expects it', () => {
-    const door = RAYCAST_LEVEL.doors[0];
-
-    expect(RAYCAST_MAP.grid[door.tileY][door.tileX]).toBe(4);
+  it('places locked doors on the map where level data expects them', () => {
+    RAYCAST_LEVEL.doors.forEach((door) => {
+      expect(RAYCAST_MAP.grid[door.tileY][door.tileX]).toBe(4);
+    });
   });
 
   it('corrects fish-eye distance when ray angle differs from camera angle', () => {

@@ -37,6 +37,9 @@ const createEnemy = (overrides: Partial<RaycastEnemy> = {}): RaycastEnemy => {
     lastKnownPlayerX: x,
     lastKnownPlayerY: y,
     wasCombatActiveLastTick: false,
+    roamHeadingRad: 0,
+    roamNextRedirectAt: 0,
+    roamStuckMs: 0,
     ...overrides
   };
 };

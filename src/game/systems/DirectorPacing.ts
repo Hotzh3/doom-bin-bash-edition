@@ -1,6 +1,6 @@
 import type { DirectorConfig } from './DirectorConfig';
 
-export type DirectorPressureCause = 'none' | 'zone-ambush' | 'anti-camp' | 'dominance';
+export type DirectorPressureCause = 'none' | 'zone-ambush' | 'anti-camp' | 'dominance' | 'low-enemy-count';
 export type AntiCampPhase = 'none' | 'watching' | 'warning' | 'pressure';
 
 export interface AntiCampState {

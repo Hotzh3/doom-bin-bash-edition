@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { castRay, type RaycastMap } from './RaycastMap';
+import { castRay, type RaycastHit, type RaycastMap } from './RaycastMap';
 import {
   getRaycastEnemySpawnTelegraphProgress,
   getRaycastEnemyWindupProgress,
@@ -92,6 +92,7 @@ export class RaycastRenderer {
 
       this.graphics.fillStyle(color, 1);
       this.graphics.fillRect(x, y, Math.ceil(columnWidth) + 1, wallHeight);
+      this.drawWallColumnVolume(hit, column, x, y, Math.ceil(columnWidth) + 1, wallHeight, shade, atmosphere, surface);
       this.drawWallPattern(hit.wallType, column, x, y, Math.ceil(columnWidth) + 1, wallHeight, shade, atmosphere, surface);
     }
   }
@@ -256,49 +257,88 @@ export class RaycastRenderer {
     const centerX = width * 0.5;
     const weaponColor = weapon === 'SHOTGUN' ? 0x6d4028 : weapon === 'LAUNCHER' ? 0x29414d : 0x334150;
     const trimColor = weapon === 'SHOTGUN' ? 0xff9f59 : weapon === 'LAUNCHER' ? 0x9feee2 : 0xfff29e;
+    const deepShadow = 0x05070c;
 
     if (weapon === 'PISTOL') {
-      this.graphics.fillStyle(0x020408, 0.7);
+      this.graphics.fillStyle(0x020408, 0.72);
       this.graphics.fillRect(centerX - 44, baseY - 78, 88, 84);
-      this.graphics.fillGradientStyle(weaponColor, weaponColor, 0x152028, 0x152028, 0.96);
+      this.graphics.fillGradientStyle(weaponColor, this.blendColors(weaponColor, deepShadow, 0.55), 0x152028, 0x152028, 0.96);
       this.graphics.fillRect(centerX - 16, baseY - 76, 32, 56);
-      this.graphics.fillStyle(weaponColor, 0.96);
+      this.graphics.fillStyle(this.blendColors(weaponColor, 0x1a2a38, 0.35), 0.96);
       this.graphics.fillRect(centerX - 12, baseY - 110, 24, 38);
-      this.graphics.fillStyle(trimColor, 0.85);
+      this.graphics.lineStyle(1, trimColor, 0.45);
+      this.graphics.strokeRect(centerX - 12, baseY - 110, 24, 38);
+      this.graphics.fillStyle(trimColor, 0.88);
       this.graphics.fillRect(centerX - 6, baseY - 126, 12, 18);
-      this.graphics.fillStyle(0x0b0d12, 0.92);
+      this.graphics.fillStyle(0x0b0d12, 0.94);
       this.graphics.fillRect(centerX - 11, baseY - 42, 22, 28);
+      this.graphics.fillStyle(0xffffff, 0.16);
+      this.graphics.fillRect(centerX - 12, baseY - 108, 24, 3);
       this.graphics.fillStyle(0xffffff, 0.12);
       this.graphics.fillRect(centerX - 12, baseY - 70, 24, 4);
-      this.graphics.fillStyle(trimColor, 0.38);
+      this.graphics.fillStyle(trimColor, 0.42);
       this.graphics.fillRect(centerX - 5, baseY - 52, 10, 14);
+      this.graphics.lineStyle(2, trimColor, 0.24);
+      this.graphics.strokeCircle(centerX - 3, baseY - 50, 11);
+      this.graphics.fillStyle(0x461830, 0.52);
+      this.graphics.fillTriangle(centerX + 10, baseY - 40, centerX + 18, baseY - 16, centerX + 6, baseY - 16);
     } else if (weapon === 'SHOTGUN') {
-      this.graphics.fillStyle(0x020408, 0.72);
+      this.graphics.fillStyle(0x020408, 0.74);
       this.graphics.fillRect(centerX - 118, baseY - 82, 236, 86);
-      this.graphics.fillStyle(weaponColor, 0.96);
+      this.graphics.fillGradientStyle(
+        this.blendColors(weaponColor, 0x3a1f0c, 0.25),
+        this.blendColors(weaponColor, deepShadow, 0.5),
+        weaponColor,
+        weaponColor,
+        0.97
+      );
       this.graphics.fillRect(centerX - 88, baseY - 72, 176, 38);
+      this.graphics.fillStyle(weaponColor, 0.96);
       this.graphics.fillRect(centerX - 62, baseY - 106, 124, 32);
-      this.graphics.fillStyle(trimColor, 0.84);
+      this.graphics.fillStyle(trimColor, 0.86);
       this.graphics.fillRect(centerX - 34, baseY - 124, 68, 18);
+      this.graphics.fillStyle(this.blendColors(weaponColor, 0x2a1408, 0.4), 0.92);
       this.graphics.fillRect(centerX - 76, baseY - 82, 14, 56);
       this.graphics.fillRect(centerX + 62, baseY - 82, 14, 56);
-      this.graphics.fillStyle(0x0b0d12, 0.9);
-      this.graphics.fillRect(centerX - 70, baseY - 30, 140, 10);
-      this.graphics.fillStyle(0xffffff, 0.12);
-      this.graphics.fillRect(centerX - 74, baseY - 66, 148, 4);
-    } else {
-      this.graphics.fillStyle(0x020408, 0.74);
-      this.graphics.fillRect(centerX - 106, baseY - 96, 212, 104);
-      this.graphics.fillStyle(weaponColor, 0.96);
-      this.graphics.fillRect(centerX - 72, baseY - 84, 144, 48);
-      this.graphics.fillRect(centerX - 38, baseY - 130, 76, 54);
-      this.graphics.fillStyle(trimColor, 0.82);
-      this.graphics.fillCircle(centerX, baseY - 108, 22);
-      this.graphics.fillRect(centerX - 12, baseY - 144, 24, 26);
       this.graphics.fillStyle(0x0b0d12, 0.92);
-      this.graphics.fillRect(centerX - 58, baseY - 32, 116, 12);
+      this.graphics.fillRect(centerX - 70, baseY - 30, 140, 10);
       this.graphics.fillStyle(0xffffff, 0.14);
+      this.graphics.fillRect(centerX - 74, baseY - 66, 148, 4);
+      for (let v = 0; v < 5; v += 1) {
+        this.graphics.fillStyle(0x1a0d06, 0.35);
+        this.graphics.fillRect(centerX - 58 + v * 26, baseY - 98, 6, 22);
+      }
+      this.graphics.lineStyle(2, trimColor, 0.28);
+      this.graphics.strokeRect(centerX - 62, baseY - 106, 124, 32);
+      this.graphics.fillStyle(trimColor, 0.2);
+      this.graphics.fillRect(centerX - 20, baseY - 48, 40, 3);
+    } else {
+      this.graphics.fillStyle(0x020408, 0.76);
+      this.graphics.fillRect(centerX - 106, baseY - 96, 212, 104);
+      this.graphics.fillGradientStyle(
+        this.blendColors(weaponColor, 0x153038, 0.22),
+        this.blendColors(weaponColor, deepShadow, 0.48),
+        weaponColor,
+        this.blendColors(weaponColor, 0x0a1820, 0.35),
+        0.97
+      );
+      this.graphics.fillRect(centerX - 72, baseY - 84, 144, 48);
+      this.graphics.fillStyle(weaponColor, 0.96);
+      this.graphics.fillRect(centerX - 38, baseY - 130, 76, 54);
+      this.graphics.fillStyle(trimColor, 0.84);
+      this.graphics.fillCircle(centerX, baseY - 108, 22);
+      this.graphics.lineStyle(2, this.blendColors(trimColor, 0x0a2030, 0.4), 0.55);
+      this.graphics.strokeCircle(centerX, baseY - 108, 20);
+      this.graphics.fillStyle(trimColor, 0.72);
+      this.graphics.fillRect(centerX - 12, baseY - 144, 24, 26);
+      this.graphics.fillStyle(0x0b0d12, 0.94);
+      this.graphics.fillRect(centerX - 58, baseY - 32, 116, 12);
+      this.graphics.fillStyle(0xffa033, 0.55);
+      this.graphics.fillRect(centerX - 18, baseY - 128, 36, 4);
+      this.graphics.fillStyle(0xffffff, 0.16);
       this.graphics.fillRect(centerX - 50, baseY - 76, 100, 5);
+      this.graphics.lineStyle(1, trimColor, 0.35);
+      this.graphics.lineBetween(centerX - 40, baseY - 88, centerX + 40, baseY - 88);
     }
 
     if (kick <= 0) return;
@@ -382,6 +422,10 @@ export class RaycastRenderer {
       );
       this.graphics.fillStyle(color, 1);
       this.graphics.fillRect(0, y, width, 4);
+      if (t < 0.1) {
+        this.graphics.fillStyle(zoneTheme.accentColor, 0.011 * (1 - t / 0.1) * bandSample.accentAlpha);
+        this.graphics.fillRect(0, y, width, 2);
+      }
 
       if (groundStyle.floorPattern === 'scanlines' && (y + Math.floor(player.x * 12)) % 24 === 0) {
         this.graphics.fillStyle(zoneTheme.patternColor, (0.024 + (1 - t) * 0.028) * bandSample.accentAlpha);
@@ -437,6 +481,64 @@ export class RaycastRenderer {
       this.graphics.lineStyle(2, zoneTheme.signalColor, 0.12 + atmosphere.pulseAlpha * 0.35);
       this.graphics.lineBetween(width * 0.5 - 44, horizonY + 26, width * 0.5, horizonY + 8);
       this.graphics.lineBetween(width * 0.5 + 44, horizonY + 26, width * 0.5, horizonY + 8);
+    }
+
+    this.graphics.fillStyle(zoneTheme.signalColor, 0.028 + atmosphere.pulseAlpha * 0.04);
+    this.graphics.fillRect(0, horizonY - 1, width, 2);
+
+    const vignette = this.blendColors(0x010206, RAYCAST_ATMOSPHERE.fogColor, 0.55);
+    this.graphics.fillStyle(vignette, 0.06 + atmosphere.corruptionAlpha * 0.08);
+    this.graphics.fillTriangle(0, horizonY, width * 0.28, height, 0, height);
+    this.graphics.fillTriangle(width, horizonY, width - width * 0.28, height, width, height);
+    this.graphics.fillStyle(vignette, 0.04);
+    this.graphics.fillTriangle(0, 0, width * 0.22, horizonY, 0, horizonY);
+    this.graphics.fillTriangle(width, 0, width - width * 0.22, horizonY, width, horizonY);
+  }
+
+  private drawWallColumnVolume(
+    hit: RaycastHit,
+    column: number,
+    x: number,
+    y: number,
+    w: number,
+    h: number,
+    shade: number,
+    atmosphere: RaycastAtmosphereRenderOptions,
+    surface: ReturnType<typeof sampleRaycastSurfaceContext>
+  ): void {
+    const edgeColor = this.blendColors(0x020408, atmosphere.fogColor, 0.48);
+    const edgeW = Math.max(1, w * 0.24);
+    const edgeAlpha = Phaser.Math.Clamp(0.12 + (1 - shade) * 0.26, 0.06, 0.34);
+    this.graphics.fillStyle(edgeColor, edgeAlpha * shade);
+    this.graphics.fillRect(x, y, edgeW, h);
+    this.graphics.fillRect(x + w - edgeW, y, edgeW, h);
+
+    const midGlow = this.blendColors(0x7a8aa8, surface.theme.patternColor, 0.4);
+    this.graphics.fillStyle(midGlow, 0.038 * shade * (0.82 + surface.variant * 0.35));
+    this.graphics.fillRect(x + w * 0.33, y + h * 0.06, w * 0.34, h * 0.88);
+
+    const brickRows = Math.min(8, Math.max(3, Math.floor(h / 13)));
+    for (let r = 1; r < brickRows; r += 1) {
+      const rowY = y + (r / brickRows) * h;
+      const v = getRaycastCellVariant(
+        surface.cellX * 9 + r,
+        surface.cellY * 11 + Math.floor(hit.hitX * 19 + hit.hitY * 13)
+      );
+      if (v > 0.3) {
+        this.graphics.fillStyle(edgeColor, (0.07 + v * 0.12) * shade);
+        this.graphics.fillRect(x, rowY, w, Math.max(1, h * 0.011));
+      }
+    }
+
+    const speck = getRaycastCellVariant(column + surface.cellX * 3, surface.cellY * 5);
+    if (speck > 0.58 && column % 4 === 0) {
+      this.graphics.fillStyle(surface.theme.signalColor, 0.055 * speck * shade);
+      this.graphics.fillRect(
+        x + w * 0.38,
+        y + h * (0.18 + (speck % 0.55) * 0.55),
+        w * 0.24,
+        Math.max(1, h * 0.038)
+      );
     }
   }
 
@@ -641,6 +743,13 @@ export class RaycastRenderer {
       this.graphics.lineStyle(2, accentColor, 0.42 * visibility);
       this.graphics.lineBetween(bodyLeft + projection.size * 0.32, bodyTop + projection.size * 0.06, bodyLeft + projection.size * 0.18, bodyTop - projection.size * 0.06);
       this.graphics.lineBetween(bodyLeft + projection.size * 0.68, bodyTop + projection.size * 0.06, bodyLeft + projection.size * 0.82, bodyTop - projection.size * 0.06);
+      this.graphics.fillStyle(0x0a0202, 0.38 * visibility);
+      this.graphics.fillRect(bodyLeft + projection.size * 0.08, bodyTop + projection.size * 0.28, projection.size * 0.2, projection.size * 0.5);
+      this.graphics.fillRect(bodyLeft + projection.size * 0.72, bodyTop + projection.size * 0.28, projection.size * 0.2, projection.size * 0.5);
+      for (const rx of [0.22, 0.5, 0.78] as const) {
+        this.graphics.fillStyle(accentColor, 0.35 * visibility);
+        this.graphics.fillCircle(bodyLeft + projection.size * rx, bodyTop + projection.size * 0.4, Math.max(1.2, projection.size * 0.04));
+      }
       return;
     }
 
@@ -680,6 +789,24 @@ export class RaycastRenderer {
       this.graphics.fillStyle(style.eyeColor, 0.92 * visibility);
       this.graphics.fillCircle(projection.screenX - projection.size * 0.05, bodyTop + projection.size * 0.22, projection.size * 0.03);
       this.graphics.fillCircle(projection.screenX + projection.size * 0.05, bodyTop + projection.size * 0.22, projection.size * 0.03);
+      this.graphics.lineStyle(1, this.blendColors(accentColor, 0x0a1a14, 0.45), 0.22 * visibility);
+      for (let w = 0; w < 4; w += 1) {
+        const o = w * 0.14;
+        this.graphics.lineBetween(
+          bodyLeft + projection.size * 0.12,
+          bodyTop + projection.size * (0.88 + o),
+          bodyLeft + projection.size * 0.32,
+          bodyTop + projection.size * (0.55 + o * 0.5)
+        );
+        this.graphics.lineBetween(
+          bodyLeft + projection.size * 0.88,
+          bodyTop + projection.size * (0.88 + o),
+          bodyLeft + projection.size * 0.68,
+          bodyTop + projection.size * (0.55 + o * 0.5)
+        );
+      }
+      this.graphics.fillStyle(0x010806, 0.28 * visibility);
+      this.graphics.fillEllipse(projection.screenX, bodyTop + projection.size * 0.4, projection.size * 0.24, projection.size * 0.2);
       return;
     }
 
@@ -705,6 +832,29 @@ export class RaycastRenderer {
       this.graphics.fillCircle(projection.screenX, bodyTop + projection.size * 0.58, projection.size * 0.1);
       this.graphics.fillStyle(style.eyeColor, 0.96 * visibility);
       this.graphics.fillCircle(projection.screenX, bodyTop + projection.size * 0.18, projection.size * 0.04);
+      this.graphics.fillStyle(0x040a12, 0.55 * visibility);
+      this.graphics.fillRect(
+        bodyLeft + projection.size * 0.78,
+        bodyTop + projection.size * 0.34,
+        projection.size * 0.22,
+        projection.size * 0.2
+      );
+      this.graphics.fillStyle(this.blendColors(style.coreColor, 0x1a2a30, 0.5), 0.85 * visibility);
+      this.graphics.fillRect(
+        bodyLeft + projection.size * 0.82,
+        bodyTop + projection.size * 0.38,
+        projection.size * 0.2,
+        projection.size * 0.12
+      );
+      this.graphics.lineStyle(1, accentColor, 0.5 * visibility);
+      for (let s = 0; s < 3; s += 1) {
+        this.graphics.lineBetween(
+          bodyLeft + projection.size * 0.86,
+          bodyTop + projection.size * (0.4 + s * 0.04),
+          bodyLeft + projection.size * 0.98,
+          bodyTop + projection.size * (0.38 + s * 0.04)
+        );
+      }
       return;
     }
 
@@ -741,6 +891,20 @@ export class RaycastRenderer {
     this.graphics.fillStyle(style.eyeColor, 0.94 * visibility);
     this.graphics.fillCircle(bodyLeft + projection.size * 0.42, bodyTop + projection.size * 0.22, projection.size * 0.03);
     this.graphics.fillCircle(bodyLeft + projection.size * 0.58, bodyTop + projection.size * 0.22, projection.size * 0.03);
+    this.graphics.fillStyle(0x0c0304, 0.4 * visibility);
+    this.graphics.fillRect(bodyLeft + projection.size * 0.28, bodyTop + projection.size * 0.4, projection.size * 0.44, projection.size * 0.12);
+    for (let b = 0; b < 3; b += 1) {
+      this.graphics.fillStyle(accentColor, (0.22 - b * 0.04) * visibility);
+      this.graphics.fillRect(
+        bodyLeft + projection.size * 0.3,
+        bodyTop + projection.size * (0.42 + b * 0.04),
+        projection.size * 0.4,
+        2
+      );
+    }
+    this.graphics.fillStyle(0x150506, 0.32 * visibility);
+    this.graphics.fillEllipse(bodyLeft + projection.size * 0.2, bodyTop + projection.size * 0.36, projection.size * 0.12, projection.size * 0.1);
+    this.graphics.fillEllipse(bodyLeft + projection.size * 0.8, bodyTop + projection.size * 0.36, projection.size * 0.12, projection.size * 0.1);
   }
 
   private drawEnemyHeadAccent(

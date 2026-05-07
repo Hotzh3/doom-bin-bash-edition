@@ -475,4 +475,51 @@ describe('GameDirector', () => {
     expect(spent.spawn).toBeNull();
     expect(spent.debug.lastDecisionReason).toBe('recovery pause');
   });
+
+  it('enters reinforcement pressure after buildup when few enemies remain mid-run', () => {
+    const director = new GameDirector({
+      spawnCooldownMs: 0,
+      config: {
+        warningLeadMs: 0,
+        lowEnemyPressureThresholdMs: 3000,
+        highIntensitySpawnCooldownMs: 400
+      }
+    });
+
+    director.update({
+      ...calmInput,
+      elapsedTime: 1000,
+      enemiesAlive: 2,
+      totalKills: 2
+    });
+
+    const reinforced = director.update({
+      ...calmInput,
+      elapsedTime: 4500,
+      enemiesAlive: 2,
+      totalKills: 2
+    });
+
+    expect(reinforced.state).toBe('PRESSURE');
+    expect(reinforced.spawn?.kind).toMatch(/GRUNT|STALKER/);
+  });
+
+  it('does not spawn low-enemy reinforcement while director recovery protects low health', () => {
+    const director = new GameDirector({
+      spawnCooldownMs: 0,
+      config: { warningLeadMs: 0, lowEnemyPressureThresholdMs: 500 }
+    });
+
+    const decision = director.update({
+      ...calmInput,
+      elapsedTime: 6000,
+      enemiesAlive: 1,
+      totalKills: 3,
+      p1Health: 28,
+      p2Health: 28
+    });
+
+    expect(decision.state).toBe('RECOVERY');
+    expect(decision.spawn).toBeNull();
+  });
 });
