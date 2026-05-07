@@ -49,7 +49,7 @@ describe('raycast items', () => {
   });
 
   it('defines explicit heal pickup metadata for authored levels', () => {
-    expect(RAYCAST_LEVEL.healthPickups).toHaveLength(2);
+    expect(RAYCAST_LEVEL.healthPickups.length).toBeGreaterThanOrEqual(2);
     expect(RAYCAST_LEVEL.healthPickups[0]).toMatchObject({
       kind: 'repair-cell',
       restoreAmount: 20,
@@ -60,6 +60,8 @@ describe('raycast items', () => {
       restoreAmount: 30,
       billboardLabel: 'PATCH'
     });
+    expect(RAYCAST_LEVEL.healthPickups.some((p) => p.id === 'east-buffer-patch')).toBe(true);
+    expect(RAYCAST_LEVEL.healthPickups.some((p) => p.id === 'south-repair-node')).toBe(true);
   });
 
   it('integrates difficulty-scaled pickup values without breaking healing caps', () => {

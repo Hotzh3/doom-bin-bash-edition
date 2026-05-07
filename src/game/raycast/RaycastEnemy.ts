@@ -1,7 +1,7 @@
 import { getEnemyConfig } from '../entities/enemyConfig';
 import type { EnemyKind } from '../types/game';
 import { RAYCAST_LEVEL, type RaycastEnemySpawn, type RaycastLevel } from './RaycastLevel';
-import { buildRaycastPatrolWaypoints, type PatrolWaypoint } from './RaycastPatrol';
+import { buildRaycastPatrolWaypoints, hashStringToSeed, type PatrolWaypoint } from './RaycastPatrol';
 
 export interface RaycastEnemy {
   id: string;
@@ -28,6 +28,11 @@ export interface RaycastEnemy {
   lastKnownPlayerY: number;
   /** Tracks prior tick combat (CHASE / ATTACK / RETREAT) for alert transition. */
   wasCombatActiveLastTick: boolean;
+  /** Idle wander heading (radians). */
+  roamHeadingRad: number;
+  /** Next game time (ms) to pick a new roam heading even if not stuck. */
+  roamNextRedirectAt: number;
+  roamStuckMs: number;
 }
 
 export function cloneRaycastEnemies(level: RaycastLevel = RAYCAST_LEVEL): RaycastEnemy[] {
@@ -60,7 +65,10 @@ export function createRaycastEnemy(spawn: RaycastEnemySpawn): RaycastEnemy {
     alertUntilTime: 0,
     lastKnownPlayerX: homeX,
     lastKnownPlayerY: homeY,
-    wasCombatActiveLastTick: false
+    wasCombatActiveLastTick: false,
+    roamHeadingRad: (hashStringToSeed(spawn.id) % 360) * (Math.PI / 180),
+    roamNextRedirectAt: 0,
+    roamStuckMs: 0
   };
 }
 

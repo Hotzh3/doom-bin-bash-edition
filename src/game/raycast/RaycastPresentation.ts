@@ -39,61 +39,21 @@ export interface RaycastPriorityMessage {
   tone: 'critical' | 'warning' | 'info' | 'routine';
 }
 
-export interface RaycastMenuCopy {
+/** Strings and vertical placement for the boot MenuScene (title + two mode lines). */
+export interface MainMenuCopy {
   title: string;
-  subtitle: string;
-  episodeTagline: string;
-  buildTagline: string;
-  difficultyLabel: string;
-  difficultyHint: string;
-  primaryAction: RaycastMenuActionCopy;
-  secondaryAction: RaycastMenuActionCopy;
-  helpActions: string[];
-  footerHint: string;
+  press3d: string;
+  press2d: string;
 }
 
-export interface RaycastMenuActionCopy {
-  keyHint: string;
-  label: string;
-  detail: string;
-}
-
-export interface RaycastMenuLayout {
+export interface MainMenuLayout {
   centerX: number;
   titleY: number;
-  subtitleY: number;
-  titleArtY: number;
-  episodeTagY: number;
-  difficultyY: number;
-  actionWidth: number;
-  actionHeight: number;
-  actionX: number;
-  primaryActionY: number;
-  secondaryActionY: number;
-  helpTextY: number;
-  footerY: number;
+  option3dY: number;
+  option2dY: number;
+  /** Center Y for the decorative frame behind the title */
+  titleFrameCenterY: number;
 }
-
-export const RAYCAST_MENU_ACTION_HEIGHT = 84;
-export const RAYCAST_MENU_COMPACT_ACTION_HEIGHT = 68;
-export const RAYCAST_MENU_SHORT_ACTION_HEIGHT = 56;
-export const RAYCAST_MENU_ACTION_GAP = 20;
-export const RAYCAST_MENU_COMPACT_ACTION_GAP = 16;
-export const RAYCAST_MENU_SHORT_ACTION_GAP = 12;
-export const RAYCAST_MENU_PANEL_TO_HELP_GAP = 18;
-export const RAYCAST_MENU_COMPACT_PANEL_TO_HELP_GAP = 14;
-export const RAYCAST_MENU_SHORT_PANEL_TO_HELP_GAP = 10;
-export const RAYCAST_MENU_HELP_TO_FOOTER_GAP = 16;
-export const RAYCAST_MENU_COMPACT_HELP_TO_FOOTER_GAP = 12;
-export const RAYCAST_MENU_SHORT_HELP_TO_FOOTER_GAP = 10;
-export const RAYCAST_MENU_FOOTER_BOTTOM_PADDING = 18;
-export const RAYCAST_MENU_COMPACT_FOOTER_BOTTOM_PADDING = 16;
-export const RAYCAST_MENU_SHORT_FOOTER_BOTTOM_PADDING = 12;
-export const RAYCAST_MENU_HELP_LINE_HEIGHT = 16;
-export const RAYCAST_MENU_FOOTER_HEIGHT = 14;
-export const RAYCAST_MENU_DIFFICULTY_LABEL_OFFSET = -14;
-export const RAYCAST_MENU_DIFFICULTY_VALUE_OFFSET = 2;
-export const RAYCAST_MENU_DIFFICULTY_HINT_OFFSET = 24;
 
 export function buildRaycastEpisodeBanner(input: RaycastEpisodeBannerInput): string {
   return `EP 1 MINI EPISODE  |  LVL ${input.currentLevelNumber}/${input.totalLevels} ${input.levelName.toUpperCase()}`;
@@ -136,7 +96,7 @@ export function buildRaycastHelpOverlayText(input: RaycastHelpOverlayInput = {})
     'RESET / MENU // R RESTART, ESC MENU',
     'DEBUG // TAB',
     difficultyLine,
-    'TITLE MENU // 2D: SPACE OR A  |  RAYCAST: R OR ENTER',
+    'TITLE MENU // A 3D MODE  |  B 2D MODE',
     'H OR ? // TOGGLE THIS HELP'
   ]
     .filter((line): line is string => line !== null)
@@ -203,96 +163,29 @@ export function buildRaycastPriorityMessage(input: RaycastPriorityMessageInput):
   };
 }
 
-export function getRaycastMenuCopy(): RaycastMenuCopy {
+export function getMainMenuCopy(): MainMenuCopy {
   return {
-    title: 'HELL ARENA TERMINAL',
-    subtitle: 'BIN BASH EDITION',
-    episodeTagline: '',
-    buildTagline: '',
-    difficultyLabel: 'DIFFICULTY',
-    difficultyHint: 'LEFT / RIGHT',
-    primaryAction: {
-      keyHint: 'SPACE / A',
-      label: '2D ARENA',
-      detail: 'Local multiplayer sandbox.'
-    },
-    secondaryAction: {
-      keyHint: 'R / ENTER',
-      label: 'RAYCAST (FPS)',
-      detail: 'First-person episode.'
-    },
-    helpActions: ['2D — SPACE OR A', 'RAYCAST — R OR ENTER', 'DIFFICULTY — LEFT / RIGHT'],
-    footerHint: 'CLICK A MODE OR USE THE KEYS'
+    title: 'DOOM BIN BASH EDITION',
+    press3d: 'Press A: 3D Mode',
+    press2d: 'Press B: 2D Mode'
   };
 }
 
-export function buildRaycastMenuLayout(width: number, height: number): RaycastMenuLayout {
-  const compactLayout = width < 900 || height < 520;
-  const shortLayout = width <= 720 || height <= 405;
+export function buildMainMenuLayout(width: number, height: number): MainMenuLayout {
   const centerX = width * 0.5;
-  const actionWidth = Math.min(420, Math.max(320, Math.round(width * 0.42)));
-  const actionHeight = shortLayout
-    ? RAYCAST_MENU_SHORT_ACTION_HEIGHT
-    : compactLayout
-      ? RAYCAST_MENU_COMPACT_ACTION_HEIGHT
-      : RAYCAST_MENU_ACTION_HEIGHT;
-  const actionGap = shortLayout
-    ? RAYCAST_MENU_SHORT_ACTION_GAP
-    : compactLayout
-      ? RAYCAST_MENU_COMPACT_ACTION_GAP
-      : RAYCAST_MENU_ACTION_GAP;
-  const panelToHelpGap = shortLayout
-    ? RAYCAST_MENU_SHORT_PANEL_TO_HELP_GAP
-    : compactLayout
-      ? RAYCAST_MENU_COMPACT_PANEL_TO_HELP_GAP
-      : RAYCAST_MENU_PANEL_TO_HELP_GAP;
-  const helpToFooterGap = shortLayout
-    ? RAYCAST_MENU_SHORT_HELP_TO_FOOTER_GAP
-    : compactLayout
-      ? RAYCAST_MENU_COMPACT_HELP_TO_FOOTER_GAP
-      : RAYCAST_MENU_HELP_TO_FOOTER_GAP;
-  const footerBottomPadding = shortLayout
-    ? RAYCAST_MENU_SHORT_FOOTER_BOTTOM_PADDING
-    : compactLayout
-    ? RAYCAST_MENU_COMPACT_FOOTER_BOTTOM_PADDING
-    : RAYCAST_MENU_FOOTER_BOTTOM_PADDING;
-  const helpLineCount = getMenuHelpLineCount(width);
-  const helpHalfHeight = (helpLineCount * RAYCAST_MENU_HELP_LINE_HEIGHT) * 0.5;
-  const footerHalfHeight = RAYCAST_MENU_FOOTER_HEIGHT * 0.5;
-  const footerY = height - footerBottomPadding - footerHalfHeight;
-  const maxHelpTextY = footerY - footerHalfHeight - helpToFooterGap - helpHalfHeight;
-  const unclampedPrimaryActionY = Math.round(height * (compactLayout ? 0.49 : 0.52));
-  const unclampedSecondaryActionY = unclampedPrimaryActionY + actionHeight + actionGap;
-  const unclampedHelpTextY = unclampedSecondaryActionY + actionHeight + panelToHelpGap + helpHalfHeight;
-  const upwardShift = Math.max(0, unclampedHelpTextY - maxHelpTextY);
-  const primaryActionY = unclampedPrimaryActionY - upwardShift;
-  const secondaryActionY = primaryActionY + actionHeight + actionGap;
-  const helpTextY = secondaryActionY + actionHeight + panelToHelpGap + helpHalfHeight;
-  const episodeTagY = Math.round(height * (shortLayout ? 0.3 : compactLayout ? 0.38 : 0.39));
-  const difficultyTopGap = shortLayout ? 2 : compactLayout ? 4 : 8;
-  const difficultyBottomGap = shortLayout ? 8 : compactLayout ? 10 : 12;
-  const minDifficultyY = episodeTagY - RAYCAST_MENU_DIFFICULTY_LABEL_OFFSET + difficultyTopGap;
-  const maxDifficultyY = primaryActionY - RAYCAST_MENU_DIFFICULTY_HINT_OFFSET - difficultyBottomGap;
-  const difficultyY = Math.max(minDifficultyY, maxDifficultyY);
+  const shortViewport = width <= 720 || height <= 405;
+  const titleY = Math.round(height * (shortViewport ? 0.4 : 0.42));
+  const titleToFirstLine = shortViewport ? 52 : 58;
+  const lineGap = shortViewport ? 30 : 34;
+  const option3dY = titleY + titleToFirstLine;
+  const option2dY = option3dY + lineGap;
+  const titleFrameCenterY = titleY - Math.round(titleToFirstLine * 0.22);
 
   return {
     centerX,
-    titleY: Math.round(height * (shortLayout ? 0.11 : compactLayout ? 0.13 : 0.15)),
-    subtitleY: Math.round(height * (shortLayout ? 0.17 : compactLayout ? 0.2 : 0.22)),
-    titleArtY: Math.round(height * (shortLayout ? 0.25 : compactLayout ? 0.29 : 0.32)),
-    episodeTagY,
-    difficultyY,
-    actionWidth,
-    actionHeight,
-    actionX: centerX - actionWidth * 0.5,
-    primaryActionY,
-    secondaryActionY,
-    helpTextY,
-    footerY
+    titleY,
+    option3dY,
+    option2dY,
+    titleFrameCenterY
   };
-}
-
-function getMenuHelpLineCount(width: number): number {
-  if (width <= 720) return 2;
-  return 1;
 }

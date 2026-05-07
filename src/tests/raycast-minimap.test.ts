@@ -67,13 +67,13 @@ describe('raycast minimap model', () => {
     expect(keyedModel.markers).toContainEqual(expect.objectContaining({ kind: 'door', label: 'DOOR', active: true }));
 
     const openedMap = cloneRaycastMap(RAYCAST_LEVEL.map);
-    openRaycastDoor(openedMap, RAYCAST_LEVEL.doors[0]);
+    RAYCAST_LEVEL.doors.forEach((door) => openRaycastDoor(openedMap, door));
     const openModel = buildRaycastMinimapModel({
       map: openedMap,
       level: RAYCAST_LEVEL,
       player: { x: 8.5, y: 7.5, angle: 0 },
       collectedKeyIds: ['rust-key'],
-      openDoorIds: ['rust-gate'],
+      openDoorIds: ['rust-gate', 'service-shutter'],
       collectedSecretIds: ['west-cache']
     });
 

@@ -1,54 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import {
   buildRaycastDifficultyMenuLine,
-  buildRaycastMenuLayout,
+  buildMainMenuLayout,
   buildRaycastEpisodeBanner,
   buildRaycastHelpOverlayText,
   buildRaycastOverlayHint,
   buildRaycastPriorityMessage,
   buildRaycastStatusMessage,
-  getRaycastMenuCopy,
-  RAYCAST_MENU_DIFFICULTY_HINT_OFFSET,
-  RAYCAST_MENU_DIFFICULTY_LABEL_OFFSET,
-  RAYCAST_MENU_DIFFICULTY_VALUE_OFFSET,
-  RAYCAST_MENU_FOOTER_HEIGHT,
-  RAYCAST_MENU_HELP_LINE_HEIGHT
+  getMainMenuCopy
 } from '../game/raycast/RaycastPresentation';
-
-function expectLowerMenuContentSeparation(width: number, height: number) {
-  const layout = buildRaycastMenuLayout(width, height);
-  const helpLineCount = width <= 720 ? 2 : 1;
-  const helpHalfHeight = (helpLineCount * RAYCAST_MENU_HELP_LINE_HEIGHT) * 0.5;
-  const secondaryBottom = layout.secondaryActionY + layout.actionHeight;
-  const helpTop = layout.helpTextY - helpHalfHeight;
-  const helpBottom = layout.helpTextY + helpHalfHeight;
-  const footerTop = layout.footerY - RAYCAST_MENU_FOOTER_HEIGHT * 0.5;
-
-  expect(layout.secondaryActionY).toBeGreaterThan(layout.primaryActionY + layout.actionHeight);
-  expect(secondaryBottom).toBeLessThan(helpTop);
-  expect(helpBottom).toBeLessThan(footerTop);
-
-  return layout;
-}
-
-function expectDifficultyBlockSeparation(
-  width: number,
-  height: number,
-  minimumGapAbovePrimaryAction: number
-) {
-  const layout = buildRaycastMenuLayout(width, height);
-  const difficultyLabelY = layout.difficultyY + RAYCAST_MENU_DIFFICULTY_LABEL_OFFSET;
-  const difficultyValueY = layout.difficultyY + RAYCAST_MENU_DIFFICULTY_VALUE_OFFSET;
-  const difficultyHintY = layout.difficultyY + RAYCAST_MENU_DIFFICULTY_HINT_OFFSET;
-
-  expect(difficultyLabelY).toBeGreaterThan(layout.episodeTagY);
-  expect(difficultyValueY).toBeGreaterThan(difficultyLabelY);
-  expect(difficultyHintY).toBeGreaterThan(difficultyValueY);
-  expect(difficultyHintY).toBeLessThan(layout.primaryActionY);
-  expect(layout.primaryActionY - difficultyHintY).toBeGreaterThanOrEqual(minimumGapAbovePrimaryAction);
-
-  return layout;
-}
 
 describe('raycast presentation helpers', () => {
   it('builds a banner that presents the mini episode and controls', () => {
@@ -100,7 +60,7 @@ describe('raycast presentation helpers', () => {
     expect(help).toContain('MAP // M');
     expect(help).toContain('INTERACT // WALK INTO GATES, LOCKS, AND EXIT NODES');
     expect(help).toContain('DIFFICULTY // ASSIST // SOFTER DAMAGE // SLOWER PRESSURE // STRONGER REPAIRS');
-    expect(help).toContain('TITLE MENU // 2D: SPACE OR A');
+    expect(help).toContain('TITLE MENU // A 3D MODE  |  B 2D MODE');
     expect(help).toContain('H OR ? // TOGGLE THIS HELP');
   });
 
@@ -209,68 +169,34 @@ describe('raycast presentation helpers', () => {
     });
   });
 
-  it('keeps the menu copy compact with explicit mode keys', () => {
-    const copy = getRaycastMenuCopy();
+  it('exposes the boot menu title and A/B mode lines', () => {
+    const copy = getMainMenuCopy();
 
-    expect(copy.title).toBe('HELL ARENA TERMINAL');
-    expect(copy.subtitle).toContain('BIN BASH');
-    expect(copy.episodeTagline).toBe('');
-    expect(copy.buildTagline).toBe('');
-    expect(copy.difficultyLabel).toBe('DIFFICULTY');
-    expect(copy.difficultyHint).toBe('LEFT / RIGHT');
-    expect(copy.primaryAction.keyHint).toBe('SPACE / A');
-    expect(copy.primaryAction.label).toBe('2D ARENA');
-    expect(copy.secondaryAction.keyHint).toBe('R / ENTER');
-    expect(copy.secondaryAction.label).toBe('RAYCAST (FPS)');
-    expect(copy.helpActions).toContain('2D — SPACE OR A');
-    expect(copy.helpActions).toContain('RAYCAST — R OR ENTER');
-    expect(copy.footerHint).toBe('CLICK A MODE OR USE THE KEYS');
+    expect(copy.title).toBe('DOOM BIN BASH EDITION');
+    expect(copy.press3d).toBe('Press A: 3D Mode');
+    expect(copy.press2d).toBe('Press B: 2D Mode');
   });
 
-  it('keeps the 960x540 menu layout clear between the secondary panel, help text, and footer', () => {
-    const layout = expectLowerMenuContentSeparation(960, 540);
+  it('keeps the main menu layout ordered title then 3D then 2D option', () => {
+    const layout = buildMainMenuLayout(960, 540);
 
     expect(layout.centerX).toBe(480);
-    expect(layout.actionWidth).toBeGreaterThanOrEqual(320);
-    expect(layout.primaryActionY).toBeGreaterThan(layout.episodeTagY);
+    expect(layout.titleY).toBeLessThan(layout.option3dY);
+    expect(layout.option3dY).toBeLessThan(layout.option2dY);
+    expect(layout.titleFrameCenterY).toBeLessThan(layout.titleY);
   });
 
-  it('keeps the difficulty selector block between the episode tag and primary action on 960x540', () => {
-    expectDifficultyBlockSeparation(960, 540, 12);
-  });
-
-  it('keeps lower menu content separated on nearby compact and large viewports', () => {
+  it('keeps main menu vertical ordering on compact viewports', () => {
     const layouts = [
+      { width: 640, height: 360 },
       { width: 854, height: 480 },
       { width: 1280, height: 720 }
     ];
 
     for (const { width, height } of layouts) {
-      const layout = expectLowerMenuContentSeparation(width, height);
-
-      expect(layout.primaryActionY).toBeGreaterThan(layout.episodeTagY);
-    }
-  });
-
-  it('keeps compact lower menu content separated on very short <=720 wide viewports', () => {
-    const layouts = [
-      { width: 640, height: 360 },
-      { width: 720, height: 405 }
-    ];
-
-    for (const { width, height } of layouts) {
-      expectLowerMenuContentSeparation(width, height);
-    }
-  });
-
-  it('keeps the difficulty selector block clear of the primary action on very short compact viewports', () => {
-    const layouts = [
-      { width: 640, height: 360, minimumGapAbovePrimaryAction: 8 },
-      { width: 720, height: 405, minimumGapAbovePrimaryAction: 8 }
-    ];
-
-    for (const { width, height, minimumGapAbovePrimaryAction } of layouts) {
-      expectDifficultyBlockSeparation(width, height, minimumGapAbovePrimaryAction);
+      const layout = buildMainMenuLayout(width, height);
+      expect(layout.titleY).toBeLessThan(layout.option3dY);
+      expect(layout.option3dY).toBeLessThan(layout.option2dY);
     }
   });
 });

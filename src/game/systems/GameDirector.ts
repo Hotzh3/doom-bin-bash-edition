@@ -78,6 +78,8 @@ export class GameDirector {
   private lastWarningMessageAt = Number.NEGATIVE_INFINITY;
   private lastStationaryPunishAt = Number.NEGATIVE_INFINITY;
   private antiCamp: AntiCampState = { meterMs: 0, phase: 'none' };
+  private lowEnemyPressureAccumMs = 0;
+  private lastEnemiesAliveSnapshot = 0;
 
   constructor(options: GameDirectorOptions = {}) {
     this.config = {
@@ -103,6 +105,7 @@ export class GameDirector {
 
   update(input: GameDirectorInput): GameDirectorDecision {
     this.observeKills(input);
+    this.lastEnemiesAliveSnapshot = input.enemiesAlive;
     const intensity = this.calculateIntensity(input);
     const previousState = this.state;
     this.updateState(input, intensity);
@@ -183,6 +186,7 @@ export class GameDirector {
 
   selectEnemyKind(input: GameDirectorInput, intensity = this.calculateIntensity(input)): EnemyKind {
     const progressScore = Math.floor(input.elapsedTime / 20_000) + input.totalKills + input.currentWave;
+    if (this.pendingPressureCause === 'low-enemy-count') return input.totalKills % 3 === 0 ? 'GRUNT' : 'STALKER';
     if (this.pendingPressureCause === 'anti-camp' || this.antiCamp.phase === 'pressure') return 'STALKER';
     if (this.state === 'AMBUSH') return input.totalKills % 2 === 0 ? 'STALKER' : 'RANGED';
     if (this.state === 'PRESSURE' && input.equippedWeapons?.includes('LAUNCHER')) return 'BRUTE';
@@ -277,12 +281,27 @@ export class GameDirector {
     }
 
     if (this.state === 'PRESSURE' && input.enemiesAlive === 0 && input.elapsedTime - this.lastKillAt < 2500) {
-      this.pendingPressureCause = 'none';
-      this.enterState('RECOVERY', input.elapsedTime, 'combat cleared');
-      return;
+      const reinforceEmptyArena =
+        !this.hasExhaustedSpawnBudget() &&
+        (this.pendingPressureCause === 'low-enemy-count' ||
+          this.lowEnemyPressureAccumMs >= this.config.lowEnemyPressureThresholdMs * 0.42);
+      if (!reinforceEmptyArena) {
+        this.pendingPressureCause = 'none';
+        this.enterState('RECOVERY', input.elapsedTime, 'combat cleared');
+        return;
+      }
     }
 
     if (this.state === 'PRESSURE' && input.elapsedTime - this.stateEnteredAt >= this.config.highIntensityDurationMs) {
+      if (
+        input.enemiesAlive <= 2 &&
+        !this.hasExhaustedSpawnBudget() &&
+        this.lowEnemyPressureAccumMs >= this.config.lowEnemyPressureThresholdMs * 0.35
+      ) {
+        this.stateEnteredAt = input.elapsedTime;
+        this.lastDecisionReason = 'reinforcement surge extended';
+        return;
+      }
       this.pendingPressureCause = 'none';
       this.enterState('RECOVERY', input.elapsedTime, 'surge spent');
       return;
@@ -326,6 +345,39 @@ export class GameDirector {
       this.pendingPressureCause = 'none';
     }
 
+    const softMercy =
+      averageHealth > this.config.lowHealthThreshold && averageHealth < this.config.comfortableHealthThreshold * 0.72;
+    const accumScale = softMercy ? 0.38 : 1;
+    const lowEnemyPressureEligible =
+      input.totalKills >= 1 ||
+      input.elapsedTime >= 11_000 ||
+      (input.enemiesAlive > 0 && input.enemiesAlive <= 2);
+    if (lowEnemyPressureEligible && input.enemiesAlive <= 2 && (input.p1Alive || input.p2Alive)) {
+      const burst = input.enemiesAlive === 0 ? 2.85 : 1;
+      this.lowEnemyPressureAccumMs += deltaMs * burst * accumScale;
+    } else if (input.enemiesAlive >= 4) {
+      this.lowEnemyPressureAccumMs = Math.max(0, this.lowEnemyPressureAccumMs - deltaMs * 1.85);
+    }
+
+    if (
+      input.enemiesAlive <= 2 &&
+      this.lowEnemyPressureAccumMs >= this.config.lowEnemyPressureThresholdMs &&
+      !this.hasExhaustedSpawnBudget()
+    ) {
+      this.pendingPressureCause = 'low-enemy-count';
+      if (this.state !== 'PRESSURE' && this.state !== 'AMBUSH') {
+        if (this.state !== 'WARNING') this.enterState('WARNING', input.elapsedTime, 'hostile count low');
+        if (shouldMatureWarning(this.pendingPressureCause, this.stateEnteredAt, input.elapsedTime, this.config, this.antiCamp)) {
+          this.enterState('PRESSURE', input.elapsedTime, 'reinforcement surge');
+        }
+      }
+      return;
+    }
+
+    if (this.pendingPressureCause === 'low-enemy-count' && (input.enemiesAlive >= 4 || this.hasExhaustedSpawnBudget())) {
+      this.pendingPressureCause = 'none';
+    }
+
     if (
       this.antiCamp.phase === 'watching' ||
       input.activeZoneId ||
@@ -352,10 +404,21 @@ export class GameDirector {
   }
 
   private getCurrentSpawnCooldownMs(): number {
-    if (this.state === 'AMBUSH') return this.config.ambushSpawnCooldownMs;
-    if (this.state === 'PRESSURE') return this.config.highIntensitySpawnCooldownMs;
-    if (this.state === 'WATCHING' || this.state === 'WARNING') return this.config.buildUpSpawnCooldownMs;
-    return this.config.baseSpawnCooldownMs;
+    let ms: number;
+    if (this.state === 'AMBUSH') ms = this.config.ambushSpawnCooldownMs;
+    else if (this.state === 'PRESSURE') ms = this.config.highIntensitySpawnCooldownMs;
+    else if (this.state === 'WATCHING' || this.state === 'WARNING') ms = this.config.buildUpSpawnCooldownMs;
+    else ms = this.config.baseSpawnCooldownMs;
+
+    if (
+      this.lastEnemiesAliveSnapshot <= 2 &&
+      this.lowEnemyPressureAccumMs > 1400 &&
+      (this.state === 'PRESSURE' || this.pendingPressureCause === 'low-enemy-count')
+    ) {
+      const ramp = 1 - 0.44 * Math.min(1, this.lowEnemyPressureAccumMs / 52_000);
+      ms = Math.round(ms * ramp);
+    }
+    return Math.max(450, ms);
   }
 
   private getAverageLivingHealth(input: GameDirectorInput): number {
@@ -462,6 +525,7 @@ export class GameDirector {
     if (this.pendingPressureCause === 'zone-ambush') return 'Ambush signatures rising';
     if (this.pendingPressureCause === 'anti-camp') return 'Motion detected. Keep moving';
     if (this.pendingPressureCause === 'dominance') return intensity >= 4 ? 'Pressure spike incoming' : 'Hostiles repositioning';
+    if (this.pendingPressureCause === 'low-enemy-count') return 'Residual signals converging';
     return 'System attention rising';
   }
 }

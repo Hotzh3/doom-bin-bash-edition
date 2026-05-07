@@ -4,12 +4,14 @@ import type { MovementVector } from '../systems/MovementSystem';
 import { castRay, type RaycastMap } from './RaycastMap';
 import { collides } from './RaycastMovement';
 import { isRaycastEnemyTelegraphing, type RaycastEnemy } from './RaycastEnemy';
+import { RAYCAST_ALERT_AFTER_LOSS_MS, RAYCAST_ALERT_ARRIVE_EPSILON } from './RaycastPatrol';
 import {
-  advancePatrolWaypointIndex,
-  RAYCAST_ALERT_AFTER_LOSS_MS,
-  RAYCAST_ALERT_ARRIVE_EPSILON,
-  RAYCAST_PATROL_WAYPOINT_EPSILON
-} from './RaycastPatrol';
+  accumulateRoamStuck,
+  pickOpenRoamHeading,
+  RAYCAST_ROAM_REDIRECT_MIN_MS,
+  RAYCAST_ROAM_REDIRECT_VAR_MS,
+  RAYCAST_ROAM_STUCK_THRESHOLD_MS
+} from './RaycastEnemyRoam';
 
 const GRID_SCALE = 100;
 const PROJECTILE_RADIUS = 0.08;
@@ -109,14 +111,27 @@ export function updateRaycastEnemies(
         return;
       }
 
-      const patrolSpeed = (config.speed / GRID_SCALE) * 0.38;
-      const wps = enemy.patrolWaypoints;
-      if (wps.length > 0) {
-        const wp = wps[enemy.patrolWaypointIndex];
-        moveEnemy(map, enemy, getDirection(enemy, wp), patrolSpeed, deltaMs);
-        const reached = Math.hypot(wp.x - enemy.x, wp.y - enemy.y) < RAYCAST_PATROL_WAYPOINT_EPSILON;
-        enemy.patrolWaypointIndex = advancePatrolWaypointIndex(enemy.patrolWaypointIndex, wps.length, reached);
+      const roamSpeed = (config.speed / GRID_SCALE) * 0.41;
+      const beforeX = enemy.x;
+      const beforeY = enemy.y;
+
+      if (time >= enemy.roamNextRedirectAt || enemy.roamStuckMs >= RAYCAST_ROAM_STUCK_THRESHOLD_MS) {
+        enemy.roamHeadingRad = pickOpenRoamHeading(map, enemy.x, enemy.y, enemy.radius);
+        const stagger = (enemy.id.charCodeAt(0) + enemy.id.length * 17) % RAYCAST_ROAM_REDIRECT_VAR_MS;
+        enemy.roamNextRedirectAt = time + RAYCAST_ROAM_REDIRECT_MIN_MS + stagger;
+        enemy.roamStuckMs = 0;
       }
+
+      moveEnemy(
+        map,
+        enemy,
+        { x: Math.cos(enemy.roamHeadingRad), y: Math.sin(enemy.roamHeadingRad) },
+        roamSpeed,
+        deltaMs
+      );
+
+      const moved = Math.hypot(enemy.x - beforeX, enemy.y - beforeY);
+      enemy.roamStuckMs = accumulateRoamStuck(moved, deltaMs, enemy.roamStuckMs);
       return;
     }
 

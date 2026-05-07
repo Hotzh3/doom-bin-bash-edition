@@ -1,24 +1,10 @@
 import Phaser from 'phaser';
 import { AudioFeedbackSystem } from '../systems/AudioFeedbackSystem';
 import { getRaycastFeedbackActions } from '../raycast/RaycastFeedback';
-import {
-  cycleRaycastDifficulty,
-  getRaycastDifficultyPreset,
-  RAYCAST_DIFFICULTY_REGISTRY_KEY,
-  type RaycastDifficultyId
-} from '../raycast/RaycastDifficulty';
-import {
-  buildRaycastDifficultyMenuLine,
-  buildRaycastMenuLayout,
-  getRaycastMenuCopy,
-  RAYCAST_MENU_DIFFICULTY_HINT_OFFSET,
-  RAYCAST_MENU_DIFFICULTY_LABEL_OFFSET,
-  RAYCAST_MENU_DIFFICULTY_VALUE_OFFSET
-} from '../raycast/RaycastPresentation';
+import { getRaycastDifficultyPreset, RAYCAST_DIFFICULTY_REGISTRY_KEY } from '../raycast/RaycastDifficulty';
+import { buildMainMenuLayout, getMainMenuCopy } from '../raycast/RaycastPresentation';
 
 const MENU_BACKGROUND = 0x070b11;
-const MENU_PANEL = 0x0b1320;
-const MENU_PANEL_ALT = 0x101823;
 const MENU_CYAN = 0x9feee2;
 const MENU_CYAN_SOFT = '#9feee2';
 const MENU_EMBER = 0xffb347;
@@ -27,8 +13,6 @@ const MENU_TEXT = '#d7deea';
 
 export class MenuScene extends Phaser.Scene {
   private inputListenersRegistered = false;
-  private selectedDifficultyId: RaycastDifficultyId = 'standard';
-  private difficultyValueText?: Phaser.GameObjects.Text;
   private audioFeedback!: AudioFeedbackSystem;
 
   private readonly handleStartArena = (): void => {
@@ -37,15 +21,8 @@ export class MenuScene extends Phaser.Scene {
 
   private readonly handleStartRaycast = (): void => {
     this.playFeedbackEvent('difficultyStart');
-    this.scene.start('RaycastScene', { difficultyId: this.selectedDifficultyId });
-  };
-
-  private readonly handleDifficultyPrevious = (): void => {
-    this.setSelectedDifficulty(cycleRaycastDifficulty(this.selectedDifficultyId, -1).id);
-  };
-
-  private readonly handleDifficultyNext = (): void => {
-    this.setSelectedDifficulty(cycleRaycastDifficulty(this.selectedDifficultyId, 1).id);
+    const difficultyId = getRaycastDifficultyPreset(this.registry.get(RAYCAST_DIFFICULTY_REGISTRY_KEY)).id;
+    this.scene.start('RaycastScene', { difficultyId });
   };
 
   constructor() {
@@ -55,145 +32,59 @@ export class MenuScene extends Phaser.Scene {
   create(): void {
     const width = this.scale.width;
     const height = this.scale.height;
-    const copy = getRaycastMenuCopy();
-    const layout = buildRaycastMenuLayout(width, height);
-    this.selectedDifficultyId = getRaycastDifficultyPreset(this.registry.get(RAYCAST_DIFFICULTY_REGISTRY_KEY)).id;
+    const copy = getMainMenuCopy();
+    const layout = buildMainMenuLayout(width, height);
     this.audioFeedback = new AudioFeedbackSystem();
 
     this.cameras.main.setBackgroundColor(MENU_BACKGROUND);
 
     this.drawBackdrop(width, height);
-    this.drawTitleFrame(width, height, layout.titleArtY);
-
-    this.drawProceduralTitleArt(layout.centerX, layout.titleArtY, width);
+    this.drawTitleFrame(width, height, layout.titleFrameCenterY);
 
     this.add
       .text(layout.centerX, layout.titleY, copy.title, {
         fontFamily: 'monospace',
-        fontSize: '34px',
+        fontSize: width <= 720 ? '22px' : '34px',
         fontStyle: '700',
         color: MENU_CYAN_SOFT,
         stroke: '#05070b',
         strokeThickness: 6,
-        align: 'center'
+        align: 'center',
+        wordWrap: { width: width - 48 }
       })
       .setOrigin(0.5)
       .setDepth(8);
 
-    this.add
-      .text(layout.centerX, layout.subtitleY, copy.subtitle, {
+    const line3d = this.add
+      .text(layout.centerX, layout.option3dY, copy.press3d, {
         fontFamily: 'monospace',
-        fontSize: '15px',
-        fontStyle: '700',
-        color: MENU_TEXT,
-        align: 'center'
-      })
-      .setOrigin(0.5)
-      .setDepth(8);
-
-    const metaLines = [copy.episodeTagline, copy.buildTagline].filter((line) => line.trim().length > 0).join('\n');
-    if (metaLines.length > 0) {
-      this.add
-        .text(layout.centerX, layout.episodeTagY, metaLines, {
-          fontFamily: 'monospace',
-          fontSize: '14px',
-          fontStyle: '700',
-          color: '#f8d8a8',
-          align: 'center',
-          lineSpacing: 6
-        })
-        .setOrigin(0.5)
-        .setDepth(8);
-    }
-
-    this.add
-      .text(layout.centerX, layout.difficultyY + RAYCAST_MENU_DIFFICULTY_LABEL_OFFSET, copy.difficultyLabel, {
-        fontFamily: 'monospace',
-        fontSize: '12px',
-        fontStyle: '700',
-        color: '#7aa4ac',
-        align: 'center'
-      })
-      .setOrigin(0.5)
-      .setDepth(8);
-
-    this.difficultyValueText = this.add
-      .text(layout.centerX, layout.difficultyY + RAYCAST_MENU_DIFFICULTY_VALUE_OFFSET, '', {
-        fontFamily: 'monospace',
-        fontSize: '14px',
+        fontSize: '17px',
         fontStyle: '700',
         color: MENU_CYAN_SOFT,
-        backgroundColor: '#07101acc',
-        padding: { x: 8, y: 5 },
         align: 'center'
       })
       .setOrigin(0.5)
-      .setDepth(9)
+      .setDepth(8)
       .setInteractive({ useHandCursor: true })
-      .on(Phaser.Input.Events.POINTER_DOWN, this.handleDifficultyNext);
+      .on(Phaser.Input.Events.POINTER_DOWN, this.handleStartRaycast);
 
-    this.add
-      .text(layout.centerX, layout.difficultyY + RAYCAST_MENU_DIFFICULTY_HINT_OFFSET, copy.difficultyHint, {
+    const line2d = this.add
+      .text(layout.centerX, layout.option2dY, copy.press2d, {
         fontFamily: 'monospace',
-        fontSize: '11px',
-        fontStyle: '700',
-        color: '#d7deea',
-        align: 'center'
-      })
-      .setOrigin(0.5)
-      .setDepth(8);
-    this.refreshDifficultyText();
-
-    this.createActionPanel({
-      x: layout.actionX,
-      y: layout.primaryActionY,
-      width: layout.actionWidth,
-      height: layout.actionHeight,
-      keyHint: copy.primaryAction.keyHint,
-      label: copy.primaryAction.label,
-      detail: copy.primaryAction.detail,
-      fillColor: MENU_PANEL,
-      strokeColor: MENU_CYAN,
-      accentColor: MENU_CYAN_SOFT,
-      onActivate: this.handleStartArena
-    });
-
-    this.createActionPanel({
-      x: layout.actionX,
-      y: layout.secondaryActionY,
-      width: layout.actionWidth,
-      height: layout.actionHeight,
-      keyHint: copy.secondaryAction.keyHint,
-      label: copy.secondaryAction.label,
-      detail: copy.secondaryAction.detail,
-      fillColor: MENU_PANEL_ALT,
-      strokeColor: MENU_EMBER,
-      accentColor: '#ffd7a1',
-      onActivate: this.handleStartRaycast
-    });
-
-    this.add
-      .text(layout.centerX, layout.helpTextY, copy.helpActions.join('  |  '), {
-        fontFamily: 'monospace',
-        fontSize: '13px',
+        fontSize: '17px',
         fontStyle: '700',
         color: MENU_TEXT,
-        align: 'center',
-        wordWrap: { width: width - 88 }
-      })
-      .setOrigin(0.5)
-      .setDepth(8);
-
-    this.add
-      .text(layout.centerX, layout.footerY, copy.footerHint, {
-        fontFamily: 'monospace',
-        fontSize: '12px',
-        fontStyle: '700',
-        color: '#7aa4ac',
         align: 'center'
       })
       .setOrigin(0.5)
-      .setDepth(8);
+      .setDepth(8)
+      .setInteractive({ useHandCursor: true })
+      .on(Phaser.Input.Events.POINTER_DOWN, this.handleStartArena);
+
+    line3d.on(Phaser.Input.Events.POINTER_OVER, () => line3d.setColor('#ffffff'));
+    line3d.on(Phaser.Input.Events.POINTER_OUT, () => line3d.setColor(MENU_CYAN_SOFT));
+    line2d.on(Phaser.Input.Events.POINTER_OVER, () => line2d.setColor(MENU_CYAN_SOFT));
+    line2d.on(Phaser.Input.Events.POINTER_OUT, () => line2d.setColor(MENU_TEXT));
 
     this.registerInputListeners();
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.cleanupInputListeners, this);
@@ -232,7 +123,7 @@ export class MenuScene extends Phaser.Scene {
   private drawTitleFrame(width: number, height: number, centerY: number): void {
     const graphics = this.add.graphics().setDepth(2);
     const frameWidth = Math.min(width - 120, 620);
-    const frameHeight = Math.min(height * 0.23, 148);
+    const frameHeight = Math.min(height * 0.2, 132);
     const frameX = width * 0.5 - frameWidth * 0.5;
     const frameY = centerY - frameHeight * 0.5;
 
@@ -244,170 +135,24 @@ export class MenuScene extends Phaser.Scene {
     graphics.strokeRoundedRect(frameX + 8, frameY + 8, frameWidth - 16, frameHeight - 16, 10);
   }
 
-  private drawProceduralTitleArt(centerX: number, centerY: number, width: number): void {
-    const graphics = this.add.graphics().setDepth(5).setAlpha(0);
-    const stripWidth = Math.min(width * 0.44, 420);
-    const stripHeight = 16;
-
-    for (let i = 0; i < 6; i += 1) {
-      const alpha = 0.1 + i * 0.04;
-      graphics.fillStyle(i % 2 === 0 ? MENU_CYAN : MENU_EMBER, alpha);
-      graphics.fillRoundedRect(centerX - stripWidth * 0.5, centerY - 42 + i * 16, stripWidth, stripHeight, 5);
-    }
-
-    graphics.fillStyle(0x04070b, 0.9);
-    graphics.fillRoundedRect(centerX - stripWidth * 0.42, centerY - 34, stripWidth * 0.84, 70, 6);
-
-    const titleText = this.add
-      .text(centerX, centerY - 4, 'HELL ARENA', {
-        fontFamily: 'monospace',
-        fontSize: '28px',
-        fontStyle: '700',
-        color: '#f6f1d2',
-        stroke: '#1d0f05',
-        strokeThickness: 5
-      })
-      .setOrigin(0.5)
-      .setDepth(6)
-      .setAlpha(0)
-      .setScale(0.98);
-
-    const subtitleText = this.add
-      .text(centerX, centerY + 28, 'BIN BASH', {
-        fontFamily: 'monospace',
-        fontSize: '12px',
-        fontStyle: '700',
-        color: '#7aa4ac'
-      })
-      .setOrigin(0.5)
-      .setDepth(6)
-      .setAlpha(0)
-      .setY(centerY + 32);
-
-    this.tweens.add({
-      targets: [graphics, titleText, subtitleText],
-      alpha: { from: 0, to: 1 },
-      duration: 360,
-      ease: 'Sine.easeOut'
-    });
-
-    this.tweens.add({
-      targets: titleText,
-      scaleX: { from: 0.98, to: 1 },
-      scaleY: { from: 0.98, to: 1 },
-      y: { from: centerY - 8, to: centerY - 4 },
-      duration: 420,
-      ease: 'Sine.easeOut'
-    });
-
-    this.tweens.add({
-      targets: subtitleText,
-      y: { from: centerY + 32, to: centerY + 28 },
-      delay: 90,
-      duration: 320,
-      ease: 'Sine.easeOut'
-    });
-  }
-
-  private createActionPanel(config: {
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-    keyHint: string;
-    label: string;
-    detail: string;
-    fillColor: number;
-    strokeColor: number;
-    accentColor: string;
-    onActivate: () => void;
-  }): void {
-    const container = this.add.container(0, 0).setDepth(9);
-    const background = this.add
-      .rectangle(config.x, config.y, config.width, config.height, config.fillColor, 0.94)
-      .setOrigin(0, 0)
-      .setStrokeStyle(2, config.strokeColor, 0.85);
-    const accent = this.add.rectangle(config.x, config.y, 10, config.height, config.strokeColor, 0.9).setOrigin(0, 0);
-    const keyText = this.add
-      .text(config.x + 22, config.y + 14, config.keyHint, {
-        fontFamily: 'monospace',
-        fontSize: '13px',
-        fontStyle: '700',
-        color: config.accentColor
-      })
-      .setOrigin(0, 0);
-    const labelText = this.add
-      .text(config.x + 22, config.y + 32, config.label, {
-        fontFamily: 'monospace',
-        fontSize: '24px',
-        fontStyle: '700',
-        color: '#ffffff'
-      })
-      .setOrigin(0, 0);
-    const detailText = this.add
-      .text(config.x + 22, config.y + 60, config.detail, {
-        fontFamily: 'monospace',
-        fontSize: '12px',
-        color: MENU_TEXT,
-        wordWrap: { width: config.width - 36 }
-      })
-      .setOrigin(0, 0);
-
-    container.add([background, accent, keyText, labelText, detailText]);
-
-    background
-      .setInteractive({ useHandCursor: true })
-      .on(Phaser.Input.Events.POINTER_OVER, () => {
-        background.setFillStyle(config.fillColor, 1);
-        accent.setFillStyle(config.strokeColor, 1);
-        labelText.setColor(config.accentColor);
-      })
-      .on(Phaser.Input.Events.POINTER_OUT, () => {
-        background.setFillStyle(config.fillColor, 0.94);
-        accent.setFillStyle(config.strokeColor, 0.9);
-        labelText.setColor('#ffffff');
-      })
-      .on(Phaser.Input.Events.POINTER_DOWN, config.onActivate);
-  }
-
   private registerInputListeners(): void {
     if (this.inputListenersRegistered) this.cleanupInputListeners();
-    this.input.keyboard?.once('keydown-SPACE', this.handleStartArena);
-    this.input.keyboard?.once('keydown-A', this.handleStartArena);
-    this.input.keyboard?.once('keydown-R', this.handleStartRaycast);
-    this.input.keyboard?.once('keydown-ENTER', this.handleStartRaycast);
-    this.input.keyboard?.on('keydown-LEFT', this.handleDifficultyPrevious);
-    this.input.keyboard?.on('keydown-RIGHT', this.handleDifficultyNext);
+    const kb = this.input.keyboard;
+    kb?.once('keydown-A', this.handleStartRaycast);
+    kb?.once('keydown-a', this.handleStartRaycast);
+    kb?.once('keydown-B', this.handleStartArena);
+    kb?.once('keydown-b', this.handleStartArena);
     this.inputListenersRegistered = true;
   }
 
   private cleanupInputListeners(): void {
     if (!this.inputListenersRegistered) return;
-    this.input.keyboard?.off('keydown-SPACE', this.handleStartArena);
-    this.input.keyboard?.off('keydown-A', this.handleStartArena);
-    this.input.keyboard?.off('keydown-R', this.handleStartRaycast);
-    this.input.keyboard?.off('keydown-ENTER', this.handleStartRaycast);
-    this.input.keyboard?.off('keydown-LEFT', this.handleDifficultyPrevious);
-    this.input.keyboard?.off('keydown-RIGHT', this.handleDifficultyNext);
+    const kb = this.input.keyboard;
+    kb?.off('keydown-A', this.handleStartRaycast);
+    kb?.off('keydown-a', this.handleStartRaycast);
+    kb?.off('keydown-B', this.handleStartArena);
+    kb?.off('keydown-b', this.handleStartArena);
     this.inputListenersRegistered = false;
-  }
-
-  private setSelectedDifficulty(difficultyId: RaycastDifficultyId): void {
-    if (difficultyId === this.selectedDifficultyId) return;
-    this.selectedDifficultyId = difficultyId;
-    this.registry.set(RAYCAST_DIFFICULTY_REGISTRY_KEY, difficultyId);
-    this.playFeedbackEvent('difficultySelect');
-    this.refreshDifficultyText();
-  }
-
-  private refreshDifficultyText(): void {
-    const preset = getRaycastDifficultyPreset(this.selectedDifficultyId);
-    this.difficultyValueText?.setText(
-      buildRaycastDifficultyMenuLine({
-        label: preset.label,
-        summary: preset.menuSummary
-      })
-    );
   }
 
   private playFeedbackEvent(event: 'difficultySelect' | 'difficultyStart'): void {

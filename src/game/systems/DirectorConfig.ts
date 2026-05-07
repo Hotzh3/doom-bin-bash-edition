@@ -20,6 +20,8 @@ export interface DirectorConfig {
   warningLeadMs: number;
   stationaryPressureGraceMs: number;
   stationaryPunishCooldownMs: number;
+  /** Accumulated ms with ≤2 living enemies before reinforcement WARNING (player above recovery HP only). */
+  lowEnemyPressureThresholdMs: number;
 }
 
 export const DEFAULT_DIRECTOR_CONFIG: DirectorConfig = {
@@ -43,5 +45,6 @@ export const DEFAULT_DIRECTOR_CONFIG: DirectorConfig = {
   warningMessageCooldownMs: 4200,
   warningLeadMs: 900,
   stationaryPressureGraceMs: 1800,
-  stationaryPunishCooldownMs: 2600
+  stationaryPunishCooldownMs: 2600,
+  lowEnemyPressureThresholdMs: 4000
 };

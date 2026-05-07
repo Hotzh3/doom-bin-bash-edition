@@ -24,12 +24,10 @@ describe('raycast enemy system', () => {
     expect(hasLineOfSight(RAYCAST_MAP, { x: 1.5, y: 10.5 }, { x: 8, y: 10.5 })).toBe(false);
   });
 
-  it('advances patrol waypoints when the player is beyond detection range', () => {
-    const enemy = createRaycastEnemy({ id: 'far-patrol', kind: 'GRUNT', x: 1.5, y: 7.5 });
+  it('roams across walkable cells when the player is beyond detection range', () => {
+    const enemy = createRaycastEnemy({ id: 'far-roam', kind: 'GRUNT', x: 1.5, y: 7.5 });
 
     updateRaycastEnemies(RAYCAST_MAP, [enemy], { x: 1.5, y: 22.0, alive: true }, 1000, 16);
-
-    expect(enemy.patrolWaypointIndex).toBeGreaterThanOrEqual(1);
 
     let t = 1016;
     for (let i = 0; i < 40; i += 1) {
