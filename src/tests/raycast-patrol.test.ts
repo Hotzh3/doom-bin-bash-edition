@@ -6,12 +6,14 @@ import {
 } from '../game/raycast/RaycastPatrol';
 
 describe('raycast patrol helpers', () => {
-  it('builds a small route around home using a stable seed', () => {
+  it('builds an irregular loop around home using a stable seed', () => {
     const wps = buildRaycastPatrolWaypoints(5, 8, 'enemy-a');
-    expect(wps.length).toBeGreaterThanOrEqual(3);
+    expect(wps.length).toBeGreaterThanOrEqual(6);
     expect(wps[0]).toEqual({ x: 5, y: 8 });
     const wpsB = buildRaycastPatrolWaypoints(5, 8, 'enemy-b');
     expect(wpsB[1]).not.toEqual(wps[1]);
+    const maxR = Math.max(...wps.slice(1).map((p) => Math.hypot(p.x - 5, p.y - 8)));
+    expect(maxR).toBeLessThanOrEqual(1.2);
   });
 
   it('advances patrol index only when the current waypoint is reached', () => {

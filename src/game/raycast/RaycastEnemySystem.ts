@@ -4,16 +4,25 @@ import type { MovementVector } from '../systems/MovementSystem';
 import { castRay, type RaycastMap } from './RaycastMap';
 import { collides } from './RaycastMovement';
 import { isRaycastEnemyTelegraphing, type RaycastEnemy } from './RaycastEnemy';
-import { RAYCAST_ALERT_AFTER_LOSS_MS, RAYCAST_ALERT_ARRIVE_EPSILON } from './RaycastPatrol';
+import {
+  RAYCAST_ALERT_AFTER_LOSS_MS,
+  RAYCAST_ALERT_ARRIVE_EPSILON,
+  RAYCAST_PATROL_WAYPOINT_EPSILON,
+  advancePatrolWaypointIndex,
+  hashStringToSeed
+} from './RaycastPatrol';
 import {
   accumulateRoamStuck,
-  pickOpenRoamHeading,
+  pickOpenRoamHeadingToward,
+  pickPatrolRetargetNearHome,
   RAYCAST_ROAM_REDIRECT_MIN_MS,
   RAYCAST_ROAM_REDIRECT_VAR_MS,
   RAYCAST_ROAM_STUCK_THRESHOLD_MS
 } from './RaycastEnemyRoam';
 
 const GRID_SCALE = 100;
+/** Hearing radius as a fraction of detection (grid units); no LOS required. */
+export const RAYCAST_HEARING_RANGE_FACTOR = 0.68;
 const PROJECTILE_RADIUS = 0.08;
 const PROJECTILE_LIFETIME_MS = 1800;
 const RANGED_MUZZLE_OFFSET = 0.16;
@@ -39,6 +48,25 @@ export interface RaycastPlayerTarget {
   x: number;
   y: number;
   alive: boolean;
+}
+
+export function computeRaycastEnemyPlayerAwareness(
+  hasSight: boolean,
+  distanceWorld: number,
+  detectionRangeGrid: number
+): { sees: boolean; hears: boolean; aware: boolean } {
+  const distGrid = distanceWorld * GRID_SCALE;
+  const sees = hasSight && distGrid <= detectionRangeGrid;
+  const hears = !hasSight && distGrid <= detectionRangeGrid * RAYCAST_HEARING_RANGE_FACTOR;
+  return { sees, hears, aware: sees || hears };
+}
+
+function createEnemySaltedRng(enemyId: string, salt: number): () => number {
+  let s = (hashStringToSeed(enemyId) ^ (salt >>> 0)) >>> 0;
+  return () => {
+    s = (Math.imul(s, 1664525) + 1013904223) >>> 0;
+    return (s >>> 8) / 0x1000000;
+  };
 }
 
 export function updateRaycastEnemies(
@@ -74,12 +102,17 @@ export function updateRaycastEnemies(
       return;
     }
 
-    const decision = decideEnemyBehavior({
+    const { aware } = computeRaycastEnemyPlayerAwareness(hasSight, distance, config.detectionRange);
+    let decision = decideEnemyBehavior({
       distanceToTarget: distance * GRID_SCALE,
       enemyAlive: enemy.alive,
-      targetAlive: player.alive && hasSight,
+      targetAlive: player.alive && aware,
       config
     });
+
+    if (decision.action === 'RANGED_ATTACK' && !hasSight) {
+      decision = { action: 'CHASE', speedMultiplier: 0.82 };
+    }
 
     if (decision.action !== 'IDLE') {
       enemy.lastKnownPlayerX = player.x;
@@ -100,10 +133,18 @@ export function updateRaycastEnemies(
           enemy.alertUntilTime = 0;
         } else {
           const alertSpeed = (config.speed / GRID_SCALE) * 0.5;
+          const alertSteer = pickOpenRoamHeadingToward(
+            map,
+            enemy.x,
+            enemy.y,
+            enemy.radius,
+            enemy.lastKnownPlayerX,
+            enemy.lastKnownPlayerY
+          );
           moveEnemy(
             map,
             enemy,
-            getDirection(enemy, { x: enemy.lastKnownPlayerX, y: enemy.lastKnownPlayerY }),
+            { x: Math.cos(alertSteer), y: Math.sin(alertSteer) },
             alertSpeed,
             deltaMs
           );
@@ -111,24 +152,45 @@ export function updateRaycastEnemies(
         return;
       }
 
-      const roamSpeed = (config.speed / GRID_SCALE) * 0.41;
+      const home = enemy.patrolWaypoints[0] ?? { x: enemy.x, y: enemy.y };
+      let targetWp = enemy.patrolWaypoints[enemy.patrolWaypointIndex] ?? home;
+      const distWp = Math.hypot(targetWp.x - enemy.x, targetWp.y - enemy.y);
+
+      if (distWp < RAYCAST_PATROL_WAYPOINT_EPSILON) {
+        enemy.patrolWaypointIndex = advancePatrolWaypointIndex(
+          enemy.patrolWaypointIndex,
+          enemy.patrolWaypoints.length,
+          true
+        );
+        enemy.roamStuckMs = Math.max(0, enemy.roamStuckMs - deltaMs * 0.85);
+        return;
+      }
+
+      const patrolSpeed = (config.speed / GRID_SCALE) * (enemy.kind === 'STALKER' ? 0.54 : 0.47);
       const beforeX = enemy.x;
       const beforeY = enemy.y;
 
       if (time >= enemy.roamNextRedirectAt || enemy.roamStuckMs >= RAYCAST_ROAM_STUCK_THRESHOLD_MS) {
-        enemy.roamHeadingRad = pickOpenRoamHeading(map, enemy.x, enemy.y, enemy.radius);
+        const stuck = enemy.roamStuckMs >= RAYCAST_ROAM_STUCK_THRESHOLD_MS;
+        if (stuck && enemy.patrolWaypoints.length > 1) {
+          const idx = enemy.patrolWaypointIndex <= 0 ? 1 : enemy.patrolWaypointIndex;
+          const rng = createEnemySaltedRng(enemy.id, Math.floor(time));
+          enemy.patrolWaypoints[idx] = pickPatrolRetargetNearHome(map, home.x, home.y, enemy.radius, rng);
+          enemy.patrolWaypointIndex = idx;
+        } else {
+          let next = (enemy.patrolWaypointIndex + 1) % enemy.patrolWaypoints.length;
+          if (next === 0) next = 1;
+          enemy.patrolWaypointIndex = next;
+        }
         const stagger = (enemy.id.charCodeAt(0) + enemy.id.length * 17) % RAYCAST_ROAM_REDIRECT_VAR_MS;
         enemy.roamNextRedirectAt = time + RAYCAST_ROAM_REDIRECT_MIN_MS + stagger;
-        enemy.roamStuckMs = 0;
+        enemy.roamStuckMs = stuck ? 0 : enemy.roamStuckMs * 0.38;
+        targetWp = enemy.patrolWaypoints[enemy.patrolWaypointIndex] ?? home;
       }
 
-      moveEnemy(
-        map,
-        enemy,
-        { x: Math.cos(enemy.roamHeadingRad), y: Math.sin(enemy.roamHeadingRad) },
-        roamSpeed,
-        deltaMs
-      );
+      const steer = pickOpenRoamHeadingToward(map, enemy.x, enemy.y, enemy.radius, targetWp.x, targetWp.y);
+      enemy.roamHeadingRad = steer;
+      moveEnemy(map, enemy, { x: Math.cos(steer), y: Math.sin(steer) }, patrolSpeed, deltaMs);
 
       const moved = Math.hypot(enemy.x - beforeX, enemy.y - beforeY);
       enemy.roamStuckMs = accumulateRoamStuck(moved, deltaMs, enemy.roamStuckMs);

@@ -3,26 +3,27 @@ import { AudioFeedbackSystem } from '../systems/AudioFeedbackSystem';
 import { getRaycastFeedbackActions } from '../raycast/RaycastFeedback';
 import { getRaycastDifficultyPreset, RAYCAST_DIFFICULTY_REGISTRY_KEY } from '../raycast/RaycastDifficulty';
 import { buildMainMenuLayout, getMainMenuCopy } from '../raycast/RaycastPresentation';
+import { RAYCAST_CSS, RAYCAST_PALETTE } from '../raycast/RaycastPalette';
 
-const MENU_BACKGROUND = 0x070b11;
-const MENU_CYAN = 0x9feee2;
-const MENU_CYAN_SOFT = '#9feee2';
-const MENU_EMBER = 0xffb347;
-const MENU_ROSE = 0xff8f7a;
-const MENU_TEXT = '#d7deea';
+const MENU_BACKGROUND = RAYCAST_PALETTE.voidBlack;
+const MENU_CYAN = RAYCAST_PALETTE.plasmaBright;
+const MENU_CYAN_SOFT = RAYCAST_CSS.accentText;
+const MENU_EMBER = RAYCAST_PALETTE.amberWarn;
+const MENU_ROSE = RAYCAST_PALETTE.telegraphRose;
+const MENU_TEXT = RAYCAST_CSS.bodyText;
 
 export class MenuScene extends Phaser.Scene {
   private inputListenersRegistered = false;
   private audioFeedback!: AudioFeedbackSystem;
 
   private readonly handleStartArena = (): void => {
-    this.scene.start('ArenaScene');
+    this.scene.start('PrologueScene', { mode: 'arena' });
   };
 
   private readonly handleStartRaycast = (): void => {
     this.playFeedbackEvent('difficultyStart');
     const difficultyId = getRaycastDifficultyPreset(this.registry.get(RAYCAST_DIFFICULTY_REGISTRY_KEY)).id;
-    this.scene.start('RaycastScene', { difficultyId });
+    this.scene.start('PrologueScene', { mode: 'raycast', difficultyId });
   };
 
   constructor() {
@@ -93,10 +94,10 @@ export class MenuScene extends Phaser.Scene {
 
   private drawBackdrop(width: number, height: number): void {
     const graphics = this.add.graphics().setDepth(0);
-    graphics.fillGradientStyle(0x04070b, 0x04070b, 0x131922, 0x080d13, 1);
+    graphics.fillGradientStyle(0x030508, 0x030508, 0x0c1018, 0x06080c, 1);
     graphics.fillRect(0, 0, width, height);
 
-    graphics.lineStyle(1, 0x16202b, 0.3);
+    graphics.lineStyle(1, 0x1a2430, 0.3);
     for (let y = 0; y < height; y += 5) {
       graphics.lineBetween(0, y, width, y);
     }
@@ -127,7 +128,7 @@ export class MenuScene extends Phaser.Scene {
     const frameX = width * 0.5 - frameWidth * 0.5;
     const frameY = centerY - frameHeight * 0.5;
 
-    graphics.fillStyle(0x07101a, 0.9);
+    graphics.fillStyle(0x050810, 0.9);
     graphics.fillRoundedRect(frameX, frameY, frameWidth, frameHeight, 14);
     graphics.lineStyle(2, MENU_CYAN, 0.45);
     graphics.strokeRoundedRect(frameX, frameY, frameWidth, frameHeight, 14);

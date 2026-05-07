@@ -2,7 +2,10 @@
 export const RAYCAST_ALERT_AFTER_LOSS_MS = 4200;
 
 /** Reach waypoint / advance to next patrol node when closer than this (world units). */
-export const RAYCAST_PATROL_WAYPOINT_EPSILON = 0.34;
+export const RAYCAST_PATROL_WAYPOINT_EPSILON = 0.36;
+
+/** Max world distance patrol nodes may sit from home (after clamp). */
+export const RAYCAST_PATROL_MAX_RADIUS = 1.15;
 
 /** Treat alert search as complete when this close to last known position. */
 export const RAYCAST_ALERT_ARRIVE_EPSILON = 0.44;
@@ -21,21 +24,26 @@ export function hashStringToSeed(id: string): number {
   return h >>> 0;
 }
 
-/** Small triangular route around spawn — no pathfinding; walls block via collision elsewhere. */
+/** Irregular loop around spawn (not an equilateral triangle); walls avoided at runtime via movement + retarget. */
 export function buildRaycastPatrolWaypoints(homeX: number, homeY: number, seedId: string): PatrolWaypoint[] {
   const seed = hashStringToSeed(seedId);
-  const a0 = (seed % 628) / 100;
-  const a1 = a0 + 2.15;
-  const a2 = a0 + 4.05;
-  const r0 = 0.55 + (seed % 45) / 100;
-  const r1 = r0 * 0.78;
-  const r2 = r0 * 0.66;
-  return [
-    { x: homeX, y: homeY },
-    { x: homeX + Math.cos(a0) * r0, y: homeY + Math.sin(a0) * r0 },
-    { x: homeX + Math.cos(a1) * r1, y: homeY + Math.sin(a1) * r1 },
-    { x: homeX + Math.cos(a2) * r2, y: homeY + Math.sin(a2) * r2 }
-  ];
+  const waypoints: PatrolWaypoint[] = [{ x: homeX, y: homeY }];
+  const nodeCount = 6;
+  let angleCursor = ((seed % 360) * Math.PI) / 180;
+  const golden = 2.399963229728653;
+
+  for (let i = 0; i < nodeCount; i += 1) {
+    const stride = 0.85 + ((seed >>> (i * 3)) % 40) / 100;
+    angleCursor += stride + golden * 0.22;
+    const radiusJitter = 0.38 + ((seed >>> (i * 5)) % 65) / 100;
+    const r = Math.min(RAYCAST_PATROL_MAX_RADIUS, radiusJitter);
+    waypoints.push({
+      x: homeX + Math.cos(angleCursor) * r,
+      y: homeY + Math.sin(angleCursor) * r
+    });
+  }
+
+  return waypoints;
 }
 
 export function advancePatrolWaypointIndex(

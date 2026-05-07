@@ -124,8 +124,8 @@ export function buildRaycastMinimapModel(state: RaycastMinimapState): RaycastMin
 
 /** Red-family markers for minimap differentiation (enemy dots). */
 export function getRaycastMinimapEnemyDotStyle(kind: EnemyKind): { fill: number; radiusMul: number; ring: number } {
-  if (kind === 'BRUTE') return { fill: 0xff2244, radiusMul: 1.35, ring: 0xff8899 };
-  if (kind === 'STALKER') return { fill: 0xff5533, radiusMul: 0.82, ring: 0xffaa88 };
-  if (kind === 'RANGED') return { fill: 0xff3366, radiusMul: 1.0, ring: 0xff88aa };
-  return { fill: 0xff4444, radiusMul: 0.92, ring: 0xffbbbb };
+  if (kind === 'BRUTE') return { fill: 0xffa64d, radiusMul: 1.35, ring: 0xffd090 };
+  if (kind === 'STALKER') return { fill: 0x54e898, radiusMul: 0.82, ring: 0xa8f0c8 };
+  if (kind === 'RANGED') return { fill: 0x5cefef, radiusMul: 1.0, ring: 0x9ffbff };
+  return { fill: 0xff5c42, radiusMul: 0.92, ring: 0xff9a80 };
 }

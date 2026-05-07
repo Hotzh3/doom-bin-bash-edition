@@ -64,12 +64,12 @@ export function getRaycastHealthVisualState(
   const clampedHealth = Math.min(Math.max(health, 0), maxHealth);
   const ratio = maxHealth <= 0 ? 0 : clampedHealth / maxHealth;
   if (ratio <= 0.25) {
-    return { ratio, tone: 'critical', color: '#ff7a8a', accentColor: 0xff5b6f };
+    return { ratio, tone: 'critical', color: '#ff3358', accentColor: 0xff3358 };
   }
   if (ratio <= 0.5) {
-    return { ratio, tone: 'low', color: '#ffcf7c', accentColor: 0xffb347 };
+    return { ratio, tone: 'low', color: '#ff9a38', accentColor: 0xff9a38 };
   }
-  return { ratio, tone: 'stable', color: '#9feee2', accentColor: 0x9feee2 };
+  return { ratio, tone: 'stable', color: '#58f2e4', accentColor: 0x58f2e4 };
 }
 
 export function buildRaycastPlayerHealthLine(state: RaycastPlayerHealthState): string {

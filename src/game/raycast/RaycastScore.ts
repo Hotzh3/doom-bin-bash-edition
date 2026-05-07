@@ -21,6 +21,13 @@ export function addRaycastKillScore(currentScore: number, killedKinds: EnemyKind
   return next;
 }
 
+/** Episode boss clear bonus (flat points). */
+export const RAYCAST_BOSS_CLEAR_POINTS = 2500;
+
+export function addRaycastBossClearScore(currentScore: number): number {
+  return currentScore + RAYCAST_BOSS_CLEAR_POINTS;
+}
+
 export function readRaycastHighScore(storage: Pick<Storage, 'getItem'> = typeof localStorage !== 'undefined'
   ? localStorage
   : { getItem: () => null }): number {

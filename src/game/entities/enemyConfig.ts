@@ -90,19 +90,19 @@ export const RAYCAST_ENEMY_CONFIG = cloneEnemyConfigRecord({
   ...BASE_ENEMY_CONFIG,
   GRUNT: {
     ...BASE_ENEMY_CONFIG.GRUNT,
-    color: 0xff6c62
+    color: 0xff5c42
   },
   BRUTE: {
     ...BASE_ENEMY_CONFIG.BRUTE,
-    color: 0xffb05c
+    color: 0xffa64d
   },
   STALKER: {
     ...BASE_ENEMY_CONFIG.STALKER,
-    color: 0x67f0b5
+    color: 0x54e898
   },
   RANGED: {
     ...BASE_ENEMY_CONFIG.RANGED,
-    color: 0x7edbff
+    color: 0x5cefef
   }
 });
 

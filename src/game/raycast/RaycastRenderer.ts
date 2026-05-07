@@ -19,7 +19,10 @@ import {
 } from './RaycastAtmosphere';
 import { RAYCAST_LEVEL, type RaycastLevel } from './RaycastLevel';
 import { RAYCAST_RENDERER_CONFIG } from './RaycastRendererConfig';
+import { RAYCAST_PALETTE } from './RaycastPalette';
+import type { RaycastBossState } from './RaycastBoss';
 import {
+  getBillboardColor,
   getRaycastCellVariant,
   getRaycastEnemyVisualStyle,
   getRaycastGroundVisualStyle,
@@ -127,16 +130,16 @@ export class RaycastRenderer {
         const markerRadius = projection.size * (0.42 + progress * 0.14 + pulse * 0.08);
         const haloRadius = projection.size * (0.72 + progress * 0.2 + pulse * 0.1);
         const alpha = (0.42 + pulse * 0.18) * visibility;
-        this.graphics.fillStyle(0x15050a, 0.52 * visibility);
+        this.graphics.fillStyle(RAYCAST_PALETTE.criticalVeil, 0.52 * visibility);
         this.graphics.fillRect(
           projection.screenX - projection.size * 0.6,
           height * 0.5 - projection.size * 0.7,
           projection.size * 1.2,
           projection.size * 1.4
         );
-        this.graphics.fillStyle(0xff5b6f, 0.16 * visibility + progress * 0.08);
+        this.graphics.fillStyle(RAYCAST_PALETTE.telegraphRose, 0.16 * visibility + progress * 0.08);
         this.graphics.fillCircle(projection.screenX, height * 0.5, haloRadius);
-        this.graphics.lineStyle(4, 0xffcf7c, alpha);
+        this.graphics.lineStyle(4, RAYCAST_PALETTE.telegraphAmber, alpha);
         this.graphics.strokeCircle(projection.screenX, height * 0.5, markerRadius);
         this.graphics.lineStyle(2, 0xffffff, (0.35 + pulse * 0.12) * visibility);
         this.graphics.lineBetween(
@@ -151,9 +154,9 @@ export class RaycastRenderer {
           projection.screenX,
           height * 0.5 + projection.size * 0.36
         );
-        this.graphics.fillStyle(0xffe8aa, (0.55 + pulse * 0.16) * visibility);
+        this.graphics.fillStyle(RAYCAST_PALETTE.amberSoft, (0.55 + pulse * 0.16) * visibility);
         this.graphics.fillRect(projection.screenX - projection.size * 0.2, height * 0.5 - projection.size * 0.9, projection.size * 0.4, 5);
-        this.graphics.fillStyle(0xff5b6f, 0.78 * visibility);
+        this.graphics.fillStyle(RAYCAST_PALETTE.telegraphRose, 0.78 * visibility);
         this.graphics.fillRect(
           projection.screenX - projection.size * 0.28,
           height * 0.5 - projection.size * 0.52,
@@ -169,7 +172,7 @@ export class RaycastRenderer {
       const telegraphMix = isWindingUp ? 0.3 + windupProgress * 0.4 + pulse * 0.18 : 0;
       const color = projection.enemy.hitFlashUntil > time
         ? 0xffffff
-        : this.blendColors(projection.enemy.color, 0xff6b5f, telegraphMix);
+        : this.blendColors(projection.enemy.color, RAYCAST_PALETTE.telegraphRose, telegraphMix);
       const enemyStyle = getRaycastEnemyVisualStyle(projection.enemy.kind, projection.enemy.color);
       const visibility = calculateEnemyVisibility(projection.distance, atmosphere);
       const size = projection.size * (isWindingUp ? 1.04 + windupProgress * 0.08 + pulse * 0.04 : 1);
@@ -195,6 +198,67 @@ export class RaycastRenderer {
         );
       }
     });
+  }
+
+  renderBoss(
+    player: RaycastPlayerState,
+    boss: RaycastBossState | null,
+    width: number,
+    height: number,
+    time: number,
+    atmosphere: RaycastAtmosphereRenderOptions
+  ): void {
+    if (!boss?.alive) return;
+    const dx = boss.x - player.x;
+    const dy = boss.y - player.y;
+    const distance = Math.hypot(dx, dy);
+    const angleToEnemy = Math.atan2(dy, dx);
+    const angleDelta = normalizeAngle(angleToEnemy - player.angle);
+    if (Math.abs(angleDelta) > this.config.fovRadians * 0.58) return;
+
+    const screenX = width * 0.5 + (angleDelta / (this.config.fovRadians * 0.5)) * width * 0.5;
+    const correctedDistance = Math.max(0.001, distance * Math.cos(angleDelta));
+    const column = Phaser.Math.Clamp(Math.floor(screenX / (width / this.config.rayCount)), 0, this.config.rayCount - 1);
+    if (correctedDistance > (this.depthBuffer[column] ?? Number.POSITIVE_INFINITY) + 0.08) return;
+
+    const visibility = calculateEnemyVisibility(correctedDistance, atmosphere);
+    const size = Phaser.Math.Clamp(height / correctedDistance / 1.12, 44, 270);
+    const telegraph = time < boss.telegraphUntil;
+    const pulse = telegraph ? 0.55 + Math.sin(time / 42) * 0.45 : 1;
+    const cx = screenX;
+    const cy = height * 0.5;
+    const coreColor = boss.hitFlashUntil > time ? 0xffffff : 0x6b4ae8;
+
+    this.graphics.fillStyle(0x120618, 0.82 * visibility);
+    this.graphics.fillEllipse(cx, cy + size * 0.1, size * 1.5, size * 0.42);
+    this.graphics.lineStyle(
+      telegraph ? 5 : 3,
+      telegraph ? 0xff8833 : RAYCAST_PALETTE.plasmaBright,
+      (telegraph ? 0.88 : 0.58) * visibility * pulse
+    );
+    this.graphics.strokeEllipse(cx, cy, size * 1.12, size * 1.45);
+    this.graphics.fillStyle(coreColor, 0.92 * visibility);
+    this.graphics.fillEllipse(cx, cy - size * 0.05, size * 0.88, size * 1.05);
+    this.graphics.fillStyle(RAYCAST_PALETTE.plasmaBright, 0.38 * visibility);
+    this.graphics.fillCircle(cx, cy - size * 0.38, size * 0.12);
+    this.graphics.fillCircle(cx + size * 0.22, cy - size * 0.18, size * 0.09);
+    this.graphics.fillCircle(cx - size * 0.22, cy - size * 0.18, size * 0.09);
+    if (telegraph) {
+      const rays = boss.phase === 2 ? 5 : 3;
+      const haloAlpha = (0.2 + pulse * 0.16) * visibility;
+      this.graphics.fillStyle(0xff8833, haloAlpha);
+      this.graphics.fillCircle(cx, cy, size * (0.84 + pulse * 0.1));
+      this.graphics.lineStyle(2, 0xfff1c4, (0.35 + pulse * 0.3) * visibility);
+      for (let i = 0; i < rays; i += 1) {
+        const a = (i / rays) * Math.PI * 2 + time * 0.003;
+        this.graphics.lineBetween(
+          cx + Math.cos(a) * size * 0.26,
+          cy + Math.sin(a) * size * 0.26,
+          cx + Math.cos(a) * size * 0.92,
+          cy + Math.sin(a) * size * 0.92
+        );
+      }
+    }
   }
 
   renderEnemyProjectiles(
@@ -231,7 +295,7 @@ export class RaycastRenderer {
         if (projection.distance > (this.depthBuffer[column] ?? Number.POSITIVE_INFINITY) + 0.05) return;
 
         const isOpenGate = projection.billboard.style === 'gate-open';
-        const haloColor = isOpenGate ? 0x9feee2 : RAYCAST_ATMOSPHERE.pickupHalo;
+        const haloColor = isOpenGate ? getBillboardColor('gate-open', true) : RAYCAST_ATMOSPHERE.pickupHalo;
         this.graphics.fillStyle(haloColor, isOpenGate ? 0.24 : 0.18);
         this.graphics.fillCircle(projection.screenX, height * 0.5, projection.size + (isOpenGate ? 9 : 6));
         this.graphics.fillStyle(projection.billboard.color, 0.94);
@@ -253,38 +317,53 @@ export class RaycastRenderer {
 
   renderWeaponOverlay(weapon: WeaponKind, width: number, height: number, muzzleAlpha: number): void {
     const kick = Phaser.Math.Clamp(muzzleAlpha, 0, 1);
-    const baseY = height - 18 + kick * 10;
-    const centerX = width * 0.5;
+    const recoilY = kick * (weapon === 'LAUNCHER' ? 18 : weapon === 'SHOTGUN' ? 15 : 12);
+    const recoilX = kick * (weapon === 'SHOTGUN' ? 7 : weapon === 'LAUNCHER' ? 5 : 4);
+    const baseY = height - 18 + recoilY;
+    const cx = width * 0.5 + recoilX;
     const weaponColor = weapon === 'SHOTGUN' ? 0x6d4028 : weapon === 'LAUNCHER' ? 0x29414d : 0x334150;
-    const trimColor = weapon === 'SHOTGUN' ? 0xff9f59 : weapon === 'LAUNCHER' ? 0x9feee2 : 0xfff29e;
-    const deepShadow = 0x05070c;
+    const trimColor = weapon === 'SHOTGUN' ? RAYCAST_PALETTE.rustBright : weapon === 'LAUNCHER' ? RAYCAST_PALETTE.plasmaBright : RAYCAST_PALETTE.muzzleWarm;
+    const deepShadow = RAYCAST_PALETTE.floorVoid;
+    const corruptGlow = RAYCAST_PALETTE.telegraphRose;
 
     if (weapon === 'PISTOL') {
+      this.graphics.fillStyle(0x010306, 0.55);
+      this.graphics.fillEllipse(cx + 6, baseY - 48, 52, 72);
       this.graphics.fillStyle(0x020408, 0.72);
-      this.graphics.fillRect(centerX - 44, baseY - 78, 88, 84);
+      this.graphics.fillRect(cx - 44, baseY - 78, 88, 84);
       this.graphics.fillGradientStyle(weaponColor, this.blendColors(weaponColor, deepShadow, 0.55), 0x152028, 0x152028, 0.96);
-      this.graphics.fillRect(centerX - 16, baseY - 76, 32, 56);
+      this.graphics.fillRect(cx - 16, baseY - 76, 32, 56);
       this.graphics.fillStyle(this.blendColors(weaponColor, 0x1a2a38, 0.35), 0.96);
-      this.graphics.fillRect(centerX - 12, baseY - 110, 24, 38);
+      this.graphics.fillRect(cx - 11, baseY - 112, 22, 40);
+      this.graphics.fillStyle(this.blendColors(weaponColor, 0x0e141c, 0.5), 0.92);
+      this.graphics.fillRect(cx - 7, baseY - 128, 14, 22);
       this.graphics.lineStyle(1, trimColor, 0.45);
-      this.graphics.strokeRect(centerX - 12, baseY - 110, 24, 38);
+      this.graphics.strokeRect(cx - 11, baseY - 112, 22, 40);
       this.graphics.fillStyle(trimColor, 0.88);
-      this.graphics.fillRect(centerX - 6, baseY - 126, 12, 18);
+      this.graphics.fillRect(cx - 5, baseY - 128, 10, 16);
       this.graphics.fillStyle(0x0b0d12, 0.94);
-      this.graphics.fillRect(centerX - 11, baseY - 42, 22, 28);
-      this.graphics.fillStyle(0xffffff, 0.16);
-      this.graphics.fillRect(centerX - 12, baseY - 108, 24, 3);
+      this.graphics.fillRect(cx - 10, baseY - 42, 20, 26);
+      this.graphics.fillStyle(0x1a222c, 0.88);
+      this.graphics.fillRect(cx - 8, baseY - 118, 16, 6);
+      this.graphics.fillStyle(0xffffff, 0.18);
+      this.graphics.fillRect(cx - 10, baseY - 110, 20, 2);
       this.graphics.fillStyle(0xffffff, 0.12);
-      this.graphics.fillRect(centerX - 12, baseY - 70, 24, 4);
+      this.graphics.fillRect(cx - 10, baseY - 70, 20, 3);
       this.graphics.fillStyle(trimColor, 0.42);
-      this.graphics.fillRect(centerX - 5, baseY - 52, 10, 14);
-      this.graphics.lineStyle(2, trimColor, 0.24);
-      this.graphics.strokeCircle(centerX - 3, baseY - 50, 11);
-      this.graphics.fillStyle(0x461830, 0.52);
-      this.graphics.fillTriangle(centerX + 10, baseY - 40, centerX + 18, baseY - 16, centerX + 6, baseY - 16);
+      this.graphics.fillRect(cx - 4, baseY - 54, 8, 12);
+      this.graphics.lineStyle(2, trimColor, 0.22);
+      this.graphics.strokeCircle(cx - 2, baseY - 50, 10);
+      this.graphics.fillStyle(0x050508, 0.9);
+      this.graphics.fillEllipse(cx, baseY - 130, 8, 5);
+      this.graphics.fillStyle(0x461830, 0.5);
+      this.graphics.fillTriangle(cx + 8, baseY - 38, cx + 16, baseY - 14, cx + 4, baseY - 14);
+      this.graphics.fillStyle(0x120a0e, 0.62);
+      this.graphics.fillTriangle(cx - 14, baseY - 28, cx - 4, baseY - 12, cx - 18, baseY - 8);
     } else if (weapon === 'SHOTGUN') {
+      this.graphics.fillStyle(0x010306, 0.58);
+      this.graphics.fillEllipse(cx + 14, baseY - 50, 108, 78);
       this.graphics.fillStyle(0x020408, 0.74);
-      this.graphics.fillRect(centerX - 118, baseY - 82, 236, 86);
+      this.graphics.fillRect(cx - 118, baseY - 82, 236, 86);
       this.graphics.fillGradientStyle(
         this.blendColors(weaponColor, 0x3a1f0c, 0.25),
         this.blendColors(weaponColor, deepShadow, 0.5),
@@ -292,29 +371,41 @@ export class RaycastRenderer {
         weaponColor,
         0.97
       );
-      this.graphics.fillRect(centerX - 88, baseY - 72, 176, 38);
+      this.graphics.fillRect(cx - 88, baseY - 72, 176, 38);
       this.graphics.fillStyle(weaponColor, 0.96);
-      this.graphics.fillRect(centerX - 62, baseY - 106, 124, 32);
+      this.graphics.fillRect(cx - 62, baseY - 108, 124, 34);
+      this.graphics.fillStyle(this.blendColors(weaponColor, 0x0a0604, 0.55), 0.9);
+      this.graphics.fillRect(cx - 24, baseY - 118, 10, 14);
+      this.graphics.fillRect(cx + 14, baseY - 118, 10, 14);
+      this.graphics.fillStyle(0x080604, 0.85);
+      this.graphics.fillRect(cx - 20, baseY - 122, 6, 8);
+      this.graphics.fillRect(cx + 14, baseY - 122, 6, 8);
       this.graphics.fillStyle(trimColor, 0.86);
-      this.graphics.fillRect(centerX - 34, baseY - 124, 68, 18);
+      this.graphics.fillRect(cx - 34, baseY - 126, 68, 16);
       this.graphics.fillStyle(this.blendColors(weaponColor, 0x2a1408, 0.4), 0.92);
-      this.graphics.fillRect(centerX - 76, baseY - 82, 14, 56);
-      this.graphics.fillRect(centerX + 62, baseY - 82, 14, 56);
+      this.graphics.fillRect(cx - 76, baseY - 82, 14, 56);
+      this.graphics.fillRect(cx + 62, baseY - 82, 14, 56);
       this.graphics.fillStyle(0x0b0d12, 0.92);
-      this.graphics.fillRect(centerX - 70, baseY - 30, 140, 10);
+      this.graphics.fillRect(cx - 70, baseY - 30, 140, 10);
+      this.graphics.fillStyle(0x1a0d06, 0.45);
+      this.graphics.fillRect(cx - 66, baseY - 52, 132, 8);
       this.graphics.fillStyle(0xffffff, 0.14);
-      this.graphics.fillRect(centerX - 74, baseY - 66, 148, 4);
+      this.graphics.fillRect(cx - 74, baseY - 66, 148, 3);
       for (let v = 0; v < 5; v += 1) {
         this.graphics.fillStyle(0x1a0d06, 0.35);
-        this.graphics.fillRect(centerX - 58 + v * 26, baseY - 98, 6, 22);
+        this.graphics.fillRect(cx - 58 + v * 26, baseY - 100, 6, 22);
       }
-      this.graphics.lineStyle(2, trimColor, 0.28);
-      this.graphics.strokeRect(centerX - 62, baseY - 106, 124, 32);
-      this.graphics.fillStyle(trimColor, 0.2);
-      this.graphics.fillRect(centerX - 20, baseY - 48, 40, 3);
+      this.graphics.lineStyle(2, trimColor, 0.26);
+      this.graphics.strokeRect(cx - 62, baseY - 108, 124, 34);
+      this.graphics.fillStyle(trimColor, 0.22);
+      this.graphics.fillRect(cx - 20, baseY - 48, 40, 3);
+      this.graphics.fillStyle(0x180c08, 0.55);
+      this.graphics.fillTriangle(cx - 28, baseY - 18, cx + 28, baseY - 18, cx, baseY - 6);
     } else {
+      this.graphics.fillStyle(0x010306, 0.6);
+      this.graphics.fillEllipse(cx + 10, baseY - 54, 96, 88);
       this.graphics.fillStyle(0x020408, 0.76);
-      this.graphics.fillRect(centerX - 106, baseY - 96, 212, 104);
+      this.graphics.fillRect(cx - 106, baseY - 96, 212, 104);
       this.graphics.fillGradientStyle(
         this.blendColors(weaponColor, 0x153038, 0.22),
         this.blendColors(weaponColor, deepShadow, 0.48),
@@ -322,35 +413,55 @@ export class RaycastRenderer {
         this.blendColors(weaponColor, 0x0a1820, 0.35),
         0.97
       );
-      this.graphics.fillRect(centerX - 72, baseY - 84, 144, 48);
+      this.graphics.fillRect(cx - 72, baseY - 84, 144, 48);
       this.graphics.fillStyle(weaponColor, 0.96);
-      this.graphics.fillRect(centerX - 38, baseY - 130, 76, 54);
+      this.graphics.fillRect(cx - 40, baseY - 134, 80, 56);
+      this.graphics.fillStyle(this.blendColors(weaponColor, 0x0a1218, 0.4), 0.88);
+      this.graphics.fillRect(cx - 14, baseY - 148, 28, 18);
+      this.graphics.fillStyle(0x05080c, 0.92);
+      this.graphics.fillRect(cx - 10, baseY - 146, 20, 6);
       this.graphics.fillStyle(trimColor, 0.84);
-      this.graphics.fillCircle(centerX, baseY - 108, 22);
+      this.graphics.fillCircle(cx, baseY - 110, 22);
       this.graphics.lineStyle(2, this.blendColors(trimColor, 0x0a2030, 0.4), 0.55);
-      this.graphics.strokeCircle(centerX, baseY - 108, 20);
+      this.graphics.strokeCircle(cx, baseY - 110, 20);
       this.graphics.fillStyle(trimColor, 0.72);
-      this.graphics.fillRect(centerX - 12, baseY - 144, 24, 26);
+      this.graphics.fillRect(cx - 12, baseY - 146, 24, 26);
       this.graphics.fillStyle(0x0b0d12, 0.94);
-      this.graphics.fillRect(centerX - 58, baseY - 32, 116, 12);
+      this.graphics.fillRect(cx - 58, baseY - 32, 116, 12);
       this.graphics.fillStyle(0xffa033, 0.55);
-      this.graphics.fillRect(centerX - 18, baseY - 128, 36, 4);
+      this.graphics.fillRect(cx - 18, baseY - 130, 36, 4);
+      this.graphics.fillStyle(0xff2348, 0.28);
+      this.graphics.fillRect(cx - 36, baseY - 122, 72, 3);
       this.graphics.fillStyle(0xffffff, 0.16);
-      this.graphics.fillRect(centerX - 50, baseY - 76, 100, 5);
+      this.graphics.fillRect(cx - 50, baseY - 76, 100, 4);
       this.graphics.lineStyle(1, trimColor, 0.35);
-      this.graphics.lineBetween(centerX - 40, baseY - 88, centerX + 40, baseY - 88);
+      this.graphics.lineBetween(cx - 40, baseY - 88, cx + 40, baseY - 88);
+      for (let band = 0; band < 3; band += 1) {
+        this.graphics.lineStyle(1, this.blendColors(trimColor, deepShadow, 0.5), 0.2);
+        this.graphics.lineBetween(cx - 36, baseY - 102 + band * 8, cx + 36, baseY - 102 + band * 8);
+      }
+      this.graphics.fillStyle(0x0a1014, 0.7);
+      this.graphics.fillRect(cx - 22, baseY - 24, 44, 10);
     }
 
     if (kick <= 0) return;
     const flashAlpha = Phaser.Math.Clamp(kick, 0, 1);
-    const flashTop = weapon === 'PISTOL' ? baseY - 124 : weapon === 'SHOTGUN' ? baseY - 120 : baseY - 138;
-    this.graphics.fillStyle(trimColor, flashAlpha * (weapon === 'LAUNCHER' ? 0.86 : 1));
-    this.graphics.fillTriangle(centerX - 40, flashTop, centerX + 40, flashTop, centerX, flashTop - (weapon === 'LAUNCHER' ? 70 : 56));
-    this.graphics.fillStyle(0xffffff, flashAlpha * 0.58);
-    this.graphics.fillCircle(centerX, flashTop - 18, weapon === 'SHOTGUN' ? 32 : weapon === 'LAUNCHER' ? 40 : 22);
-    this.graphics.lineStyle(2, trimColor, flashAlpha * 0.88);
-    this.graphics.lineBetween(centerX, flashTop + 4, centerX, flashTop - 78);
-    this.graphics.lineBetween(centerX - 16, flashTop - 10, centerX + 16, flashTop - 10);
+    const flashTop = weapon === 'PISTOL' ? baseY - 126 : weapon === 'SHOTGUN' ? baseY - 122 : baseY - 142;
+    const flashH = weapon === 'LAUNCHER' ? 74 : weapon === 'SHOTGUN' ? 60 : 52;
+    const flashW = weapon === 'SHOTGUN' ? 48 : weapon === 'LAUNCHER' ? 44 : 36;
+
+    this.graphics.fillStyle(corruptGlow, flashAlpha * 0.22);
+    this.graphics.fillCircle(cx, flashTop - 12, weapon === 'SHOTGUN' ? 38 : weapon === 'LAUNCHER' ? 46 : 26);
+    this.graphics.fillStyle(trimColor, flashAlpha * (weapon === 'LAUNCHER' ? 0.82 : 0.95));
+    this.graphics.fillTriangle(cx - flashW, flashTop, cx + flashW, flashTop, cx, flashTop - flashH);
+    this.graphics.fillStyle(0xffffff, flashAlpha * 0.62);
+    this.graphics.fillCircle(cx, flashTop - 16, weapon === 'SHOTGUN' ? 30 : weapon === 'LAUNCHER' ? 38 : 20);
+    this.graphics.lineStyle(2, trimColor, flashAlpha * 0.85);
+    this.graphics.lineBetween(cx, flashTop + 4, cx, flashTop - 82);
+    this.graphics.lineBetween(cx - 18, flashTop - 12, cx + 18, flashTop - 12);
+    this.graphics.lineStyle(1, 0xfff0c2, flashAlpha * 0.45);
+    this.graphics.lineBetween(cx - 26, flashTop - 4, cx - 8, flashTop - 28);
+    this.graphics.lineBetween(cx + 26, flashTop - 4, cx + 8, flashTop - 28);
   }
 
   private drawBackground(
@@ -707,15 +818,20 @@ export class RaycastRenderer {
     const bodyTop = height * 0.5 - projection.size * 0.55;
     const bodyLeft = projection.screenX - projection.size * 0.5;
     const centerY = height * 0.5;
-    const accentColor = this.blendColors(style.accentColor, 0xff6b5f, telegraphMix * 0.45);
+    const accentColor = this.blendColors(style.accentColor, RAYCAST_PALETTE.telegraphRose, telegraphMix * 0.45);
 
     this.graphics.fillStyle(color, 0.95 * visibility);
 
     if (style.silhouette === 'juggernaut') {
-      this.graphics.fillCircle(projection.screenX, bodyTop + projection.size * 0.16, projection.size * 0.18);
-      this.graphics.fillEllipse(projection.screenX, bodyTop + projection.size * 0.6, projection.size * 0.86, projection.size * 0.92);
-      this.graphics.fillCircle(bodyLeft + projection.size * 0.16, bodyTop + projection.size * 0.46, projection.size * 0.14);
-      this.graphics.fillCircle(bodyLeft + projection.size * 0.84, bodyTop + projection.size * 0.46, projection.size * 0.14);
+      this.graphics.fillStyle(0x080402, 0.55 * visibility);
+      this.graphics.fillEllipse(projection.screenX, bodyTop + projection.size * 0.62, projection.size * 0.95, projection.size * 0.38);
+      this.graphics.fillStyle(color, 0.95 * visibility);
+      this.graphics.fillCircle(projection.screenX, bodyTop + projection.size * 0.16, projection.size * 0.2);
+      this.graphics.fillEllipse(projection.screenX, bodyTop + projection.size * 0.58, projection.size * 0.9, projection.size * 0.96);
+      this.graphics.fillRect(bodyLeft + projection.size * 0.02, bodyTop + projection.size * 0.34, projection.size * 0.22, projection.size * 0.28);
+      this.graphics.fillRect(bodyLeft + projection.size * 0.76, bodyTop + projection.size * 0.34, projection.size * 0.22, projection.size * 0.28);
+      this.graphics.fillCircle(bodyLeft + projection.size * 0.14, bodyTop + projection.size * 0.46, projection.size * 0.15);
+      this.graphics.fillCircle(bodyLeft + projection.size * 0.86, bodyTop + projection.size * 0.46, projection.size * 0.15);
       this.graphics.fillTriangle(
         projection.screenX,
         bodyTop + projection.size * 0.52,
@@ -750,34 +866,61 @@ export class RaycastRenderer {
         this.graphics.fillStyle(accentColor, 0.35 * visibility);
         this.graphics.fillCircle(bodyLeft + projection.size * rx, bodyTop + projection.size * 0.4, Math.max(1.2, projection.size * 0.04));
       }
+      this.graphics.fillStyle(0x120805, 0.45 * visibility);
+      this.graphics.fillEllipse(bodyLeft + projection.size * 0.22, bodyTop + projection.size * 0.92, projection.size * 0.2, projection.size * 0.14);
+      this.graphics.fillEllipse(bodyLeft + projection.size * 0.78, bodyTop + projection.size * 0.92, projection.size * 0.2, projection.size * 0.14);
       return;
     }
 
     if (style.silhouette === 'phantom') {
-      this.graphics.fillCircle(projection.screenX, bodyTop + projection.size * 0.18, projection.size * 0.14);
+      this.graphics.fillStyle(0x020408, 0.5 * visibility);
+      this.graphics.fillTriangle(
+        projection.screenX - projection.size * 0.06,
+        bodyTop + projection.size * 0.12,
+        bodyLeft + projection.size * 0.02,
+        bodyTop + projection.size * 0.52,
+        bodyLeft + projection.size * 0.14,
+        bodyTop + projection.size * 0.2
+      );
+      this.graphics.fillTriangle(
+        projection.screenX + projection.size * 0.06,
+        bodyTop + projection.size * 0.12,
+        bodyLeft + projection.size * 0.98,
+        bodyTop + projection.size * 0.52,
+        bodyLeft + projection.size * 0.86,
+        bodyTop + projection.size * 0.2
+      );
+      this.graphics.fillStyle(color, 0.95 * visibility);
+      this.graphics.fillCircle(projection.screenX, bodyTop + projection.size * 0.16, projection.size * 0.11);
+      this.graphics.fillRect(
+        projection.screenX - projection.size * 0.12,
+        bodyTop + projection.size * 0.22,
+        projection.size * 0.24,
+        projection.size * 0.52
+      );
       this.graphics.fillTriangle(
         projection.screenX,
-        bodyTop + projection.size * 0.08,
-        bodyLeft + projection.size * 0.08,
+        bodyTop + projection.size * 0.06,
+        bodyLeft + projection.size * 0.1,
         bodyTop + projection.size * 1.02,
-        bodyLeft + projection.size * 0.92,
+        bodyLeft + projection.size * 0.9,
         bodyTop + projection.size * 1.02
       );
       this.graphics.fillTriangle(
-        projection.screenX - projection.size * 0.08,
-        bodyTop + projection.size * 0.18,
-        projection.screenX - projection.size * 0.34,
-        bodyTop + projection.size * 0.02,
-        projection.screenX - projection.size * 0.12,
-        bodyTop + projection.size * 0.46
+        projection.screenX - projection.size * 0.06,
+        bodyTop + projection.size * 0.14,
+        projection.screenX - projection.size * 0.38,
+        bodyTop - projection.size * 0.02,
+        projection.screenX - projection.size * 0.1,
+        bodyTop + projection.size * 0.42
       );
       this.graphics.fillTriangle(
-        projection.screenX + projection.size * 0.08,
-        bodyTop + projection.size * 0.18,
-        projection.screenX + projection.size * 0.34,
-        bodyTop + projection.size * 0.02,
-        projection.screenX + projection.size * 0.12,
-        bodyTop + projection.size * 0.46
+        projection.screenX + projection.size * 0.06,
+        bodyTop + projection.size * 0.14,
+        projection.screenX + projection.size * 0.38,
+        bodyTop - projection.size * 0.02,
+        projection.screenX + projection.size * 0.1,
+        bodyTop + projection.size * 0.42
       );
       this.graphics.fillStyle(style.coreColor, 0.42 * visibility);
       this.graphics.fillEllipse(projection.screenX, bodyTop + projection.size * 0.56, projection.size * 0.26, projection.size * 0.38);
@@ -811,8 +954,23 @@ export class RaycastRenderer {
     }
 
     if (style.silhouette === 'sentinel') {
-      this.graphics.fillCircle(projection.screenX, bodyTop + projection.size * 0.18, projection.size * 0.18);
-      this.graphics.fillEllipse(projection.screenX, bodyTop + projection.size * 0.56, projection.size * 0.68, projection.size * 0.76);
+      this.graphics.fillStyle(0x030810, 0.52 * visibility);
+      this.graphics.fillEllipse(projection.screenX, bodyTop + projection.size * 0.54, projection.size * 0.74, projection.size * 0.52);
+      this.graphics.fillStyle(color, 0.95 * visibility);
+      this.graphics.fillCircle(projection.screenX, bodyTop + projection.size * 0.18, projection.size * 0.17);
+      this.graphics.fillEllipse(projection.screenX, bodyTop + projection.size * 0.54, projection.size * 0.64, projection.size * 0.72);
+      this.graphics.fillRect(
+        bodyLeft + projection.size * 0.06,
+        bodyTop + projection.size * 0.32,
+        projection.size * 0.2,
+        projection.size * 0.36
+      );
+      this.graphics.fillRect(
+        bodyLeft + projection.size * 0.74,
+        bodyTop + projection.size * 0.32,
+        projection.size * 0.2,
+        projection.size * 0.36
+      );
       this.graphics.fillCircle(bodyLeft + projection.size * 0.16, centerY, projection.size * 0.11);
       this.graphics.fillCircle(bodyLeft + projection.size * 0.84, centerY, projection.size * 0.11);
       this.graphics.fillTriangle(
@@ -855,10 +1013,26 @@ export class RaycastRenderer {
           bodyTop + projection.size * (0.38 + s * 0.04)
         );
       }
+      this.graphics.fillStyle(accentColor, 0.32 * visibility);
+      this.graphics.fillRect(
+        bodyLeft + projection.size * 0.88,
+        bodyTop + projection.size * 0.2,
+        projection.size * 0.26,
+        projection.size * 0.08
+      );
       return;
     }
 
-    this.graphics.fillCircle(projection.screenX, bodyTop + projection.size * 0.18, projection.size * 0.14);
+    this.graphics.fillStyle(0x0a0305, 0.48 * visibility);
+    this.graphics.fillEllipse(projection.screenX, bodyTop + projection.size * 0.52, projection.size * 0.52, projection.size * 0.44);
+    this.graphics.fillStyle(color, 0.95 * visibility);
+    this.graphics.fillCircle(projection.screenX, bodyTop + projection.size * 0.17, projection.size * 0.13);
+    this.graphics.fillRect(
+      projection.screenX - projection.size * 0.18,
+      bodyTop + projection.size * 0.26,
+      projection.size * 0.36,
+      projection.size * 0.38
+    );
     this.graphics.fillTriangle(
       projection.screenX,
       bodyTop + projection.size * 0.16,
@@ -888,9 +1062,11 @@ export class RaycastRenderer {
     this.graphics.lineStyle(2, accentColor, 0.3 * visibility);
     this.drawEnemyHeadAccent(projection.screenX, bodyTop + projection.size * 0.12, projection.size, visibility, style, accentColor);
     this.graphics.lineBetween(bodyLeft + projection.size * 0.26, bodyTop + projection.size * 0.72, bodyLeft + projection.size * 0.74, bodyTop + projection.size * 0.72);
+    this.graphics.fillStyle(0x1a0a0c, 0.85 * visibility);
+    this.graphics.fillRect(bodyLeft + projection.size * 0.34, bodyTop + projection.size * 0.19, projection.size * 0.32, projection.size * 0.05);
     this.graphics.fillStyle(style.eyeColor, 0.94 * visibility);
-    this.graphics.fillCircle(bodyLeft + projection.size * 0.42, bodyTop + projection.size * 0.22, projection.size * 0.03);
-    this.graphics.fillCircle(bodyLeft + projection.size * 0.58, bodyTop + projection.size * 0.22, projection.size * 0.03);
+    this.graphics.fillRect(bodyLeft + projection.size * 0.36, bodyTop + projection.size * 0.2, projection.size * 0.1, projection.size * 0.03);
+    this.graphics.fillRect(bodyLeft + projection.size * 0.54, bodyTop + projection.size * 0.2, projection.size * 0.1, projection.size * 0.03);
     this.graphics.fillStyle(0x0c0304, 0.4 * visibility);
     this.graphics.fillRect(bodyLeft + projection.size * 0.28, bodyTop + projection.size * 0.4, projection.size * 0.44, projection.size * 0.12);
     for (let b = 0; b < 3; b += 1) {

@@ -108,9 +108,9 @@ describe('raycast HUD', () => {
   });
 
   it('returns stable low and critical health visuals for HUD styling', () => {
-    expect(getRaycastHealthVisualState(90)).toMatchObject({ tone: 'stable', ratio: 0.9, color: '#9feee2' });
-    expect(getRaycastHealthVisualState(50)).toMatchObject({ tone: 'low', ratio: 0.5, color: '#ffcf7c' });
-    expect(getRaycastHealthVisualState(25)).toMatchObject({ tone: 'critical', ratio: 0.25, color: '#ff7a8a' });
+    expect(getRaycastHealthVisualState(90)).toMatchObject({ tone: 'stable', ratio: 0.9, color: '#58f2e4' });
+    expect(getRaycastHealthVisualState(50)).toMatchObject({ tone: 'low', ratio: 0.5, color: '#ff9a38' });
+    expect(getRaycastHealthVisualState(25)).toMatchObject({ tone: 'critical', ratio: 0.25, color: '#ff3358' });
   });
 
   it('builds a focused target line with enemy health and windup state', () => {

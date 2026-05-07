@@ -8,6 +8,7 @@ import {
   RAYCAST_LEVEL_3,
   RAYCAST_LEVEL_4,
   RAYCAST_LEVEL_5,
+  RAYCAST_LEVEL_BOSS,
   RAYCAST_LEVEL_CATALOG,
   cloneRaycastMap,
   findRaycastZoneId,
@@ -27,18 +28,32 @@ import { RAYCAST_ATMOSPHERE } from '../game/raycast/RaycastAtmosphere';
 import { RAYCAST_TILE, type RaycastMap } from '../game/raycast/RaycastMap';
 
 describe('raycast level catalog', () => {
-  it('includes five levels with unique ids and stable ordering', () => {
-    expect(RAYCAST_LEVEL_CATALOG).toHaveLength(5);
-    expect(new Set(RAYCAST_LEVEL_CATALOG.map((level) => level.id)).size).toBe(5);
+  it('includes six episode maps (five sectors + boss) with unique ids and stable ordering', () => {
+    expect(RAYCAST_LEVEL_CATALOG).toHaveLength(6);
+    expect(new Set(RAYCAST_LEVEL_CATALOG.map((level) => level.id)).size).toBe(6);
     expect(getRaycastLevelIndex(RAYCAST_LEVEL.id)).toBe(0);
     expect(getRaycastLevelIndex(RAYCAST_LEVEL_2.id)).toBe(1);
     expect(getRaycastLevelIndex(RAYCAST_LEVEL_3.id)).toBe(2);
     expect(getRaycastLevelIndex(RAYCAST_LEVEL_4.id)).toBe(3);
     expect(getRaycastLevelIndex(RAYCAST_LEVEL_5.id)).toBe(4);
+    expect(getRaycastLevelIndex(RAYCAST_LEVEL_BOSS.id)).toBe(5);
   });
 
   it('defines required route objects and valid map references for each level', () => {
     RAYCAST_LEVEL_CATALOG.forEach((level) => {
+      if (level.bossConfig) {
+        expect(level.keys).toHaveLength(0);
+        expect(level.doors).toHaveLength(0);
+        expect(level.triggers).toHaveLength(0);
+        expect(level.secrets).toHaveLength(0);
+        expect(level.healthPickups.length).toBeGreaterThanOrEqual(1);
+        expect(level.exits).toHaveLength(1);
+        expect(level.initialSpawns).toHaveLength(0);
+        expect(level.director.enabled).toBe(false);
+        expect(level.progression.requireBossDefeated).toBe(true);
+        expect(level.bossConfig.displayName).toBe('Volt Archon');
+        return;
+      }
       expect(level.keys).toHaveLength(1);
       expect(level.doors.length).toBeGreaterThanOrEqual(1);
       expect(level.triggers.length).toBeGreaterThanOrEqual(3);
@@ -79,11 +94,13 @@ describe('raycast level catalog', () => {
         ...level.exits,
         ...level.initialSpawns,
         ...level.triggers.flatMap((trigger) => trigger.spawns),
-        ...level.director.spawnPoints
+        ...level.director.spawnPoints,
+        ...(level.bossConfig ? [{ x: level.bossConfig.x, y: level.bossConfig.y }] : [])
       ];
 
       points.forEach((point) => {
-        expect(level.map.grid[Math.floor(point.y)]?.[Math.floor(point.x)]).toBe(RAYCAST_TILE.EMPTY);
+        const tile = level.map.grid[Math.floor(point.y)]?.[Math.floor(point.x)];
+        expect(tile, `${level.id} @ (${point.x},${point.y})`).toBe(RAYCAST_TILE.EMPTY);
       });
     });
   });
@@ -103,9 +120,9 @@ describe('raycast level catalog', () => {
     const level5BossLockdown = RAYCAST_LEVEL_5.triggers.find((trigger) => trigger.id === 'boss-lockdown');
 
     expect(RAYCAST_LEVEL_4.initialSpawns.filter((spawn) => spawn.kind === 'RANGED')).toHaveLength(2);
-    expect(RAYCAST_LEVEL_4.initialSpawns.some((spawn) => spawn.kind === 'BRUTE')).toBe(false);
-    expect(level4SpiralBreak?.spawns.filter((spawn) => spawn.kind === 'RANGED')).toHaveLength(2);
-    expect(level4CrownCrossfire?.spawns.filter((spawn) => spawn.kind === 'STALKER')).toHaveLength(2);
+    expect(RAYCAST_LEVEL_4.initialSpawns.filter((spawn) => spawn.kind === 'BRUTE')).toHaveLength(1);
+    expect(level4SpiralBreak?.spawns.filter((spawn) => spawn.kind === 'RANGED')).toHaveLength(1);
+    expect(level4CrownCrossfire?.spawns.filter((spawn) => spawn.kind === 'STALKER')).toHaveLength(1);
 
     expect(RAYCAST_LEVEL_5.initialSpawns.filter((spawn) => spawn.kind === 'BRUTE')).toHaveLength(2);
     expect(RAYCAST_LEVEL_5.initialSpawns.filter((spawn) => spawn.kind === 'RANGED')).toHaveLength(2);
@@ -251,6 +268,30 @@ describe('raycast level progression', () => {
         openDoorIds: ['heart-seal-door'],
         activatedTriggerIds: ['heart-breach', 'boss-lockdown'],
         livingEnemyCount: 0
+      }).allowed
+    ).toBe(true);
+
+    expect(
+      getRaycastExitAccess(RAYCAST_LEVEL_BOSS, {
+        collectedKeyIds: [],
+        openDoorIds: [],
+        activatedTriggerIds: [],
+        livingEnemyCount: 0,
+        bossDefeated: false
+      })
+    ).toEqual({
+      allowed: false,
+      reason: 'SIGNAL_LOCKED',
+      message: RAYCAST_LEVEL_BOSS.progression.blockedExitMessage
+    });
+
+    expect(
+      getRaycastExitAccess(RAYCAST_LEVEL_BOSS, {
+        collectedKeyIds: [],
+        openDoorIds: [],
+        activatedTriggerIds: [],
+        livingEnemyCount: 0,
+        bossDefeated: true
       }).allowed
     ).toBe(true);
   });
@@ -598,8 +639,8 @@ describe('raycast level route safety', () => {
     expect(RAYCAST_LEVEL.keys[0].pickupObjectiveText).toContain('return to gateway');
     expect(RAYCAST_LEVEL_2.keys[0].pickupObjectiveText).toContain('breach the furnace gate');
     expect(RAYCAST_LEVEL_3.keys[0].pickupObjectiveText).toContain('break the relay seal');
-    expect(RAYCAST_LEVEL_4.keys[0].pickupObjectiveText).toContain('cut through the spiral gate');
-    expect(RAYCAST_LEVEL_5.keys[0].pickupObjectiveText).toContain('open the heart seal');
+    expect(RAYCAST_LEVEL_4.keys[0].pickupObjectiveText).toContain('crimson gate');
+    expect(RAYCAST_LEVEL_5.keys[0].pickupObjectiveText.toLowerCase()).toContain('black gate');
   });
 
   it('keeps escalating director pressure across the episode', () => {

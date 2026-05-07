@@ -276,6 +276,15 @@ export function shouldThrottleAudioCue(
 export class AudioFeedbackSystem {
   private audioContext: AudioContext | null | undefined;
   private readonly lastPlayedAt = new Map<AudioFeedbackCue, number>();
+  private masterVolume = 1;
+
+  setMasterVolume(linear: number): void {
+    this.masterVolume = Math.max(0, Math.min(1, linear));
+  }
+
+  getMasterVolume(): number {
+    return this.masterVolume;
+  }
 
   play(cue: AudioFeedbackCue, intensity = 1, nowMs = performance.now()): void {
     const context = this.getAudioContext();
@@ -292,7 +301,7 @@ export class AudioFeedbackSystem {
         const gain = context.createGain();
         const startTime = context.currentTime + (layer.delay ?? 0);
         const endTime = startTime + layer.duration;
-        const layerVolume = Math.max(0.0001, Math.min(0.08, layer.volume * intensity));
+        const layerVolume = Math.max(0.0001, Math.min(0.08, layer.volume * intensity * this.masterVolume));
 
         oscillator.type = layer.type;
         oscillator.frequency.setValueAtTime(layer.frequency, startTime);
