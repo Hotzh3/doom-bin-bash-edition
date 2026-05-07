@@ -50,39 +50,48 @@ export interface TickRaycastPassiveHealInput {
   config: RaycastPassiveHealConfig;
   /** Combined director + swarm multiplier in 0..1 */
   combatScale: number;
+  /** Internal fractional carry for whole-number healing ticks. */
+  fractionalCarry?: number;
 }
 
 export interface TickRaycastPassiveHealResult {
   nextHealth: number;
   healingThisTick: number;
   isRegenerating: boolean;
+  nextFractionalCarry: number;
 }
 
 export function tickRaycastPassiveHeal(input: TickRaycastPassiveHealInput): TickRaycastPassiveHealResult {
   const { health, nowMs, lastDamageAtMs, deltaMs, config, combatScale } = input;
   const maxH = Math.min(config.maxHealth, RAYCAST_PLAYER_MAX_HEALTH);
   const clampedHealth = Math.max(0, Math.min(health, maxH));
+  const carry = Math.max(0, input.fractionalCarry ?? 0);
 
   if (clampedHealth >= maxH || deltaMs <= 0 || combatScale <= 0) {
     return {
       nextHealth: clampedHealth,
       healingThisTick: 0,
-      isRegenerating: false
+      isRegenerating: false,
+      nextFractionalCarry: 0
     };
   }
 
   const sinceDamage = nowMs - lastDamageAtMs;
   if (sinceDamage < config.delayAfterDamageMs) {
-    return { nextHealth: clampedHealth, healingThisTick: 0, isRegenerating: false };
+    return { nextHealth: clampedHealth, healingThisTick: 0, isRegenerating: false, nextFractionalCarry: carry };
   }
 
   const heal = (deltaMs / 1000) * config.healPerSecond * combatScale;
-  const nextHealth = Math.min(maxH, clampedHealth + heal);
+  const totalHealing = carry + heal;
+  const wholeHealing = Math.floor(totalHealing);
+  const nextHealth = Math.min(maxH, clampedHealth + wholeHealing);
   const healingThisTick = nextHealth - clampedHealth;
+  const nextFractionalCarry = nextHealth >= maxH ? 0 : Math.max(0, totalHealing - wholeHealing);
 
   return {
     nextHealth,
     healingThisTick,
-    isRegenerating: healingThisTick > 0.0005
+    isRegenerating: heal > 0.0005,
+    nextFractionalCarry
   };
 }

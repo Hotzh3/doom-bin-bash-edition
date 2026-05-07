@@ -29,9 +29,10 @@ describe('raycast passive heal', () => {
       config: DEFAULT_RAYCAST_PASSIVE_HEAL_CONFIG,
       combatScale: 1
     });
-    expect(result.nextHealth).toBeGreaterThan(40);
-    expect(result.healingThisTick).toBeCloseTo(2, 5);
+    expect(result.nextHealth).toBe(42);
+    expect(result.healingThisTick).toBe(2);
     expect(result.isRegenerating).toBe(true);
+    expect(result.nextFractionalCarry).toBe(0);
   });
 
   it('respects max health', () => {
@@ -55,5 +56,33 @@ describe('raycast passive heal', () => {
   it('suppresses healing when many enemies are alive', () => {
     expect(computeEnemySwarmHealScale(0)).toBe(1);
     expect(computeEnemySwarmHealScale(4)).toBe(0);
+  });
+
+  it('accumulates fractional passive regen but only applies whole HP', () => {
+    const first = tickRaycastPassiveHeal({
+      health: 71,
+      nowMs: 20_000,
+      lastDamageAtMs: 10_000,
+      deltaMs: 200,
+      config: DEFAULT_RAYCAST_PASSIVE_HEAL_CONFIG,
+      combatScale: 1,
+      fractionalCarry: 0
+    });
+    expect(first.nextHealth).toBe(71);
+    expect(first.healingThisTick).toBe(0);
+    expect(first.nextFractionalCarry).toBeCloseTo(0.4, 5);
+
+    const second = tickRaycastPassiveHeal({
+      health: first.nextHealth,
+      nowMs: 20_200,
+      lastDamageAtMs: 10_000,
+      deltaMs: 300,
+      config: DEFAULT_RAYCAST_PASSIVE_HEAL_CONFIG,
+      combatScale: 1,
+      fractionalCarry: first.nextFractionalCarry
+    });
+    expect(second.nextHealth).toBe(72);
+    expect(second.healingThisTick).toBe(1);
+    expect(second.nextFractionalCarry).toBeCloseTo(0, 5);
   });
 });

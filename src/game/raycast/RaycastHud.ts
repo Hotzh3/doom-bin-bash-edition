@@ -76,7 +76,8 @@ export function buildRaycastPlayerHealthLine(state: RaycastPlayerHealthState): s
   const maxHealth = state.maxHealth ?? 100;
   const visual = getRaycastHealthVisualState(state.health, maxHealth);
   const statusLabel = visual.tone === 'critical' ? 'CRITICAL' : visual.tone === 'low' ? 'LOW' : 'STABLE';
-  return `HP ${Math.max(0, Math.min(state.health, maxHealth))}/${maxHealth} ${statusLabel}`;
+  const wholeHealth = Math.floor(Math.max(0, Math.min(state.health, maxHealth)));
+  return `HP ${wholeHealth}/${maxHealth} ${statusLabel}`;
 }
 
 export function formatRaycastEnemyKindLabel(kind: EnemyKind): string {

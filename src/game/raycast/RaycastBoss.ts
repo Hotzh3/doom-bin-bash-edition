@@ -1,7 +1,7 @@
 import type { BalanceProfile } from '../types/BalanceProfile';
 import type { WeaponKind } from '../systems/WeaponTypes';
 import { createProjectileSpawns } from '../systems/WeaponSystem';
-import { castRay, type RaycastMap } from './RaycastMap';
+import { castRay, isWallAt, type RaycastMap } from './RaycastMap';
 import type { RaycastEnemyProjectile } from './RaycastEnemySystem';
 import type { RaycastPlayerState } from './RaycastPlayerController';
 import { normalizeAngle } from './RaycastCombatSystem';
@@ -191,6 +191,67 @@ function spawnBossProjectile(fromX: number, fromY: number, toX: number, toY: num
   };
 }
 
+function canOccupyBossSpace(map: RaycastMap, x: number, y: number, radius: number): boolean {
+  if (isWallAt(map, x, y)) return false;
+  const checks = [
+    [radius, 0],
+    [-radius, 0],
+    [0, radius],
+    [0, -radius],
+    [radius * 0.72, radius * 0.72],
+    [radius * 0.72, -radius * 0.72],
+    [-radius * 0.72, radius * 0.72],
+    [-radius * 0.72, -radius * 0.72]
+  ] as const;
+  return checks.every(([ox, oy]) => !isWallAt(map, x + ox, y + oy));
+}
+
+export function tickRaycastBossMovement(
+  state: RaycastBossState,
+  map: RaycastMap,
+  player: { x: number; y: number; alive: boolean },
+  deltaMs: number,
+  time: number
+): void {
+  if (!state.alive || !player.alive || deltaMs <= 0) return;
+  const toPlayerX = player.x - state.x;
+  const toPlayerY = player.y - state.y;
+  const distance = Math.hypot(toPlayerX, toPlayerY);
+  if (distance <= 0.001) return;
+  const ux = toPlayerX / distance;
+  const uy = toPlayerY / distance;
+  const strafeSign = Math.sin(time / 760) >= 0 ? 1 : -1;
+  const strafeX = -uy * strafeSign;
+  const strafeY = ux * strafeSign;
+
+  const preferredRange = state.phase === 1 ? 3.9 : 2.9;
+  const chaseWeight = distance > preferredRange ? 1 : 0.28;
+  const strafeWeight = state.phase === 2 ? 0.95 : 0.62;
+  const telegraphSlow = time < state.telegraphUntil ? 0.45 : 1;
+  const speed = (state.phase === 2 ? 1.65 : 1.18) * telegraphSlow;
+  const step = (deltaMs / 1000) * speed;
+  const moveX = ux * chaseWeight + strafeX * strafeWeight;
+  const moveY = uy * chaseWeight + strafeY * strafeWeight;
+  const moveLen = Math.hypot(moveX, moveY) || 1;
+  const nx = state.x + (moveX / moveLen) * step;
+  const ny = state.y + (moveY / moveLen) * step;
+
+  if (canOccupyBossSpace(map, nx, ny, state.hitRadius + 0.1)) {
+    state.x = nx;
+    state.y = ny;
+    return;
+  }
+  const slideX = state.x + Math.sign(moveX) * step;
+  if (canOccupyBossSpace(map, slideX, state.y, state.hitRadius + 0.1)) {
+    state.x = slideX;
+    return;
+  }
+  const slideY = state.y + Math.sign(moveY) * step;
+  if (canOccupyBossSpace(map, state.x, slideY, state.hitRadius + 0.1)) {
+    state.y = slideY;
+  }
+}
+
 function fanAngles(base: number, count: number, spread: number): number[] {
   if (count <= 1) return [base];
   const out: number[] = [];
@@ -202,7 +263,7 @@ function fanAngles(base: number, count: number, spread: number): number[] {
 
 export function tickRaycastBossVolleys(
   state: RaycastBossState,
-  player: { x: number; y: number; alive: boolean },
+  player: { x: number; y: number; alive: boolean; stationaryMs?: number },
   time: number
 ): RaycastEnemyProjectile[] {
   if (!state.alive || !player.alive) return [];
@@ -214,10 +275,15 @@ export function tickRaycastBossVolleys(
 
     const base = Math.atan2(player.y - state.y, player.x - state.x);
     const volley: RaycastEnemyProjectile[] = [];
+    const playerStationary = (player.stationaryMs ?? 0) >= 1000;
     if (state.phase === 1) {
-      volley.push(spawnBossProjectile(state.x, state.y, player.x, player.y, time));
+      const count = playerStationary ? 3 : 1;
+      for (const a of fanAngles(base, count, 0.22)) {
+        volley.push(spawnBossProjectile(state.x, state.y, state.x + Math.cos(a) * 3, state.y + Math.sin(a) * 3, time));
+      }
     } else {
-      for (const a of fanAngles(base, 3, 0.36)) {
+      const count = playerStationary ? 5 : 3;
+      for (const a of fanAngles(base, count, playerStationary ? 0.54 : 0.36)) {
         volley.push(spawnBossProjectile(state.x, state.y, state.x + Math.cos(a) * 3, state.y + Math.sin(a) * 3, time));
       }
     }

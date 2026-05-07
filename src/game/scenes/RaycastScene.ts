@@ -54,6 +54,7 @@ import {
   damageRaycastBoss,
   getRaycastBossPhaseLabel,
   getRaycastBossCrosshairTarget,
+  tickRaycastBossMovement,
   tickRaycastBossVolleys,
   type RaycastBossState
 } from '../raycast/RaycastBoss';
@@ -191,6 +192,7 @@ export class RaycastScene extends Phaser.Scene {
   private gamePaused = false;
   private pauseSelectionIndex = 0;
   private passiveRegenHudActive = false;
+  private passiveHealFractionalCarry = 0;
   private audioMasterVolume = 1;
   private pauseBackdrop!: Phaser.GameObjects.Rectangle;
   private pauseTitleText!: Phaser.GameObjects.Text;
@@ -883,6 +885,7 @@ export class RaycastScene extends Phaser.Scene {
     this.gamePaused = false;
     this.pauseSelectionIndex = 0;
     this.passiveRegenHudActive = false;
+    this.passiveHealFractionalCarry = 0;
     this.bossTelegraphActive = false;
     this.bossState = this.currentLevel.bossConfig
       ? createRaycastBossState(this.currentLevel.bossConfig, this.time.now)
@@ -1196,14 +1199,23 @@ export class RaycastScene extends Phaser.Scene {
       lastDamageAtMs: this.lastPlayerDamageAt,
       deltaMs: delta,
       config: DEFAULT_RAYCAST_PASSIVE_HEAL_CONFIG,
-      combatScale
+      combatScale,
+      fractionalCarry: this.passiveHealFractionalCarry
     });
     this.playerHealth = result.nextHealth;
     this.passiveRegenHudActive = result.isRegenerating;
+    this.passiveHealFractionalCarry = result.nextFractionalCarry;
   }
 
   private updateEnemies(delta: number): void {
     if (this.bossState?.alive) {
+      tickRaycastBossMovement(
+        this.bossState,
+        this.map,
+        { x: this.player.x, y: this.player.y, alive: this.playerAlive },
+        delta,
+        this.time.now
+      );
       if (this.lastBossPhase !== this.bossState.phase) {
         if (this.bossState.phase === 2) {
           this.audioFeedback.play('directorAmbush', 1, this.time.now);
@@ -1222,7 +1234,7 @@ export class RaycastScene extends Phaser.Scene {
       this.bossTelegraphActive = telegraphActive;
       const bossShots = tickRaycastBossVolleys(
         this.bossState,
-        { x: this.player.x, y: this.player.y, alive: this.playerAlive },
+        { x: this.player.x, y: this.player.y, alive: this.playerAlive, stationaryMs: this.playerStationaryMs },
         this.time.now
       );
       if (bossShots.length > 0) {

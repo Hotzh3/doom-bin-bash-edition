@@ -198,10 +198,10 @@ export function getPrologueCopy(mode: PrologueGameMode): PrologueCopy {
   if (mode === 'raycast') {
     return {
       lines: [
-        'You wake inside a corrupted system beneath the dead terminal.',
-        'Five sectors stand between you and the core.',
-        'The system is hunting you.',
-        'Keep moving.'
+        'You were sent to recover a dead signal under an abandoned terminal complex.',
+        'Extraction failed. The buried system woke up and tagged your uplink as hostile.',
+        'Five sectors now rewrite themselves between you and the core access channel.',
+        'Advance fast: every loop the system learns your path and hunts harder.'
       ],
       continueLine: '// CONTINUE // SPACE  |  ENTER  |  A',
       backLine: '// BACK // ESC'
@@ -210,9 +210,9 @@ export function getPrologueCopy(mode: PrologueGameMode): PrologueCopy {
 
   return {
     lines: [
-      'Combat simulation loaded.',
-      'Two operators enter the arena.',
-      'Survive the corruption protocol.'
+      'Simulation uplink restored.',
+      'Two operators enter a corrupted combat sandbox.',
+      'Survive the pressure protocol and hold signal lock.'
     ],
     continueLine: '// CONTINUE // SPACE  |  ENTER  |  B',
     backLine: '// BACK // ESC'
