@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/assets/doombanner.png" width="100%" alt="Project banner"/>
+  <img src="docs/assets/doombanner.png" width="100%" alt="DOOM BIN BASH EDITION cover"/>
 </p>
 
 # doom-bin-bash-edition
@@ -8,33 +8,7 @@
 
 **Status:** Portfolio-ready — core logic covered by **Vitest**, ESLint, production **Vite** build, GitHub Actions CI.
 
-**Showcase:** Everything in **Gameplay preview** is a **live capture** (960×540, no UI chrome). Regenerate stills and GIFs with **`npm run capture:media`** ([`scripts/capture-portfolio.mjs`](scripts/capture-portfolio.mjs)). Moodboard images at the bottom are style references only.
-
----
-
-## Gameplay preview
-
-<p align="center">
-  <img src="docs/assets/screenshots/raycast-menu.webp" width="31%" alt="Main menu with 3D and arena modes"/>
-  &nbsp;
-  <img src="docs/assets/screenshots/raycast-prologue.webp" width="31%" alt="Terminal prologue"/>
-  &nbsp;
-  <img src="docs/assets/screenshots/raycast-sector-hud.webp" width="31%" alt="Raycast first-person HUD"/>
-</p>
-
-<p align="center">
-  <img src="docs/assets/screenshots/raycast-combat-director.webp" width="47%" alt="Combat with HUD"/>
-  &nbsp;
-  <img src="docs/assets/screenshots/raycast-exploration.webp" width="47%" alt="Sector exploration"/>
-</p>
-
-<p align="center">
-  <img src="docs/assets/gifs/raycast-boot-to-sector.gif" width="48%" alt="Recording from menu through first sector"/>
-  &nbsp;
-  <img src="docs/assets/gifs/raycast-combat-loop.gif" width="48%" alt="Short combat segment"/>
-</p>
-
-<p align="center"><sub>Portfolio stills (5× WebP) ~97 KB total · GIFs ~230 KB + ~265 KB · Level-clear still (optional): <a href="docs/assets/screenshots/SHOT_LIST.md">SHOT_LIST.md</a> · Regenerate: <code>npm run capture:media</code> (script prints exact sizes)</sub></p>
+**Media:** Gameplay captures and moodboard references live in `docs/assets/` and the phase docs; the README now stays text-first.
 
 ---
 
@@ -142,22 +116,6 @@ Phaser 3 · TypeScript · Vite · Vitest · ESLint · Prettier · GitHub Actions
 - **`GameDirector`** and pacing helpers covered by unit tests where logic is pure.
 - **World 2** data in `RaycastWorldTwoLevels.ts` (re-exported from the level module).
 - **No backend** — high score is **local** (`localStorage`).
-
----
-
-## Visual inspiration (moodboard)
-
-**Not gameplay.** Style reference only.
-
-<p align="center">
-  <img src="docs/assets/im1.png" width="90%" alt="Visual inspiration moodboard 1"/>
-</p>
-<p align="center">
-  <img src="docs/assets/im2.png" width="90%" alt="Visual inspiration moodboard 2"/>
-</p>
-<p align="center">
-  <img src="docs/assets/im3.png" width="90%" alt="Visual inspiration moodboard 3"/>
-</p>
 
 ---
 
