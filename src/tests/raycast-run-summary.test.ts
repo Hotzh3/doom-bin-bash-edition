@@ -2,8 +2,10 @@ import { describe, expect, it } from 'vitest';
 import {
   buildRaycastRunSummary,
   computeRaycastRunRank,
+  computeRaycastRunRankParts,
   formatRunDuration
 } from '../game/raycast/RaycastRunSummary';
+import { createEmptyCampaignMetrics, mergeCampaignMetrics } from '../game/raycast/RaycastScore';
 
 describe('raycast run summary', () => {
   it('formats run duration as minutes, seconds, and tenths', () => {
@@ -26,22 +28,24 @@ describe('raycast run summary', () => {
 
     expect(summary).toEqual([
       '══ SECTOR REPORT ══',
-      'DIFFICULTY HARD',
-      '── TIME ──',
-      'ELAPSED 2:05.9',
-      '── COMBAT ──',
-      'HOSTILES TERMINATED 8',
-      'DAMAGE TAKEN 47',
-      '── INTEL ──',
-      'SECRETS 1/2',
-      'TOKENS 1/1'
+      ' DIFFICULTY      HARD',
+      ' ◆ TIME ◆',
+      ' ELAPSED         2:05.9',
+      ' ◆ COMBAT ◆',
+      ' HOSTILES        8',
+      ' DMG (YOU)       47',
+      ' ◆ INTEL ◆',
+      ' SECRETS         1/2',
+      ' TOKENS          1/1'
     ]);
   });
 
   it('computes discrete rank tiers from score', () => {
-    expect(computeRaycastRunRank(5300)).toContain('RANK C');
-    expect(computeRaycastRunRank(12_500)).toContain('RANK A');
-    expect(computeRaycastRunRank(17_000)).toContain('RANK S');
+    expect(computeRaycastRunRank(6200)).toContain('RANK C');
+    expect(computeRaycastRunRank(14_500)).toContain('RANK A');
+    expect(computeRaycastRunRank(19_000)).toContain('RANK S');
+    expect(computeRaycastRunRankParts(6200).tierLetter).toBe('C');
+    expect(computeRaycastRunRankParts(19_000).tierLetter).toBe('S');
   });
 
   it('includes score lines when provided', () => {
@@ -59,8 +63,44 @@ describe('raycast run summary', () => {
       pelletsHitHostile: 9
     });
 
-    expect(summary).toContain('SCORE 350  │  HIGH SCORE 1200');
-    expect(summary.some((line) => line.startsWith('RANK '))).toBe(true);
-    expect(summary).toContain('ACCURACY 45% (9/20 pellets)');
+    expect(summary.some((line) => line.includes('350') && line.includes('1,200'))).toBe(true);
+    expect(summary.some((line) => line.includes('RANK'))).toBe(true);
+    expect(summary.some((line) => line.includes('ACC (SECTOR)') && line.includes('45%') && line.includes('9/20'))).toBe(
+      true
+    );
+  });
+
+  it('prepends run composite when finale campaign metrics are provided', () => {
+    let c = createEmptyCampaignMetrics();
+    c = mergeCampaignMetrics(c, {
+      pelletsFired: 30,
+      pelletsHitHostile: 12,
+      damageTaken: 20,
+      secretsFound: 1,
+      secretTotal: 1,
+      elapsedMs: 120_000,
+      enemiesKilled: 4,
+      bossPelletsFired: 10,
+      bossPelletsHitHostile: 4,
+      bossDamageTaken: 15,
+      hadBoss: true
+    });
+    const summary = buildRaycastRunSummary({
+      elapsedMs: 120_000,
+      enemiesKilled: 4,
+      score: 9000,
+      secretsFound: 1,
+      secretTotal: 1,
+      tokensFound: 0,
+      tokenTotal: 1,
+      damageTaken: 20,
+      pelletsFired: 30,
+      pelletsHitHostile: 12,
+      episodeComplete: true,
+      campaign: c
+    });
+    expect(summary[0]).toBe('══ SIGNAL REPORT // RUN COMPLETE ══');
+    expect(summary.some((line) => line.includes('RUN LOCK // COMPOSITE'))).toBe(true);
+    expect(summary.some((line) => line.includes('WALL TIME'))).toBe(true);
   });
 });

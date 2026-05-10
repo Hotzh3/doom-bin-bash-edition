@@ -4,10 +4,13 @@ import { DoorSystem } from '../systems/DoorSystem';
 import { GameDirector, type SpawnRequest } from '../systems/GameDirector';
 import { KeySystem } from '../systems/KeySystem';
 import { TriggerSystem } from '../systems/TriggerSystem';
+import { getRaycastEnemyRoleAbbrev } from '../entities/enemyConfig';
+import type { EnemyKind } from '../types/game';
 import {
   AudioFeedbackSystem,
   getDirectorEventAudioPlan,
-  getWeaponAudioPlan
+  getWeaponAudioPlan,
+  type AudioFeedbackCue
 } from '../systems/AudioFeedbackSystem';
 import type { DirectorEvent } from '../systems/DirectorEvents';
 import { DIRECTOR_STATE_LABELS, type DirectorDebugInfo, type DirectorState } from '../systems/DirectorState';
@@ -29,6 +32,7 @@ import {
   getRaycastExitAccess,
   getRaycastLevelById,
   RAYCAST_WORLD_TWO_CATALOG,
+  RAYCAST_WORLD_THREE_CATALOG,
   isRaycastPointReachable,
   getSafeDirectorSpawnPoints,
   isNearPoint,
@@ -43,20 +47,29 @@ import {
 import { getRaycastEpisodeState, resolveRaycastNextLevelId } from '../raycast/RaycastEpisode';
 import {
   buildRaycastMinimapModel,
+  buildStaticRaycastMinimapCells,
   getRaycastMinimapEnemyDotStyle,
-  type RaycastMinimapEnemyBlip
+  type RaycastMinimapCell,
+  type RaycastMinimapEnemyBlip,
+  type RaycastMinimapMarker
 } from '../raycast/RaycastMinimap';
 import { registerRaycastOptionalAssets } from '../raycast/raycastAssetHooks';
 import {
   addRaycastBossClearScore,
+  addRaycastCampaignCompletionBonus,
   addRaycastKillScore,
   addRaycastSecretScore,
   addRaycastSectorPerformanceBonus,
+  computeRaycastCampaignMedals,
   computeRaycastSectorMedals,
+  createEmptyCampaignMetrics,
+  mergeCampaignMetrics,
   RAYCAST_FULL_ARC_CLEAR_BONUS,
   RAYCAST_WORLD2_ENTRY_POINTS,
+  RAYCAST_WORLD3_ENTRY_POINTS,
   readRaycastHighScore,
   writeRaycastHighScoreIfBetter,
+  type RaycastCampaignMetrics,
   type RaycastSectorMetrics
 } from '../raycast/RaycastScore';
 import {
@@ -82,12 +95,14 @@ import {
 import {
   applyWorldSegmentToAtmosphere,
   getAtmosphereForDirector,
+  getRaycastBossHudLines,
   getRaycastCombatMessageForSegment,
   getRaycastExitMessageForSegment,
   getRaycastIntroMessageForSegment,
   RAYCAST_ATMOSPHERE,
   type RaycastWorldSegmentId
 } from '../raycast/RaycastAtmosphere';
+import type { RaycastSetpieceCue } from '../raycast/RaycastSetpiece';
 import {
   buildRaycastHudLayout,
   buildRaycastDebugLine,
@@ -150,8 +165,12 @@ interface RaycastSceneData {
   difficultyId?: RaycastDifficultyId;
   /** Carry cumulative score when advancing to the next map in an episode. */
   carryScore?: number;
+  /** Carry merged campaign metrics (pellets, damage, secrets, wall time). */
+  carryCampaignMetrics?: RaycastCampaignMetrics;
   /** First World 2 map after Episode 1 boss — applies one-time breach bonus. */
   breachWorldTwo?: boolean;
+  /** First World 3 map after World 2 finale — applies one-time breach bonus. */
+  breachWorldThree?: boolean;
 }
 
 const DIRECTOR_SPAWN_TELEGRAPH_MS = 820;
@@ -193,8 +212,11 @@ export class RaycastScene extends Phaser.Scene {
   private runBossPelletsHitHostile = 0;
   private runBossDamageTaken = 0;
   private runScore = 0;
+  /** Cross-sector aggregate for finale scoring + summary (Phase 26). */
+  private campaignMetrics!: RaycastCampaignMetrics;
   private carriedScoreFromEpisode = 0;
   private pendingWorldTwoBreachBonus = false;
+  private pendingWorldThreeBreachBonus = false;
   private bossState: RaycastBossState | null = null;
   private playerStationaryMs = 0;
   private lastPlayerDamageAt = 0;
@@ -218,6 +240,11 @@ export class RaycastScene extends Phaser.Scene {
   private readonly minimapKeyIdScratch: string[] = [];
   private readonly minimapDoorIdScratch: string[] = [];
   private readonly minimapEnemyBlipScratch: RaycastMinimapEnemyBlip[] = [];
+  /** Invalidated when a door mutates the map grid (`openRaycastDoor`). */
+  private mapLayoutRevision = 0;
+  private minimapStaticCellsCacheKey = '';
+  private minimapStaticCells: RaycastMinimapCell[] | null = null;
+  private readonly minimapLabeledMarkerScratch: RaycastMinimapMarker[] = [];
   private pauseBackdrop!: Phaser.GameObjects.Rectangle;
   private pauseTitleText!: Phaser.GameObjects.Text;
   private pauseMenuBodyText!: Phaser.GameObjects.Text;
@@ -293,11 +320,16 @@ export class RaycastScene extends Phaser.Scene {
     const nextId = this.nextLevelId;
     const breachWorldTwo =
       Boolean(this.currentLevel.bossConfig) && nextId === RAYCAST_WORLD_TWO_CATALOG[0]?.id;
+    const breachWorldThree =
+      this.currentLevel.id === RAYCAST_WORLD_TWO_CATALOG[RAYCAST_WORLD_TWO_CATALOG.length - 1]?.id &&
+      nextId === RAYCAST_WORLD_THREE_CATALOG[0]?.id;
     this.scene.restart({
       levelId: nextId,
       difficultyId: this.difficultyId,
       carryScore: this.runScore,
-      breachWorldTwo
+      carryCampaignMetrics: this.campaignMetrics,
+      breachWorldTwo,
+      breachWorldThree
     });
   };
 
@@ -422,12 +454,16 @@ export class RaycastScene extends Phaser.Scene {
     this.registry.set(RAYCAST_DIFFICULTY_REGISTRY_KEY, this.difficultyId);
     this.carriedScoreFromEpisode = data.carryScore ?? 0;
     this.pendingWorldTwoBreachBonus = Boolean(data.breachWorldTwo);
+    this.pendingWorldThreeBreachBonus = Boolean(data.breachWorldThree);
+    this.campaignMetrics = data.carryCampaignMetrics ?? createEmptyCampaignMetrics();
   }
 
   create(): void {
     registerRaycastOptionalAssets(this);
     this.resetRuntimeState();
-    this.cameras.main.setBackgroundColor(this.getWorldSegment() === 'world2' ? '#030612' : '#05070c');
+    this.cameras.main.setBackgroundColor(
+      this.getWorldSegment() === 'world2' ? '#030612' : this.getWorldSegment() === 'world3' ? '#0c0604' : '#05070c'
+    );
     this.map = cloneRaycastMap(this.currentLevel.map);
     this.keySystem = new KeySystem();
     this.doorSystem = new DoorSystem(this.keySystem);
@@ -446,23 +482,33 @@ export class RaycastScene extends Phaser.Scene {
     const hudLayout = buildRaycastHudLayout(GAME_WIDTH, GAME_HEIGHT);
     const difficultyPreset = getRaycastDifficultyPreset(this.difficultyId);
     this.hudCss = getRaycastHudCss(this.getWorldSegment());
-    const ionHudAccent = this.getWorldSegment() === 'world2' ? RAYCAST_PALETTE.riftIon : RAYCAST_PALETTE.plasmaBright;
+    const segment = this.getWorldSegment();
+    const ionHudAccent =
+      segment === 'world2' ? RAYCAST_PALETTE.riftIon : segment === 'world3' ? RAYCAST_PALETTE.amberWarn : RAYCAST_PALETTE.plasmaBright;
 
     const episodeState = getRaycastEpisodeState(this.currentLevel.id);
     const worldTwoIndex = RAYCAST_WORLD_TWO_CATALOG.findIndex((entry) => entry.id === this.currentLevel.id);
+    const worldThreeIndex = RAYCAST_WORLD_THREE_CATALOG.findIndex((entry) => entry.id === this.currentLevel.id);
     const bannerPayload =
-      worldTwoIndex >= 0
+      worldThreeIndex >= 0
         ? buildRaycastEpisodeBanner({
             currentLevelNumber: episodeState.currentLevelNumber,
             totalLevels: episodeState.totalLevels,
             levelName: this.currentLevel.name,
-            worldTwoSector: { index: worldTwoIndex + 1, total: RAYCAST_WORLD_TWO_CATALOG.length }
+            worldThreeSector: { index: worldThreeIndex + 1, total: RAYCAST_WORLD_THREE_CATALOG.length }
           })
-        : buildRaycastEpisodeBanner({
-            currentLevelNumber: episodeState.currentLevelNumber,
-            totalLevels: episodeState.totalLevels,
-            levelName: this.currentLevel.name
-          });
+        : worldTwoIndex >= 0
+          ? buildRaycastEpisodeBanner({
+              currentLevelNumber: episodeState.currentLevelNumber,
+              totalLevels: episodeState.totalLevels,
+              levelName: this.currentLevel.name,
+              worldTwoSector: { index: worldTwoIndex + 1, total: RAYCAST_WORLD_TWO_CATALOG.length }
+            })
+          : buildRaycastEpisodeBanner({
+              currentLevelNumber: episodeState.currentLevelNumber,
+              totalLevels: episodeState.totalLevels,
+              levelName: this.currentLevel.name
+            });
     this.add
       .text(
         16,
@@ -917,10 +963,15 @@ export class RaycastScene extends Phaser.Scene {
       this.runScore += RAYCAST_WORLD2_ENTRY_POINTS;
       this.pendingWorldTwoBreachBonus = false;
     }
+    if (this.pendingWorldThreeBreachBonus) {
+      this.runScore += RAYCAST_WORLD3_ENTRY_POINTS;
+      this.pendingWorldThreeBreachBonus = false;
+    }
     this.carriedScoreFromEpisode = 0;
     this.playerStationaryMs = 0;
     this.lastPlayerDamageAt = this.time.now;
-    this.lastPlayerPosition = { x: this.currentLevel.playerStart.x, y: this.currentLevel.playerStart.y };
+    this.lastPlayerPosition.x = this.currentLevel.playerStart.x;
+    this.lastPlayerPosition.y = this.currentLevel.playerStart.y;
     this.activeZoneId = null;
     this.directorDebug = null;
     this.lastDirectorState = null;
@@ -945,6 +996,9 @@ export class RaycastScene extends Phaser.Scene {
     this.billboardSig = '';
     this.cachedBillboards = [];
     this.minimapFrameCounter = 0;
+    this.mapLayoutRevision = 0;
+    this.minimapStaticCellsCacheKey = '';
+    this.minimapStaticCells = null;
     this.bossTelegraphActive = false;
     this.bossState = this.currentLevel.bossConfig
       ? createRaycastBossState(this.currentLevel.bossConfig, this.time.now)
@@ -1060,6 +1114,7 @@ export class RaycastScene extends Phaser.Scene {
     this.audioFeedback.play(weaponAudio.cue, weaponAudio.intensity, this.time.now);
 
     if (this.bossState?.alive) {
+      const bossHud = getRaycastBossHudLines(this.currentLevel.bossConfig?.displayName ?? 'Volt Archon');
       const bossDamage = computeRaycastBossWeaponDamage(this.bossState, this.player, this.map, result.weaponKind, 'raycast');
       if (bossDamage > 0) {
         const bossPellets = countRaycastBossConnectingPellets(
@@ -1083,7 +1138,7 @@ export class RaycastScene extends Phaser.Scene {
         this.pulseCrosshair(killed ? '#ff5b6f' : '#ffffff', killed ? 118 : 92);
         this.flashHitMarker(killed, false);
         this.cameras.main.shake(killed ? 96 : 54, killed ? 0.00225 : 0.00135);
-        this.setCombatMessage(killed ? 'ARCHON CORE SHATTERED' : 'ARCHON HULL STRESSED');
+        this.setCombatMessage(killed ? bossHud.coreShattered : bossHud.hullStressed);
         return;
       }
     }
@@ -1223,6 +1278,15 @@ export class RaycastScene extends Phaser.Scene {
     return this.enemies.filter((enemy) => enemy.alive).length;
   }
 
+  private countLivingEnemyKinds(): Partial<Record<EnemyKind, number>> {
+    const tally: Partial<Record<EnemyKind, number>> = {};
+    for (const enemy of this.enemies) {
+      if (!enemy.alive) continue;
+      tally[enemy.kind] = (tally[enemy.kind] ?? 0) + 1;
+    }
+    return tally;
+  }
+
   private applyMinimapToggle(): void {
     this.minimapVisible = !this.minimapVisible;
     this.minimapFrame?.setVisible(this.minimapVisible);
@@ -1292,20 +1356,22 @@ export class RaycastScene extends Phaser.Scene {
         delta,
         this.time.now
       );
+      const bossHud = getRaycastBossHudLines(this.currentLevel.bossConfig?.displayName ?? 'Volt Archon');
       if (this.lastBossPhase !== this.bossState.phase) {
         if (this.bossState.phase === 2) {
-          this.audioFeedback.play('directorAmbush', 1, this.time.now);
+          this.audioFeedback.play('bossPhaseShift', 1, this.time.now);
           this.pulseFeedback(0xff5b6f, 0.11, 220);
           this.cameras.main.shake(132, 0.00195);
-          this.setCombatMessage('ARCHON CORE OVERDRIVE // PHASE 2');
+          this.setCombatMessage(bossHud.phase2Overdrive);
         }
         this.lastBossPhase = this.bossState.phase;
       }
       const telegraphActive = this.time.now < this.bossState.telegraphUntil;
       if (telegraphActive && !this.bossTelegraphActive) {
         this.audioFeedback.play('directorWarning', 0.95, this.time.now);
+        this.audioFeedback.play('stingerDread', 0.44, this.time.now + 42);
         this.pulseFeedback(0xffb347, 0.08, 170);
-        this.setCombatMessage('ARCHON TELEGRAPH LOCKED');
+        this.setCombatMessage(bossHud.telegraphLocked);
       }
       this.bossTelegraphActive = telegraphActive;
       const bossShots = tickRaycastBossVolleys(
@@ -1315,7 +1381,7 @@ export class RaycastScene extends Phaser.Scene {
       );
       if (bossShots.length > 0) {
         this.enemyProjectiles.push(...bossShots);
-        this.setCombatMessage('ARCHON VOLLEY INBOUND');
+        this.setCombatMessage(bossHud.volleyInbound);
         this.audioFeedback.play('spawn', 0.9, this.time.now);
         this.pulseFeedback(0xff8833, 0.065, 150);
       }
@@ -1372,7 +1438,9 @@ export class RaycastScene extends Phaser.Scene {
     const shakeMag = Phaser.Math.Clamp(0.00275 + appliedDamage * 0.000065, 0.00275, 0.0045);
     this.cameras.main.shake(shakeDur, shakeMag);
     this.flashDamage(appliedDamage);
-    this.audioFeedback.play('damage', 1, this.time.now);
+    let damageIntensity = Phaser.Math.Clamp(0.58 + appliedDamage * 0.019, 0.58, 1.05);
+    if (this.bossState?.alive) damageIntensity = Math.min(1.08, damageIntensity + 0.065);
+    this.audioFeedback.play('damage', damageIntensity, this.time.now);
     this.setCombatMessage(`${getRaycastCombatMessageForSegment(this.getWorldSegment(), 'damage')} -${appliedDamage}`);
     if (this.playerHealth === 0) {
       this.playerAlive = false;
@@ -1433,6 +1501,7 @@ export class RaycastScene extends Phaser.Scene {
 
       this.gameDirector.notifyZoneTrigger(trigger.id, this.time.now);
       this.tryTriggerEncounterBeat((beat) => beat.triggerId === trigger.id);
+      this.stageSetpieceCue(trigger.setpieceCue);
       this.audioFeedback.play('directorAmbush', 1, this.time.now);
       this.pulseCorruption();
       this.pulseFeedback(0xff5b6f, 0.06, 170);
@@ -1511,19 +1580,23 @@ export class RaycastScene extends Phaser.Scene {
         return;
       }
       const sectorMetrics = this.collectSectorMetricsSnapshot();
+      this.campaignMetrics = mergeCampaignMetrics(this.campaignMetrics, sectorMetrics);
       this.runScore = addRaycastSectorPerformanceBonus(this.runScore, sectorMetrics);
-      if (this.isLastWorldTwoLevel()) {
+      if (this.isTerminalArcSector()) {
         this.runScore += RAYCAST_FULL_ARC_CLEAR_BONUS;
       }
       this.levelComplete = true;
       this.episodeComplete = this.nextLevelId === null;
+      if (this.episodeComplete) {
+        this.runScore = addRaycastCampaignCompletionBonus(this.runScore, this.campaignMetrics);
+      }
       const bossContinueWorldTwo =
         Boolean(this.currentLevel.bossConfig) && !this.episodeComplete && this.nextLevelId !== null;
 
       let overlayTitle = 'LEVEL CLEAR';
       if (bossContinueWorldTwo) {
         overlayTitle = 'BOSS DEFEATED';
-      } else if (this.episodeComplete && this.isLastWorldTwoLevel()) {
+      } else if (this.episodeComplete && this.isTerminalArcSector()) {
         overlayTitle = 'FULL ARC CLEAR';
       } else if (this.episodeComplete && this.currentLevel.bossConfig) {
         overlayTitle = 'BOSS DEFEATED';
@@ -1555,6 +1628,17 @@ export class RaycastScene extends Phaser.Scene {
     };
   }
 
+  private static dedupeMedalList(ids: string[]): string[] {
+    const seen = new Set<string>();
+    const out: string[] = [];
+    for (const id of ids) {
+      if (seen.has(id)) continue;
+      seen.add(id);
+      out.push(id);
+    }
+    return out;
+  }
+
   private showRunCompleteOverlay(
     title: string,
     titleColor: string,
@@ -1565,9 +1649,15 @@ export class RaycastScene extends Phaser.Scene {
     const highScore = readRaycastHighScore();
     const episodeState = getRaycastEpisodeState(this.currentLevel.id);
     const worldTwoIndex = RAYCAST_WORLD_TWO_CATALOG.findIndex((entry) => entry.id === this.currentLevel.id);
-    const fullArcClear = episodeComplete && this.isLastWorldTwoLevel();
+    const worldThreeIndex = RAYCAST_WORLD_THREE_CATALOG.findIndex((entry) => entry.id === this.currentLevel.id);
+    const fullArcClear = episodeComplete && this.isTerminalArcSector();
     const sectorMetrics = this.collectSectorMetricsSnapshot();
-    const medals = !isDeath ? computeRaycastSectorMedals(sectorMetrics) : [];
+    const medals = !isDeath
+      ? RaycastScene.dedupeMedalList([
+          ...(episodeComplete ? computeRaycastCampaignMedals(this.campaignMetrics) : []),
+          ...computeRaycastSectorMedals(sectorMetrics)
+        ])
+      : [];
 
     const summary = buildRaycastRunSummary({
       difficultyLabel: getRaycastDifficultyPreset(this.difficultyId).label,
@@ -1580,18 +1670,23 @@ export class RaycastScene extends Phaser.Scene {
       tokensFound: this.getKeyCount(),
       tokenTotal: this.currentLevel.keys.length,
       damageTaken: this.damageTaken,
+      bossArenaDamageTaken: this.currentLevel.bossConfig ? this.runBossDamageTaken : undefined,
       fullArcClear: !isDeath && fullArcClear,
       pelletsFired: this.runPelletsFired,
       pelletsHitHostile: this.runPelletsHitHostile,
       bossPelletsFired: this.runBossPelletsFired,
       bossPelletsHitHostile: this.runBossPelletsHitHostile,
       hadBoss: Boolean(this.currentLevel.bossConfig),
-      medals: medals.length > 0 ? medals : undefined
+      medals: medals.length > 0 ? medals : undefined,
+      campaign: episodeComplete ? this.campaignMetrics : undefined,
+      episodeComplete: !isDeath && episodeComplete
     });
     const levelLine =
-      worldTwoIndex >= 0
-        ? `WORLD 2 SECTOR ${worldTwoIndex + 1}/${RAYCAST_WORLD_TWO_CATALOG.length} ${this.currentLevel.name.toUpperCase()}`
-        : `SECTOR ${episodeState.currentLevelNumber}/${episodeState.totalLevels} ${this.currentLevel.name.toUpperCase()}`;
+      worldThreeIndex >= 0
+        ? `WORLD 3 SECTOR ${worldThreeIndex + 1}/${RAYCAST_WORLD_THREE_CATALOG.length} ${this.currentLevel.name.toUpperCase()}`
+        : worldTwoIndex >= 0
+          ? `WORLD 2 SECTOR ${worldTwoIndex + 1}/${RAYCAST_WORLD_TWO_CATALOG.length} ${this.currentLevel.name.toUpperCase()}`
+          : `SECTOR ${episodeState.currentLevelNumber}/${episodeState.totalLevels} ${this.currentLevel.name.toUpperCase()}`;
 
     if (isDeath) {
       const overlaySummary = [...buildRaycastDeathOverlaySummary(levelLine), ...summary];
@@ -1606,18 +1701,25 @@ export class RaycastScene extends Phaser.Scene {
     }
 
     const finaleBossEpisodeComplete = Boolean(episodeComplete && this.currentLevel.bossConfig);
+    const bossContinueWorldThree =
+      !episodeComplete &&
+      this.nextLevelId === RAYCAST_WORLD_THREE_CATALOG[0]?.id &&
+      this.currentLevel.id === RAYCAST_WORLD_TWO_CATALOG[RAYCAST_WORLD_TWO_CATALOG.length - 1]?.id;
     const bossContinueWorldTwo =
-      Boolean(this.currentLevel.bossConfig) && !episodeComplete && this.nextLevelId !== null;
+      Boolean(this.currentLevel.bossConfig) &&
+      !episodeComplete &&
+      this.nextLevelId !== null &&
+      !bossContinueWorldThree;
 
     const overlaySummary = episodeComplete
       ? [
           fullArcClear
-            ? 'FULL ARC CLEAR — EPISODE 1 + WORLD 2'
+            ? 'FULL ARC CLEAR — EPISODE 1 + WORLD 2 + EMBER MERIDIAN'
             : finaleBossEpisodeComplete
               ? 'BOSS DEFEATED // EPISODE 1 COMPLETE'
               : 'EPISODE CLEAR',
           fullArcClear
-            ? 'Stratum rift quiet. High score and rank updated — tighten the route for a better tier.'
+            ? 'Stratum and meridian quiet. High score and rank updated — tighten the route for a better tier.'
             : finaleBossEpisodeComplete
               ? 'Volt Archon decompiled. High score updated if improved.'
               : 'Mini episode complete. Arena remains available as a secondary sandbox.',
@@ -1625,10 +1727,16 @@ export class RaycastScene extends Phaser.Scene {
           ...summary
         ]
       : [
-          bossContinueWorldTwo ? 'BOSS DEFEATED // RIFT ROUTE OPEN' : 'LEVEL CLEAR',
-          bossContinueWorldTwo
-            ? 'Score carries into World 2 — hunt secrets for a higher tier.'
-            : 'Score carried forward on continue.',
+          bossContinueWorldThree
+            ? 'WARDEN DOWN // MERIDIAN BREACH'
+            : bossContinueWorldTwo
+              ? 'BOSS DEFEATED // RIFT ROUTE OPEN'
+              : 'LEVEL CLEAR',
+          bossContinueWorldThree
+            ? 'Score carries into World 3 — ember meridian opens (third hell).'
+            : bossContinueWorldTwo
+              ? 'Score carries into World 2 — hunt secrets for a higher tier.'
+              : 'Score carried forward on continue.',
           levelLine,
           ...summary
         ];
@@ -1636,9 +1744,10 @@ export class RaycastScene extends Phaser.Scene {
       currentLevelNumber: episodeState.currentLevelNumber,
       canAdvance: !episodeComplete && this.nextLevelId !== null,
       episodeComplete,
-      finaleBossCleared: finaleBossEpisodeComplete || bossContinueWorldTwo,
+      finaleBossCleared: finaleBossEpisodeComplete || bossContinueWorldTwo || bossContinueWorldThree,
       worldTwoLocked: RAYCAST_WORLD_TWO_CATALOG.length === 0,
-      continueToWorldTwo: bossContinueWorldTwo
+      continueToWorldTwo: bossContinueWorldTwo,
+      continueToWorldThree: bossContinueWorldThree
     });
 
     this.finalTitleText.setText(title).setColor(titleColor);
@@ -1663,6 +1772,9 @@ export class RaycastScene extends Phaser.Scene {
     if (!result.opened) return;
 
     openRaycastDoor(this.map, door);
+    this.mapLayoutRevision += 1;
+    this.minimapStaticCellsCacheKey = '';
+    this.minimapStaticCells = null;
     this.blockedHintReason = null;
     this.tryTriggerEncounterBeat((beat) => beat.doorId === door.id);
     this.playFeedbackEvent('doorOpened');
@@ -1678,15 +1790,14 @@ export class RaycastScene extends Phaser.Scene {
   }
 
   private computeBillboardSignature(): string {
+    /** Level key/door order is stable — no sort (saves work on every frame before cache hit). */
     const keysHeld = this.currentLevel.keys
       .filter((key) => this.keySystem.hasKey(key.id))
       .map((key) => key.id)
-      .sort()
       .join(',');
     const doorsOpen = this.currentLevel.doors
       .filter((door) => this.doorSystem.isOpen(door.id))
       .map((door) => door.id)
-      .sort()
       .join(',');
     const secrets = [...this.collectedSecrets].sort().join(',');
     const pickups = [...this.collectedHealthPickups].sort().join(',');
@@ -1768,7 +1879,8 @@ export class RaycastScene extends Phaser.Scene {
   private updatePlayerMetrics(delta: number): void {
     const movement = Math.hypot(this.player.x - this.lastPlayerPosition.x, this.player.y - this.lastPlayerPosition.y);
     this.playerStationaryMs = movement < 0.01 ? this.playerStationaryMs + delta : 0;
-    this.lastPlayerPosition = { x: this.player.x, y: this.player.y };
+    this.lastPlayerPosition.x = this.player.x;
+    this.lastPlayerPosition.y = this.player.y;
   }
 
   private updateGameDirector(): void {
@@ -1793,7 +1905,8 @@ export class RaycastScene extends Phaser.Scene {
         map: this.map,
         enemies: this.enemies,
         allowVisibleFrontSpawns: false
-      })
+      }),
+      aliveEnemyKindCounts: this.countLivingEnemyKinds()
     });
 
     const previousState = this.lastDirectorState;
@@ -1881,10 +1994,11 @@ export class RaycastScene extends Phaser.Scene {
     this.audioFeedback.play('directorAmbush', 1, this.time.now);
     this.pulseCorruption();
     this.pulseFeedback(0xff5b6f, 0.06, 160);
+    const roleTag = getRaycastEnemyRoleAbbrev(spawn.kind);
     this.setCombatMessage(
       this.getWorldSegment() === 'world2'
-        ? `STRATUM SIGNATURE: ${spawn.kind}`
-        : `HOSTILE SIGNAL DETECTED: ${spawn.kind}`
+        ? `STRATUM SIGNATURE: ${spawn.kind} (${roleTag})`
+        : `HOSTILE SIGNAL DETECTED: ${spawn.kind} (${roleTag})`
     );
   }
 
@@ -1951,7 +2065,7 @@ export class RaycastScene extends Phaser.Scene {
       this.playerAlive,
       Boolean(this.levelComplete && this.currentLevel.bossConfig),
       RAYCAST_WORLD_TWO_CATALOG.length === 0,
-      Boolean(this.levelComplete && this.episodeComplete && this.isLastWorldTwoLevel()),
+      Boolean(this.levelComplete && this.episodeComplete && this.isTerminalArcSector()),
       this.isWorldTwoBreachFromBossClear()
     );
   }
@@ -1963,7 +2077,7 @@ export class RaycastScene extends Phaser.Scene {
       episodeComplete: this.episodeComplete,
       finaleBossCleared: Boolean(this.levelComplete && this.currentLevel.bossConfig),
       worldTwoLocked: RAYCAST_WORLD_TWO_CATALOG.length === 0,
-      fullArcClear: Boolean(this.levelComplete && this.episodeComplete && this.isLastWorldTwoLevel()),
+      fullArcClear: Boolean(this.levelComplete && this.episodeComplete && this.isTerminalArcSector()),
       worldTwoTransition: this.isWorldTwoBreachFromBossClear(),
       playerAlive: this.playerAlive,
       playerHealth: this.playerHealth,
@@ -2006,6 +2120,17 @@ export class RaycastScene extends Phaser.Scene {
     return this.currentLevel.id === RAYCAST_WORLD_TWO_CATALOG[RAYCAST_WORLD_TWO_CATALOG.length - 1].id;
   }
 
+  private isLastWorldThreeLevel(): boolean {
+    if (RAYCAST_WORLD_THREE_CATALOG.length === 0) return false;
+    return this.currentLevel.id === RAYCAST_WORLD_THREE_CATALOG[RAYCAST_WORLD_THREE_CATALOG.length - 1].id;
+  }
+
+  /** Terminal sector for full-arc scoring — World 3 finale when shipped, else World 2 finale. */
+  private isTerminalArcSector(): boolean {
+    if (RAYCAST_WORLD_THREE_CATALOG.length > 0) return this.isLastWorldThreeLevel();
+    return this.isLastWorldTwoLevel();
+  }
+
   private getAtmosphereOptions() {
     const base = getAtmosphereForDirector(this.directorDebug?.state ?? null, this.directorIntensity);
     return applyWorldSegmentToAtmosphere(base, this.getWorldSegment());
@@ -2035,6 +2160,15 @@ export class RaycastScene extends Phaser.Scene {
 
   private getObjectiveHint(): string {
     return buildRaycastCurrentObjective(this.getObjectiveState());
+  }
+
+  private ensureMinimapStaticCells(): RaycastMinimapCell[] {
+    const key = `${this.currentLevel.id}:${this.mapLayoutRevision}`;
+    if (this.minimapStaticCellsCacheKey !== key || !this.minimapStaticCells) {
+      this.minimapStaticCells = buildStaticRaycastMinimapCells({ map: this.map, level: this.currentLevel });
+      this.minimapStaticCellsCacheKey = key;
+    }
+    return this.minimapStaticCells;
   }
 
   private renderMinimap(): void {
@@ -2069,7 +2203,8 @@ export class RaycastScene extends Phaser.Scene {
       collectedKeyIds: keyIds,
       openDoorIds: doorIds,
       collectedSecretIds: this.collectedSecrets,
-      enemies: blips
+      enemies: blips,
+      staticCells: this.ensureMinimapStaticCells()
     });
     const hudLayout = buildRaycastHudLayout(GAME_WIDTH, GAME_HEIGHT);
     const panelWidth = hudLayout.minimapPanelWidth;
@@ -2087,20 +2222,20 @@ export class RaycastScene extends Phaser.Scene {
       this.minimapGraphics.fillRect(offsetX + cell.x * tileSize, offsetY + cell.y * tileSize, tileSize - 1, tileSize - 1);
     });
 
-    model.markers
-      .filter((marker) => marker.active && marker.kind !== 'player')
-      .forEach((marker) => {
-        const px = offsetX + marker.x * tileSize;
-        const py = offsetY + marker.y * tileSize;
-        const color =
-          marker.kind === 'key'
-            ? RAYCAST_PALETTE.plasmaBright
-            : marker.kind === 'exit'
-              ? 0x6fd8ff
-              : 0xffb347;
-        this.minimapGraphics.fillStyle(color, 0.95);
-        this.minimapGraphics.fillRect(px - 2, py - 2, Math.max(4, tileSize - 2), Math.max(4, tileSize - 2));
-      });
+    for (let mi = 0; mi < model.markers.length; mi += 1) {
+      const marker = model.markers[mi];
+      if (!marker.active || marker.kind === 'player') continue;
+      const px = offsetX + marker.x * tileSize;
+      const py = offsetY + marker.y * tileSize;
+      const color =
+        marker.kind === 'key'
+          ? RAYCAST_PALETTE.plasmaBright
+          : marker.kind === 'exit'
+            ? 0x6fd8ff
+            : 0xffb347;
+      this.minimapGraphics.fillStyle(color, 0.95);
+      this.minimapGraphics.fillRect(px - 2, py - 2, Math.max(4, tileSize - 2), Math.max(4, tileSize - 2));
+    }
 
     model.enemyBlips.forEach((enemy) => {
       const px = offsetX + enemy.x * tileSize;
@@ -2122,7 +2257,14 @@ export class RaycastScene extends Phaser.Scene {
       }
     });
 
-    const playerMarker = model.markers.find((marker) => marker.kind === 'player' && marker.active);
+    let playerMarker: RaycastMinimapMarker | undefined;
+    for (let pi = 0; pi < model.markers.length; pi += 1) {
+      const candidate = model.markers[pi];
+      if (candidate.kind === 'player' && candidate.active) {
+        playerMarker = candidate;
+        break;
+      }
+    }
     if (playerMarker) {
       const px = offsetX + playerMarker.x * tileSize;
       const py = offsetY + playerMarker.y * tileSize;
@@ -2142,8 +2284,15 @@ export class RaycastScene extends Phaser.Scene {
       this.minimapGraphics.strokePath();
     }
 
-    const labeledMarkers = model.markers.filter((marker) => this.shouldRenderMinimapMarkerLabel(marker));
-    labeledMarkers.slice(0, this.minimapMarkerLabels.length).forEach((marker, index) => {
+    const labelScratch = this.minimapLabeledMarkerScratch;
+    labelScratch.length = 0;
+    for (let li = 0; li < model.markers.length; li += 1) {
+      const marker = model.markers[li];
+      if (this.shouldRenderMinimapMarkerLabel(marker)) labelScratch.push(marker);
+    }
+    const labelLimit = Math.min(labelScratch.length, this.minimapMarkerLabels.length);
+    for (let index = 0; index < labelLimit; index += 1) {
+      const marker = labelScratch[index];
       const label = this.minimapMarkerLabels[index];
       const markerX = offsetX + marker.x * tileSize;
       const markerY = offsetY + marker.y * tileSize;
@@ -2151,7 +2300,7 @@ export class RaycastScene extends Phaser.Scene {
       const textX = Phaser.Math.Clamp(markerX + 4, originX + 6, originX + panelWidth - label.width - 4);
       const textY = Phaser.Math.Clamp(markerY - 6, originY + 3, originY + panelHeight - label.height - 3);
       label.setPosition(textX, textY).setVisible(true);
-    });
+    }
   }
 
   private shouldRenderMinimapMarkerLabel(marker: { kind: string; label: string; active: boolean }): boolean {
@@ -2271,13 +2420,30 @@ export class RaycastScene extends Phaser.Scene {
     if (this.gamePaused || !this.playerAlive || this.levelComplete) return;
     if (this.time.now < this.nextAmbientCueAt) return;
     const bossActive = Boolean(this.bossState?.alive && this.currentLevel.bossConfig && !this.levelComplete);
-    this.audioFeedback.play('ambient', bossActive ? 0.92 : 0.75, this.time.now);
-    if (bossActive) this.audioFeedback.play('directorWarning', 0.6, this.time.now + 120);
-    const interval = bossActive
-      ? 2800
-      : this.directorDebug?.state === 'AMBUSH' || this.directorDebug?.state === 'PRESSURE'
-        ? 4200
-        : 7600;
+    const segment = this.getWorldSegment();
+    const dirState = this.directorDebug?.state;
+    const pressure = dirState === 'AMBUSH' || dirState === 'PRESSURE';
+    const recovery = dirState === 'RECOVERY';
+
+    let cue: AudioFeedbackCue = 'ambient';
+    if (bossActive) cue = segment === 'world2' ? 'ambientCorrupt' : 'ambientIndustrial';
+    else if (pressure) cue = 'ambientIndustrial';
+    else if (segment === 'world2') cue = 'ambientCorrupt';
+
+    const baseIntensity = bossActive
+      ? segment === 'world2'
+        ? 0.88
+        : 0.84
+      : pressure
+        ? 0.81
+        : segment === 'world2'
+          ? 0.72
+          : 0.75;
+
+    this.audioFeedback.play(cue, baseIntensity, this.time.now);
+    if (bossActive) this.audioFeedback.play('directorWarning', 0.58, this.time.now + 120);
+
+    const interval = bossActive ? 3000 : recovery ? 13200 : pressure ? 4400 : 8200;
     this.nextAmbientCueAt = this.time.now + interval;
   }
 
@@ -2295,7 +2461,64 @@ export class RaycastScene extends Phaser.Scene {
     else this.pulseFeedback(0xff5b6f, 0.04, 130);
     if (beat.directorState !== 'RECOVERY') this.pulseCorruption();
     this.setCombatMessage(beat.message);
+    this.stageSetpieceCue(beat.setpieceCue);
     return true;
+  }
+
+  /** Authored tension beats — overlays + audio only (see `RaycastSetpieceCue`). */
+  private stageSetpieceCue(cue: RaycastSetpieceCue | undefined): void {
+    if (!cue || this.gamePaused) return;
+    const opts = this.getAtmosphereOptions();
+    const now = this.time.now;
+
+    if (cue === 'BLACKOUT_PULSE') {
+      this.corruptionVeil.setAlpha(Math.min(0.4, opts.corruptionAlpha + 0.22));
+      this.tweens.killTweensOf(this.corruptionVeil);
+      this.tweens.add({
+        targets: this.corruptionVeil,
+        alpha: opts.corruptionAlpha,
+        duration: 520,
+        ease: 'Quad.easeOut'
+      });
+      this.cameras.main.flash(130, 12, 14, 18, false);
+      this.audioFeedback.play('directorWarning', 0.48, now);
+      return;
+    }
+
+    if (cue === 'ALARM_SURGE') {
+      this.audioFeedback.play('directorWarning', 0.88, now);
+      this.pulseFeedback(0xff2244, 0.07, 110);
+      this.time.delayedCall(120, () => this.pulseFeedback(0xff5533, 0.055, 95));
+      this.time.delayedCall(260, () => this.audioFeedback.play('stingerDread', 0.42, now + 260));
+      return;
+    }
+
+    if (cue === 'RITUAL_PULSE') {
+      this.pulseCorruption();
+      this.pulseFeedback(RAYCAST_PALETTE.riftBloom, 0.1, 220);
+      this.audioFeedback.play('directorAmbush', 0.62, now + 40);
+      return;
+    }
+
+    if (cue === 'FAKE_CALM') {
+      this.audioFeedback.play('directorRecovery', 0.58, now);
+      this.pulseFeedback(RAYCAST_PALETTE.plasmaBright, 0.052, 180);
+      this.corruptionVeil.setAlpha(Math.max(0.03, opts.corruptionAlpha * 0.45));
+      this.tweens.killTweensOf(this.corruptionVeil);
+      this.tweens.add({
+        targets: this.corruptionVeil,
+        alpha: opts.corruptionAlpha,
+        duration: 520,
+        ease: 'Quad.easeOut'
+      });
+      return;
+    }
+
+    if (cue === 'CORRIDOR_HUNT') {
+      this.audioFeedback.play('directorWarning', 0.74, now);
+      this.audioFeedback.play('uiSoftDeny', 0.44, now + 55);
+      this.pulseFeedback(0xffaa44, 0.068, 140);
+    }
   }
 
   private getNearestAvailableHealthPickupDistance(): number | null {

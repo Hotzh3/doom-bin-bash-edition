@@ -1,8 +1,14 @@
 # Raycast demo script
 
-Presenter-facing guide for portfolio reviews, interviews, and internal playtests. Primary mode is **`RaycastScene`** (mini episode + boss + optional World 2). **`ArenaScene`** is a short secondary proof for legacy / regression coverage.
+Presenter-facing guide for portfolio reviews, interviews, and internal playtests. **Target length:** **3–5 minutes** (tables below default to ~4 min). Primary mode is **`RaycastScene`** (Episode 1 + boss + optional World 2). **`ArenaScene`** is a short secondary proof for regression coverage.
 
 **Companion assets:** capture intent per frame in [`../assets/screenshots/SHOT_LIST.md`](../assets/screenshots/SHOT_LIST.md).
+
+### Narrative arc (what reviewers should remember)
+
+1. **Legit build** — browser raycast slice, TypeScript + tests + CI.  
+2. **Feel** — terminal horror tone, director-driven pressure, readable HUD.  
+3. **Finish line** — sector report / rank proves presentation + systems wiring (optional: World 2 peek = second “hell,” not a recolor).
 
 ---
 
@@ -27,7 +33,7 @@ Use a stable window size (e.g. **960×540** or **1280×720**) for consistency wi
 
 ---
 
-## 4-minute demo (recommended)
+## ~4-minute demo (recommended; fits 3–5 min window)
 
 | Time | Action | Talking points |
 |------|--------|----------------|
@@ -35,6 +41,10 @@ Use a stable window size (e.g. **960×540** or **1280×720**) for consistency wi
 | 0:45–2:00 | **Prologue → sector 1** | Terminal tone; WASD, look, fire; read objective / HUD. |
 | 2:00–3:15 | **Progression** | Token → door → trigger or ambush; compact HUD; audio + director pressure. |
 | 3:15–4:00 | **Level clear** | Sector report: score, rank, time; **ESC** returns to menu. |
+
+**Shorter (~3 min):** compress progression to one door + one fight, skip extra routing; still hit **clear overlay** or **boss-down** menu.
+
+**Longer (~5 min):** add one extra sector beat or a **World 2** peek after boss (**N**) — banner shows **ABYSS STRATUM** / **NOT THE FORGE** — then **ESC** to menu.
 
 Skip **Arena** unless the audience cares about the 2D sandbox — if so, add **~30 s**: **B**, one duel, **ESC**.
 

@@ -33,10 +33,13 @@ npm run build
 - Say inspiration is limited to classic genre feel, not copied content
 - Do not imply Doom or Doom 64 assets, maps, code, names, or content are present
 
-## Portfolio media (optional)
+## Portfolio media (recommended before external demos)
 
 - Stills / GIFs live under `docs/assets/screenshots/` and `docs/assets/gifs/` ([shot list](../assets/screenshots/SHOT_LIST.md)).
-- Regenerate automated captures after visual changes: `npx playwright install chromium` (once) then `npm run capture:media`.
+- After UI or raycast visual changes, refresh: `npx playwright install chromium` (once per machine) then `npm run capture:media` (needs `ffmpeg` on `PATH`). Use **`CAPTURE_URL=...`** if Vite is already running — see [`scripts/capture-portfolio.mjs`](../../scripts/capture-portfolio.mjs).
+- The capture script prints **per-file sizes** when it finishes; align root [`README.md`](../../README.md) subline with combined WebP + GIF totals.
+- Quick sanity check: five WebPs typically **~95–110 KB** combined; two GIFs **under ~1 MB** each (recent passes ≈ **~230 KB + ~265 KB** — rerun `capture:media` and update [`README.md`](../../README.md) if totals shift).
+- Verify relative links: README references `docs/assets/screenshots/*.webp`, `docs/assets/gifs/*.gif`, and [`docs/assets/doombanner.png`](../assets/doombanner.png) — `ls` those paths before tagging.
 
 ## Handoff Links
 

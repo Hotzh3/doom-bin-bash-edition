@@ -14,7 +14,7 @@ Objetivo: que World 2 se perciba como **otro infierno / bioma / dimensión**, no
 | **22-4** | **Presentación / dressing** | Banner, hints, opcional tint enemigo si hay hook | `RaycastPresentation.ts`, quizá escena | Tests de strings | `raycast-presentation.test.ts` | Overlay rank/banner | `feat(ui): World 2 presentation copy` |
 | **22-5** | **Transición W1→W2** | Copy post-boss / locked coherent | `RaycastPresentation.ts`, `RaycastWorldLockedScene.ts`, toques mínimos escena | Flujo `N` | presentation + smoke | Caminos feliz y locked | `feat(flow): World 2 transition messaging` |
 
-**Estado:** **22-1** implementado en la iteración actual (solo atmósfera). **22-2 en adelante** pendiente.
+**Estado:** La línea **22-1 … 22-5** quedó cerrada en **Phase 31** (palette, tema, niveles, presentación). Ver [`phases/phase-31-world-2-final-identity.md`](./phases/phase-31-world-2-final-identity.md) y [`design/world2-identity-bible.md`](./design/world2-identity-bible.md).
 
 ---
 

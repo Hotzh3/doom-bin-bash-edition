@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   getRaycastEpisodeState,
   resolveRaycastNextLevelId,
+  RAYCAST_WORLD_THREE_CATALOG,
   RAYCAST_WORLD_TWO_CATALOG
 } from '../game/raycast/RaycastEpisode';
 import {
@@ -21,7 +22,12 @@ describe('raycast episode progression', () => {
     expect(resolveRaycastNextLevelId(RAYCAST_WORLD_TWO_CATALOG[0].id)).toBe(RAYCAST_WORLD_TWO_CATALOG[1].id);
     expect(resolveRaycastNextLevelId(RAYCAST_WORLD_TWO_CATALOG[1].id)).toBe(RAYCAST_WORLD_TWO_CATALOG[2].id);
     expect(resolveRaycastNextLevelId(RAYCAST_WORLD_TWO_CATALOG[2].id)).toBe(RAYCAST_WORLD_TWO_CATALOG[3].id);
-    expect(resolveRaycastNextLevelId(RAYCAST_WORLD_TWO_CATALOG[3].id)).toBeNull();
+    expect(resolveRaycastNextLevelId(RAYCAST_WORLD_TWO_CATALOG[3].id)).toBe(RAYCAST_WORLD_THREE_CATALOG[0].id);
+    expect(RAYCAST_WORLD_THREE_CATALOG).toHaveLength(3);
+    expect(RAYCAST_WORLD_THREE_CATALOG.map((l) => l.worldSegment)).toEqual(['world3', 'world3', 'world3']);
+    expect(resolveRaycastNextLevelId(RAYCAST_WORLD_THREE_CATALOG[0].id)).toBe(RAYCAST_WORLD_THREE_CATALOG[1].id);
+    expect(resolveRaycastNextLevelId(RAYCAST_WORLD_THREE_CATALOG[1].id)).toBe(RAYCAST_WORLD_THREE_CATALOG[2].id);
+    expect(resolveRaycastNextLevelId(RAYCAST_WORLD_THREE_CATALOG[2].id)).toBeNull();
   });
 
   it('advances through five story sectors into the boss map', () => {

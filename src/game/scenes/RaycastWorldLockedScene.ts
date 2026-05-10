@@ -12,7 +12,7 @@ export class RaycastWorldLockedScene extends Phaser.Scene {
     this.cameras.main.setBackgroundColor(RAYCAST_PALETTE.voidBlack);
 
     this.add
-      .text(GAME_WIDTH * 0.5, GAME_HEIGHT * 0.38, 'ION STRATUM — SIGNAL ABSENT', {
+      .text(GAME_WIDTH * 0.5, GAME_HEIGHT * 0.38, 'ABYSS STRATUM — SIGNAL ABSENT', {
         fontFamily: 'monospace',
         fontSize: '22px',
         fontStyle: '700',

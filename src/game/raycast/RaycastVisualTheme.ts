@@ -11,7 +11,10 @@ export type RaycastZoneThemeId =
   /** World 2 — authored cold biomes */
   | 'basalt-rift'
   | 'ion-shaft'
-  | 'nadir-glow';
+  | 'nadir-glow'
+  /** World 3 — Ember Meridian (Phase 34) */
+  | 'ash-conduit'
+  | 'ember-vault';
 
 export type RaycastLandmarkId = 'none' | 'key' | 'gate' | 'ambush' | 'secret' | 'exit';
 
@@ -148,27 +151,43 @@ export const RAYCAST_ZONE_THEMES: Record<RaycastZoneThemeId, RaycastZoneTheme> =
     id: 'basalt-rift',
     accentColor: RAYCAST_PALETTE.riftBasalt,
     patternColor: RAYCAST_PALETTE.riftBone,
-    /** Deeper cold floor vs ion shaft — reads as broken crust / tread lanes */
-    floorColor: 0x020610,
-    ceilingColor: 0x010208,
+    /** Fracture crust — icy deck vs W1 rust slabs (grammar: noise floors + violet seam). */
+    floorColor: 0x020914,
+    ceilingColor: 0x01040e,
     signalColor: RAYCAST_PALETTE.riftViolet
   },
   'ion-shaft': {
     id: 'ion-shaft',
-    accentColor: 0x1e6888,
+    accentColor: 0x164e72,
     patternColor: RAYCAST_PALETTE.riftIon,
-    /** Brighter frost deck — vertical circulation silhouette */
-    floorColor: 0x020e18,
-    ceilingColor: 0x010a14,
+    /** Frost circulation lanes — vertical shaft read (cyan conductor, not amber hazard). */
+    floorColor: 0x02141c,
+    ceilingColor: 0x010e18,
     signalColor: RAYCAST_PALETTE.riftIon
   },
   'nadir-glow': {
     id: 'nadir-glow',
-    accentColor: 0x402068,
-    patternColor: 0xe8e8ff,
-    floorColor: 0x050818,
-    ceilingColor: 0x02040c,
+    accentColor: 0x401878,
+    patternColor: 0xe8eaff,
+    floorColor: 0x030c22,
+    ceilingColor: 0x020818,
     signalColor: RAYCAST_PALETTE.riftViolet
+  },
+  'ash-conduit': {
+    id: 'ash-conduit',
+    accentColor: 0x6a3020,
+    patternColor: 0xffc4a0,
+    floorColor: 0x100805,
+    ceilingColor: 0x080402,
+    signalColor: RAYCAST_PALETTE.amberWarn
+  },
+  'ember-vault': {
+    id: 'ember-vault',
+    accentColor: 0x4a1a0a,
+    patternColor: 0xff9a6a,
+    floorColor: 0x140a06,
+    ceilingColor: 0x0a0402,
+    signalColor: 0xff6633
   }
 };
 
@@ -235,6 +254,41 @@ export function getRaycastWallVisualStyle(wallType: number, surface: RaycastSurf
       signalColor: surface.theme.signalColor,
       trimMix: 0.5,
       panelStride: 9,
+      pulseSignal: true
+    };
+  }
+
+  /** World 2 primary walls (type 1): distinct grammar vs Episode 1 terminal slabs. */
+  if (wallType === 1 && surface.theme.id === 'basalt-rift') {
+    return {
+      pattern: 'data-noise-cells',
+      detailColor: blendThemeColor(surface.theme.patternColor, RAYCAST_PALETTE.riftFog, 0.34),
+      secondaryColor: blendThemeColor(surface.theme.accentColor, RAYCAST_PALETTE.riftBasalt, 0.3),
+      signalColor: surface.theme.signalColor,
+      trimMix: 0.54,
+      panelStride: 11,
+      pulseSignal: surface.landmark === 'secret'
+    };
+  }
+  if (wallType === 1 && surface.theme.id === 'ion-shaft') {
+    return {
+      pattern: 'terminal-panels',
+      detailColor: blendThemeColor(surface.theme.patternColor, RAYCAST_PALETTE.riftIon, 0.24),
+      secondaryColor: blendThemeColor(surface.theme.accentColor, 0x050c14, 0.38),
+      signalColor: surface.theme.signalColor,
+      trimMix: 0.47,
+      panelStride: 13,
+      pulseSignal: true
+    };
+  }
+  if (wallType === 1 && surface.theme.id === 'nadir-glow') {
+    return {
+      pattern: 'corrupted-ribs',
+      detailColor: blendThemeColor(surface.theme.patternColor, RAYCAST_PALETTE.riftViolet, 0.3),
+      secondaryColor: blendThemeColor(surface.theme.accentColor, 0x100428, 0.34),
+      signalColor: surface.theme.signalColor,
+      trimMix: 0.56,
+      panelStride: 12,
       pulseSignal: true
     };
   }
@@ -315,8 +369,12 @@ export function getRaycastGroundVisualStyle(surface: Pick<RaycastSurfaceContext,
     return {
       floorPattern: 'hazard-lattice',
       ceilingPattern: 'crossbars',
-      floorGlowColor: blendThemeColor(RAYCAST_PALETTE.riftIon, 0x082028, 0.42),
-      floorBandAlpha: 0.13,
+      floorGlowColor: blendThemeColor(
+        blendThemeColor(RAYCAST_PALETTE.riftIon, 0x082028, 0.42),
+        RAYCAST_PALETTE.riftBloom,
+        0.06
+      ),
+      floorBandAlpha: 0.135,
       cellStride: 14
     };
   }
@@ -325,8 +383,8 @@ export function getRaycastGroundVisualStyle(surface: Pick<RaycastSurfaceContext,
     return {
       floorPattern: 'glow-rings',
       ceilingPattern: 'void-noise',
-      floorGlowColor: blendThemeColor(surface.theme.signalColor, RAYCAST_PALETTE.riftFog, 0.5),
-      floorBandAlpha: 0.15,
+      floorGlowColor: blendThemeColor(surface.theme.signalColor, RAYCAST_PALETTE.riftFog, 0.52),
+      floorBandAlpha: 0.155,
       cellStride: 19
     };
   }
@@ -364,6 +422,19 @@ export function getRaycastEnemyVisualStyle(kind: EnemyKind, color: number): Rayc
       hornStyle: 'glitch-spikes',
       role: 'flanker',
       windupColor: RAYCAST_PALETTE.patternOxide
+    };
+  }
+
+  if (kind === 'SCRAMBLER') {
+    return {
+      silhouette: 'raider',
+      outlineColor: 0x180602,
+      accentColor: blendThemeColor(color, RAYCAST_PALETTE.amberWarn, 0.42),
+      eyeColor: RAYCAST_PALETTE.boneBright,
+      coreColor: RAYCAST_PALETTE.rustBright,
+      hornStyle: 'glitch-spikes',
+      role: 'flanker',
+      windupColor: RAYCAST_PALETTE.amberWarn
     };
   }
 

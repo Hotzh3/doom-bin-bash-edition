@@ -11,13 +11,16 @@ export const RAYCAST_BOSS_DISPLAY_NAME = 'Volt Archon';
 export const RAYCAST_BOSS_ID = 'volt-archon';
 
 /** Volley + HUD tuning presets — extend via authored `bossConfig`, not ad-hoc forks. */
-export type RaycastBossBehaviorId = 'volt-archon' | 'bloom-warden';
+export type RaycastBossBehaviorId = 'volt-archon' | 'bloom-warden' | 'ash-judge';
 
 const GRID_SCALE = 100;
 const BOSS_PROJECTILE_SPEED_GRID = 300;
 const BOSS_PROJECTILE_DAMAGE = 13;
 const BOSS_PROJECTILE_RADIUS = 0.1;
 const BOSS_PROJECTILE_COLOR = 0xff8833;
+/** Bloom Warden volleys — toxic yellow-green read vs Volt Archon ion orange (Phase 30). */
+const BLOOM_WARDEN_PROJECTILE_COLOR = 0xa8dd58;
+const ASH_JUDGE_PROJECTILE_COLOR = 0xff5522;
 
 export interface RaycastBossConfig {
   id: string;
@@ -48,6 +51,9 @@ export interface RaycastBossState {
 }
 
 function telegraphMs(state: Pick<RaycastBossState, 'phase' | 'behavior'>): number {
+  if (state.behavior === 'ash-judge') {
+    return state.phase === 1 ? 800 : 520;
+  }
   if (state.behavior === 'bloom-warden') {
     /* Bloom Warden: tight twin rails → faster cross bloom — telegraph stays readable */
     return state.phase === 1 ? 720 : 460;
@@ -58,6 +64,9 @@ function telegraphMs(state: Pick<RaycastBossState, 'phase' | 'behavior'>): numbe
 }
 
 function cooldownMs(state: Pick<RaycastBossState, 'phase' | 'behavior'>): number {
+  if (state.behavior === 'ash-judge') {
+    return state.phase === 1 ? 2080 : 1580;
+  }
   if (state.behavior === 'bloom-warden') {
     return state.phase === 1 ? 2100 : 1520;
   }
@@ -66,6 +75,9 @@ function cooldownMs(state: Pick<RaycastBossState, 'phase' | 'behavior'>): number
 }
 
 export function getRaycastBossPhaseLabel(boss: Pick<RaycastBossState, 'phase' | 'behavior'>): string {
+  if (boss.behavior === 'ash-judge') {
+    return boss.phase === 1 ? 'PHASE 1: CINDER SPIRES' : 'PHASE 2: MERIDIAN HALO // SPLIT CUT';
+  }
   if (boss.behavior === 'bloom-warden') {
     return boss.phase === 1 ? 'PHASE 1: TWIN VEINS' : 'PHASE 2: BLOOM CROSS // PERPENDICULAR';
   }
@@ -222,7 +234,14 @@ export function getRaycastBossCrosshairTarget(
   };
 }
 
-function spawnBossProjectile(fromX: number, fromY: number, toX: number, toY: number, time: number): RaycastEnemyProjectile {
+function spawnBossProjectile(
+  fromX: number,
+  fromY: number,
+  toX: number,
+  toY: number,
+  time: number,
+  color: number = BOSS_PROJECTILE_COLOR
+): RaycastEnemyProjectile {
   const dx = toX - fromX;
   const dy = toY - fromY;
   const len = Math.hypot(dx, dy) || 1;
@@ -235,7 +254,7 @@ function spawnBossProjectile(fromX: number, fromY: number, toX: number, toY: num
     damage: BOSS_PROJECTILE_DAMAGE,
     radius: BOSS_PROJECTILE_RADIUS,
     alive: true,
-    color: BOSS_PROJECTILE_COLOR,
+    color,
     createdAt: time
   };
 }
@@ -270,36 +289,58 @@ export function tickRaycastBossMovement(
   const ux = toPlayerX / distance;
   const uy = toPlayerY / distance;
   const strafeSign =
-    state.behavior === 'bloom-warden' ? (Math.sin(time / 620) >= 0 ? 1 : -1) : Math.sin(time / 760) >= 0 ? 1 : -1;
+    state.behavior === 'ash-judge'
+      ? Math.sin(time / 540) >= 0
+        ? 1
+        : -1
+      : state.behavior === 'bloom-warden'
+        ? Math.sin(time / 620) >= 0
+          ? 1
+          : -1
+        : Math.sin(time / 760) >= 0
+          ? 1
+          : -1;
   const strafeX = -uy * strafeSign;
   const strafeY = ux * strafeSign;
 
   const preferredRange =
-    state.behavior === 'bloom-warden'
+    state.behavior === 'ash-judge'
       ? state.phase === 1
-        ? 4.15
-        : 3.05
-      : state.phase === 1
-        ? 3.9
-        : 2.9;
+        ? 4.0
+        : 3.2
+      : state.behavior === 'bloom-warden'
+        ? state.phase === 1
+          ? 4.15
+          : 3.05
+        : state.phase === 1
+          ? 3.9
+          : 2.9;
   const chaseWeight = distance > preferredRange ? 1 : 0.28;
   const strafeWeight =
-    state.behavior === 'bloom-warden'
+    state.behavior === 'ash-judge'
       ? state.phase === 2
-        ? 1.02
-        : 0.68
-      : state.phase === 2
-        ? 0.95
-        : 0.62;
+        ? 1.05
+        : 0.72
+      : state.behavior === 'bloom-warden'
+        ? state.phase === 2
+          ? 1.02
+          : 0.68
+        : state.phase === 2
+          ? 0.95
+          : 0.62;
   const telegraphSlow = time < state.telegraphUntil ? 0.45 : 1;
   const speed =
-    (state.behavior === 'bloom-warden'
+    (state.behavior === 'ash-judge'
       ? state.phase === 2
-        ? 1.58
-        : 1.22
-      : state.phase === 2
-        ? 1.65
-        : 1.18) * telegraphSlow;
+        ? 1.52
+        : 1.2
+      : state.behavior === 'bloom-warden'
+        ? state.phase === 2
+          ? 1.58
+          : 1.22
+        : state.phase === 2
+          ? 1.65
+          : 1.18) * telegraphSlow;
   const step = (deltaMs / 1000) * speed;
   const moveX = ux * chaseWeight + strafeX * strafeWeight;
   const moveY = uy * chaseWeight + strafeY * strafeWeight;
@@ -347,18 +388,37 @@ export function tickRaycastBossVolleys(
     const base = Math.atan2(player.y - state.y, player.x - state.x);
     const volley: RaycastEnemyProjectile[] = [];
     const playerStationary = (player.stationaryMs ?? 0) >= 1000;
+    const pelletColor =
+      state.behavior === 'bloom-warden'
+        ? BLOOM_WARDEN_PROJECTILE_COLOR
+        : state.behavior === 'ash-judge'
+          ? ASH_JUDGE_PROJECTILE_COLOR
+          : BOSS_PROJECTILE_COLOR;
 
-    if (state.behavior === 'bloom-warden') {
-      /** Twin rails (phase 1) → fan + perpendicular “bloom” spikes — punishes standing in lane line */
+    if (state.behavior === 'ash-judge') {
+      /** Rotating ember spires → denser halo — asks strafe reads vs Bloom twin rails */
       if (state.phase === 1) {
-        for (const a of fanAngles(base, 2, 0.34)) {
-          volley.push(spawnBossProjectile(state.x, state.y, state.x + Math.cos(a) * 3, state.y + Math.sin(a) * 3, time));
+        const spin = time * 0.00105;
+        for (let i = 0; i < 3; i += 1) {
+          const a = spin + (i * Math.PI * 2) / 3;
+          volley.push(
+            spawnBossProjectile(
+              state.x,
+              state.y,
+              state.x + Math.cos(a) * 3,
+              state.y + Math.sin(a) * 3,
+              time,
+              pelletColor
+            )
+          );
         }
       } else {
-        const spread = playerStationary ? 0.52 : 0.38;
+        const spread = playerStationary ? 0.58 : 0.42;
         const fanCount = playerStationary ? 6 : 4;
         for (const a of fanAngles(base, fanCount, spread)) {
-          volley.push(spawnBossProjectile(state.x, state.y, state.x + Math.cos(a) * 3, state.y + Math.sin(a) * 3, time));
+          volley.push(
+            spawnBossProjectile(state.x, state.y, state.x + Math.cos(a) * 3, state.y + Math.sin(a) * 3, time, pelletColor)
+          );
         }
         volley.push(
           spawnBossProjectile(
@@ -366,7 +426,8 @@ export function tickRaycastBossVolleys(
             state.y,
             state.x + Math.cos(base + Math.PI * 0.5) * 3,
             state.y + Math.sin(base + Math.PI * 0.5) * 3,
-            time
+            time,
+            pelletColor
           )
         );
         volley.push(
@@ -375,7 +436,48 @@ export function tickRaycastBossVolleys(
             state.y,
             state.x + Math.cos(base - Math.PI * 0.5) * 3,
             state.y + Math.sin(base - Math.PI * 0.5) * 3,
-            time
+            time,
+            pelletColor
+          )
+        );
+      }
+      return volley;
+    }
+
+    if (state.behavior === 'bloom-warden') {
+      /** Twin rails (phase 1) → fan + perpendicular “bloom” spikes — punishes standing in lane line */
+      if (state.phase === 1) {
+        for (const a of fanAngles(base, 2, 0.34)) {
+          volley.push(
+            spawnBossProjectile(state.x, state.y, state.x + Math.cos(a) * 3, state.y + Math.sin(a) * 3, time, pelletColor)
+          );
+        }
+      } else {
+        const spread = playerStationary ? 0.52 : 0.38;
+        const fanCount = playerStationary ? 6 : 4;
+        for (const a of fanAngles(base, fanCount, spread)) {
+          volley.push(
+            spawnBossProjectile(state.x, state.y, state.x + Math.cos(a) * 3, state.y + Math.sin(a) * 3, time, pelletColor)
+          );
+        }
+        volley.push(
+          spawnBossProjectile(
+            state.x,
+            state.y,
+            state.x + Math.cos(base + Math.PI * 0.5) * 3,
+            state.y + Math.sin(base + Math.PI * 0.5) * 3,
+            time,
+            pelletColor
+          )
+        );
+        volley.push(
+          spawnBossProjectile(
+            state.x,
+            state.y,
+            state.x + Math.cos(base - Math.PI * 0.5) * 3,
+            state.y + Math.sin(base - Math.PI * 0.5) * 3,
+            time,
+            pelletColor
           )
         );
       }
@@ -385,20 +487,34 @@ export function tickRaycastBossVolleys(
     if (state.phase === 1) {
       const count = playerStationary ? 3 : 1;
       for (const a of fanAngles(base, count, 0.22)) {
-        volley.push(spawnBossProjectile(state.x, state.y, state.x + Math.cos(a) * 3, state.y + Math.sin(a) * 3, time));
+        volley.push(spawnBossProjectile(state.x, state.y, state.x + Math.cos(a) * 3, state.y + Math.sin(a) * 3, time, pelletColor));
       }
     } else {
       /** Phase 2: fan + fixed “ion bracket” rails — same damage/speed, forces lateral cut vs hugging center. */
       const count = playerStationary ? 5 : 3;
       for (const a of fanAngles(base, count, playerStationary ? 0.54 : 0.36)) {
-        volley.push(spawnBossProjectile(state.x, state.y, state.x + Math.cos(a) * 3, state.y + Math.sin(a) * 3, time));
+        volley.push(spawnBossProjectile(state.x, state.y, state.x + Math.cos(a) * 3, state.y + Math.sin(a) * 3, time, pelletColor));
       }
       const bracket = 0.52;
       volley.push(
-        spawnBossProjectile(state.x, state.y, state.x + Math.cos(base - bracket) * 3, state.y + Math.sin(base - bracket) * 3, time)
+        spawnBossProjectile(
+          state.x,
+          state.y,
+          state.x + Math.cos(base - bracket) * 3,
+          state.y + Math.sin(base - bracket) * 3,
+          time,
+          pelletColor
+        )
       );
       volley.push(
-        spawnBossProjectile(state.x, state.y, state.x + Math.cos(base + bracket) * 3, state.y + Math.sin(base + bracket) * 3, time)
+        spawnBossProjectile(
+          state.x,
+          state.y,
+          state.x + Math.cos(base + bracket) * 3,
+          state.y + Math.sin(base + bracket) * 3,
+          time,
+          pelletColor
+        )
       );
     }
     return volley;

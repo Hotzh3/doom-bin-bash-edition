@@ -67,26 +67,27 @@ export const RAYCAST_ATMOSPHERE = {
 
 type RaycastAtmosphereMessageKey = keyof typeof RAYCAST_ATMOSPHERE.messages;
 
-/** World 2 — colder fog, violet veil + stratified combat copy (HUD pulls palette separately). */
+/** World 2 — abyss stratum: deeper fog envelope, violet interference layer, “other hell” voice (HUD uses RAYCAST_CSS_WORLD2). */
 export const RAYCAST_ATMOSPHERE_WORLD2 = {
   fogColor: RAYCAST_PALETTE.riftFog,
   corruptionTint: RAYCAST_PALETTE.riftVeil,
   messageOverrides: {
-    intro: 'STRATUM RIFT — SUBLEVEL SIGNAL FREEZING YOUR TELEMETRY',
-    exit: 'RIFT NODE COOLED — STRATUM LINE HOLDS',
-    idle: 'STRATUM GLASS READS YOUR TRACE',
-    locked: 'ACCESS DENIED — RIFT SEALED',
-    key: 'ACCESS TOKEN FUSED TO THE STRATUM',
-    doorOpen: 'SEAM DECRYPTED — PATH VENTS',
-    trigger: 'STRATUM PROTOCOL RELEASED',
-    pressure: 'ION SHEAR STRESSES THE ROUTE',
-    surge: 'STRATUM SPIKE — HOSTILES IN THE SHAFT',
-    recovery: 'COLD LULL — RECOVER BEFORE NEXT SPIKE',
-    spawn: 'HOSTILE SURFACED IN FROST AIR',
-    damage: 'THERMAL BLEED',
-    kill: 'HOSTILE SHATTERED IN THE RIFT',
-    secret: 'CONCEALED STRATUM NODE INDEXED',
-    critical: 'CORE HYPOTHERMIC — MOVE OR DROP'
+    intro:
+      'ABYSS STRATUM — NOT THE FORGE — SUBLEVEL SIGNAL SHEARS HUD INTO BLUE ICE (SECOND HELL)',
+    exit: 'RIFT NODE COOLED — YOU ARE STILL NOT HOME',
+    idle: 'VOID GLASS LEAKS THROUGH THE STRATUM — TRACE HELD IN VIOLET STATIC — NOT EPISODE HEAT',
+    locked: 'ACCESS DENIED — SEAM WELDED BY COLD SIGNAL',
+    key: 'TOKEN FUSED — STRATUM ROUTING KNOWS YOUR SILHOUETTE',
+    doorOpen: 'SEAM CRACKS — PRESSURE FRONT MOVES DOWNGRADE',
+    trigger: 'STRATUM HANDSHAKE — HOSTILES ALLOCATED TO YOUR CORRIDOR',
+    pressure: 'ION SHEAR TEARS THE ROUTE — SIDESTEP THE BRACKET',
+    surge: 'STRATUM SPIKE — HOSTILES BOILED UP FROM THE ABYSS SHAFT',
+    recovery: 'STATIC LULL — USE THE BREATH BEFORE THE NEXT SPIKE',
+    spawn: 'ENTITY SURFACES IN FROST AIR — NOT THE SAME BIOS AS EPISODE 1',
+    damage: 'THERMAL BLEED — CORE TEMP SLIPPING',
+    kill: 'HOSTILE SHATTERED INTO RIFT SNOW',
+    secret: 'CONCEALED ABYSS NODE INDEXED',
+    critical: 'CORE HYPOTHERMIC — MOVE OR DROP INTO BLACK WATER'
   }
 } as const satisfies {
   fogColor: number;
@@ -99,27 +100,74 @@ export const RAYCAST_ATMOSPHERE_WORLD2 = {
  * Ion stratum: slightly deeper fog envelope + softer corrupt pulse vs infernal W1; bump silhouette floor so cold haze stays fair.
  */
 export const RAYCAST_WORLD2_SEGMENT_LAYER = {
-  fogStartDelta: 0.2,
+  fogStartDelta: 0.22,
+  /** Deeper cold envelope vs W1 — keeps silhouette floor bounded by fogEndCap. */
   fogEndDelta: 0.5,
-  fogEndCap: 12,
-  corruptionAlphaScale: 0.86,
-  pulseAlphaScale: 0.81,
-  ambientDarknessBump: 0.014,
-  ambientDarknessMax: 0.31,
-  enemyMinVisibilityDelta: 0.034,
-  enemyMinVisibilityCap: 0.73
+  fogEndCap: 11.6,
+  corruptionAlphaScale: 0.82,
+  pulseAlphaScale: 0.77,
+  ambientDarknessBump: 0.019,
+  ambientDarknessMax: 0.314,
+  enemyMinVisibilityDelta: 0.038,
+  enemyMinVisibilityCap: 0.735
 } as const;
 
-export type RaycastWorldSegmentId = 'world1' | 'world2';
+/** World 3 — warm ash haze; distinct from icy World 2 without breaking silhouette caps. */
+export const RAYCAST_ATMOSPHERE_WORLD3 = {
+  fogColor: 0x140804,
+  corruptionTint: 0x5a1820,
+  messageOverrides: {
+    intro:
+      'EMBER MERIDIAN — THIRD HELL — ASH CLOCKS YOUR ROUTE AND SCRAMBLES IDLE LANES',
+    exit: 'MERIDIAN NODE COOLED — VERDICT ARCHIVED',
+    idle: 'ASH STATIC CLINGS TO THE HUD — HEAT WITHOUT FORGE BOILER — NOT ABYSS BLUE',
+    locked: 'ACCESS DENIED — SEAL PACKED WITH CINDER',
+    key: 'TOKEN BRANDED — MERIDIAN ROUTING KNOWS YOUR FOOTPRINT',
+    doorOpen: 'VENT TEARS — EMBER FRONT MOVES DOWNCORRIDOR',
+    trigger: 'MERIDIAN HANDSHAKE — HOSTILES ALLOCATED TO YOUR TIMING WINDOW',
+    pressure: 'HARASS LAYER SHREDS REST — KEEP STRAFE TEMPO OR EAT CHIP DAMAGE',
+    surge: 'ASH SPIKE — SCRAMBLERS AND BRACKETS STACK FAST',
+    recovery: 'EMBER LULL — ONE WINDOW BEFORE THE NEXT SPIRE',
+    spawn: 'HOSTILE SURFACES IN WARM HAZE — SCRAMBLER READ DIFFERENT FROM STRATUM ICE',
+    damage: 'THERMAL CHIP — CORE ROUTING UNSTABLE',
+    kill: 'HOSTILE DISPERSED INTO ASH',
+    secret: 'CONCEALED LEDGER NODE INDEXED — SCORE SPINE TICK',
+    critical: 'CORE OVERHEATING — MOVE OR BURN INTO BLACK ASH'
+  }
+} as const satisfies {
+  fogColor: number;
+  corruptionTint: number;
+  messageOverrides: Partial<Record<RaycastAtmosphereMessageKey, string>>;
+};
+
+export const RAYCAST_WORLD3_SEGMENT_LAYER = {
+  fogStartDelta: 0.18,
+  fogEndDelta: 0.42,
+  fogEndCap: 11.4,
+  corruptionAlphaScale: 0.85,
+  pulseAlphaScale: 0.8,
+  ambientDarknessBump: 0.015,
+  ambientDarknessMax: 0.308,
+  enemyMinVisibilityDelta: 0.032,
+  enemyMinVisibilityCap: 0.728
+} as const;
+
+export type RaycastWorldSegmentId = 'world1' | 'world2' | 'world3';
 
 export function getRaycastCombatMessageForSegment(
   segment: RaycastWorldSegmentId,
   key: RaycastAtmosphereMessageKey
 ): string {
   const base = RAYCAST_ATMOSPHERE.messages[key];
-  if (segment !== 'world2') return base;
-  const hit = RAYCAST_ATMOSPHERE_WORLD2.messageOverrides[key];
-  return hit !== undefined ? hit : base;
+  if (segment === 'world2') {
+    const hit = RAYCAST_ATMOSPHERE_WORLD2.messageOverrides[key];
+    return hit !== undefined ? hit : base;
+  }
+  if (segment === 'world3') {
+    const hit = RAYCAST_ATMOSPHERE_WORLD3.messageOverrides[key];
+    return hit !== undefined ? hit : base;
+  }
+  return base;
 }
 
 export function getRaycastIntroMessageForSegment(segment: RaycastWorldSegmentId): string {
@@ -130,19 +178,73 @@ export function getRaycastExitMessageForSegment(segment: RaycastWorldSegmentId):
   return getRaycastCombatMessageForSegment(segment, 'exit');
 }
 
+/** Boss-specific combat strip lines (HUD); keyed by level `bossConfig.displayName`. */
+export interface RaycastBossHudLines {
+  phase2Overdrive: string;
+  telegraphLocked: string;
+  volleyInbound: string;
+  hullStressed: string;
+  coreShattered: string;
+}
+
+export function getRaycastBossHudLines(displayName: string): RaycastBossHudLines {
+  const lower = displayName.toLowerCase();
+  if (lower.includes('ash judge')) {
+    return {
+      phase2Overdrive: 'ASH HALO OVERDRIVE // PHASE 2',
+      telegraphLocked: 'JUDGE TELEGRAPH LOCKED',
+      volleyInbound: 'EMBER SPIRE VOLLEY INBOUND',
+      hullStressed: 'JUDGE HULL STRESSED',
+      coreShattered: 'JUDGE VERDICT VOIDED'
+    };
+  }
+  if (lower.includes('bloom')) {
+    return {
+      phase2Overdrive: 'BLOOM OVERDRIVE // PHASE 2',
+      telegraphLocked: 'BLOOM TELEGRAPH LOCKED',
+      volleyInbound: 'BLOOM VOLLEY INBOUND',
+      hullStressed: 'WARDEN HULL STRESSED',
+      coreShattered: 'WARDEN CORE SHATTERED'
+    };
+  }
+  return {
+    phase2Overdrive: 'ARCHON CORE OVERDRIVE // PHASE 2',
+    telegraphLocked: 'ARCHON TELEGRAPH LOCKED',
+    volleyInbound: 'ARCHON VOLLEY INBOUND',
+    hullStressed: 'ARCHON HULL STRESSED',
+    coreShattered: 'ARCHON CORE SHATTERED'
+  };
+}
+
 /** Biome tint layered on director-driven atmosphere (no second renderer). */
 export function applyWorldSegmentToAtmosphere(
   base: RaycastAtmosphereRenderOptions,
   segment: RaycastWorldSegmentId
 ): RaycastAtmosphereRenderOptions {
-  if (segment !== 'world2') return base;
-  const L = RAYCAST_WORLD2_SEGMENT_LAYER;
+  if (segment === 'world1') return base;
+  if (segment === 'world2') {
+    const L = RAYCAST_WORLD2_SEGMENT_LAYER;
+    const fogEnd = Math.min(L.fogEndCap, base.fogEnd + L.fogEndDelta);
+    const fogStart = Math.min(base.fogStart + L.fogStartDelta, fogEnd - 0.35);
+    return {
+      ...base,
+      fogColor: RAYCAST_ATMOSPHERE_WORLD2.fogColor,
+      corruptionTint: RAYCAST_ATMOSPHERE_WORLD2.corruptionTint,
+      fogStart,
+      fogEnd,
+      corruptionAlpha: base.corruptionAlpha * L.corruptionAlphaScale,
+      pulseAlpha: base.pulseAlpha * L.pulseAlphaScale,
+      ambientDarkness: Math.min(L.ambientDarknessMax, base.ambientDarkness + L.ambientDarknessBump),
+      enemyMinVisibility: Math.min(L.enemyMinVisibilityCap, base.enemyMinVisibility + L.enemyMinVisibilityDelta)
+    };
+  }
+  const L = RAYCAST_WORLD3_SEGMENT_LAYER;
   const fogEnd = Math.min(L.fogEndCap, base.fogEnd + L.fogEndDelta);
   const fogStart = Math.min(base.fogStart + L.fogStartDelta, fogEnd - 0.35);
   return {
     ...base,
-    fogColor: RAYCAST_ATMOSPHERE_WORLD2.fogColor,
-    corruptionTint: RAYCAST_ATMOSPHERE_WORLD2.corruptionTint,
+    fogColor: RAYCAST_ATMOSPHERE_WORLD3.fogColor,
+    corruptionTint: RAYCAST_ATMOSPHERE_WORLD3.corruptionTint,
     fogStart,
     fogEnd,
     corruptionAlpha: base.corruptionAlpha * L.corruptionAlphaScale,

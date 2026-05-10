@@ -1,11 +1,13 @@
 import {
   computeBossPelletEfficiency,
   computePelletAccuracyRatio,
-  formatRaycastSectorMedalLabel
+  formatRaycastSectorMedalLabel,
+  type RaycastCampaignMetrics
 } from './RaycastScore';
 
 export interface RaycastRunSummaryInput {
   difficultyLabel?: string;
+  /** Last cleared sector — wall time for that map only. */
   elapsedMs: number;
   enemiesKilled: number;
   score?: number;
@@ -14,7 +16,10 @@ export interface RaycastRunSummaryInput {
   secretTotal: number;
   tokensFound: number;
   tokenTotal: number;
+  /** Total scaled damage taken this sector (all sources). */
   damageTaken: number;
+  /** Damage taken while the sector boss was alive — skill read for arena maps. */
+  bossArenaDamageTaken?: number;
   /** Replay incentive — derived from score bands when score present. */
   includeRank?: boolean;
   /** Campaign beat both Episode 1 + World 2 (shown when applicable). */
@@ -26,16 +31,34 @@ export interface RaycastRunSummaryInput {
   bossPelletsHitHostile?: number;
   hadBoss?: boolean;
   medals?: string[];
+  /** Merged cumulative metrics — finale overlay only. */
+  campaign?: RaycastCampaignMetrics;
+  /** When true, show run composite block + recalibrated copy. */
+  episodeComplete?: boolean;
 }
 
-/** Lightweight tier — tuned upward slightly vs baseline kills because sector performance bonuses add ~400–650 pts/clear. */
-export function computeRaycastRunRank(score: number): string {
+/** Tier letter + subtitle — used for HUD-safe overlays and summary alignment (Phase 26). */
+export interface RaycastRunRankParts {
+  tierLetter: 'S' | 'A' | 'B' | 'C' | 'D';
+  subtitle: string;
+}
+
+/**
+ * Discrete tiers — tuned upward because campaign completion bonus raises typical clears.
+ * Focus: reward full-run skill without requiring pacifist routing.
+ */
+export function computeRaycastRunRankParts(score: number): RaycastRunRankParts {
   const safe = Number.isFinite(score) ? Math.max(0, Math.floor(score)) : 0;
-  if (safe >= 16_500) return 'RANK S — STRATUM BREAKER';
-  if (safe >= 12_200) return 'RANK A — CLEAN SIGNAL';
-  if (safe >= 8800) return 'RANK B — HARD ROUTE';
-  if (safe >= 5200) return 'RANK C — SCRAPE BY';
-  return 'RANK D — BARE EXIT';
+  if (safe >= 18_800) return { tierLetter: 'S', subtitle: 'STRATUM BREAKER' };
+  if (safe >= 14_000) return { tierLetter: 'A', subtitle: 'CLEAN SIGNAL' };
+  if (safe >= 10_200) return { tierLetter: 'B', subtitle: 'HARD ROUTE' };
+  if (safe >= 6000) return { tierLetter: 'C', subtitle: 'SCRAPE BY' };
+  return { tierLetter: 'D', subtitle: 'BARE EXIT' };
+}
+
+export function computeRaycastRunRank(score: number): string {
+  const p = computeRaycastRunRankParts(score);
+  return `RANK ${p.tierLetter} — ${p.subtitle}`;
 }
 
 export function formatRunDuration(elapsedMs: number): string {
@@ -48,18 +71,64 @@ export function formatRunDuration(elapsedMs: number): string {
   return `${minutes}:${seconds.toString().padStart(2, '0')}.${tenths}`;
 }
 
+function padStat(label: string, value: string, labelWidth = 15): string {
+  return ` ${label.padEnd(labelWidth)} ${value}`;
+}
+
+function formatScoreInt(n: number): string {
+  return Math.max(0, Math.floor(n)).toLocaleString('en-US');
+}
+
+function buildCampaignCompositeLines(c: RaycastCampaignMetrics): string[] {
+  const runAcc = computePelletAccuracyRatio(c.cumulativePelletsFired, c.cumulativePelletsHitHostile);
+  const runAccPct = runAcc !== null ? `${Math.round(runAcc * 100)}%` : '—';
+  const runAccDetail =
+    c.cumulativePelletsFired > 0
+      ? `${runAccPct} (${c.cumulativePelletsHitHostile}/${c.cumulativePelletsFired})`
+      : '—';
+
+  const runBossEff = computeBossPelletEfficiency(
+    c.cumulativeBossPelletsFired,
+    c.cumulativeBossPelletsHitHostile,
+    c.bossSectorsPlayed > 0
+  );
+  const bossEffLine =
+    runBossEff !== null && c.cumulativeBossPelletsFired > 0
+      ? padStat('BOSS EFF (RUN)', `${Math.round(runBossEff * 100)}% (${c.cumulativeBossPelletsHitHostile}/${c.cumulativeBossPelletsFired})`)
+      : null;
+
+  const bossDmgRun =
+    c.bossSectorsPlayed > 0
+      ? padStat('BOSS DMG (RUN)', String(Math.round(c.cumulativeBossDamageTaken)))
+      : null;
+
+  return [
+    '▓ RUN LOCK // COMPOSITE ▓',
+    padStat('WALL TIME', formatRunDuration(c.cumulativeElapsedMs)),
+    padStat('SECTORS', String(c.sectorsCleared)),
+    padStat('ACC (RUN)', runAccDetail),
+    padStat('DMG (RUN)', String(Math.round(c.cumulativeDamageTaken))),
+    padStat('SECRETS (RUN)', `${c.cumulativeSecretsFound}/${c.cumulativeSecretSlots}`),
+    ...(bossEffLine ? [bossEffLine] : []),
+    ...(bossDmgRun ? [bossDmgRun] : [])
+  ];
+}
+
 export function buildRaycastRunSummary(input: RaycastRunSummaryInput): string[] {
-  const rankLine =
-    input.includeRank !== false && input.score !== undefined ? computeRaycastRunRank(input.score) : null;
+  const rankParts =
+    input.includeRank !== false && input.score !== undefined ? computeRaycastRunRankParts(input.score) : null;
+  const rankFormatted = rankParts ? padStat('RANK', `${rankParts.tierLetter} — ${rankParts.subtitle}`) : null;
 
   const scoreBlock =
     input.score !== undefined && input.highScore !== undefined
-      ? `SCORE ${input.score}  │  HIGH SCORE ${input.highScore}`
+      ? padStat('SCORE │ BEST', `${formatScoreInt(input.score)} │ ${formatScoreInt(input.highScore)}`)
       : input.score !== undefined
-        ? `SCORE ${input.score}`
+        ? padStat('SCORE', formatScoreInt(input.score))
         : null;
   const highOnly =
-    input.score === undefined && input.highScore !== undefined ? `HIGH SCORE ${input.highScore}` : null;
+    input.score === undefined && input.highScore !== undefined
+      ? padStat('BEST RUN', formatScoreInt(input.highScore))
+      : null;
 
   const accRatio =
     input.pelletsFired !== undefined && input.pelletsHitHostile !== undefined
@@ -70,7 +139,7 @@ export function buildRaycastRunSummary(input: RaycastRunSummaryInput): string[] 
     input.pelletsFired !== undefined &&
     input.pelletsHitHostile !== undefined &&
     input.pelletsFired > 0
-      ? `ACCURACY ${Math.round(accRatio * 100)}% (${input.pelletsHitHostile}/${input.pelletsFired} pellets)`
+      ? padStat('ACC (SECTOR)', `${Math.round(accRatio * 100)}% (${input.pelletsHitHostile}/${input.pelletsFired})`)
       : null;
 
   const bossEff =
@@ -84,34 +153,57 @@ export function buildRaycastRunSummary(input: RaycastRunSummaryInput): string[] 
     input.bossPelletsFired !== undefined &&
     input.bossPelletsFired > 0 &&
     input.bossPelletsHitHostile !== undefined
-      ? `BOSS EFF ${Math.round(bossEff * 100)}% (${input.bossPelletsHitHostile}/${input.bossPelletsFired})`
+      ? padStat('BOSS EFF', `${Math.round(bossEff * 100)}% (${input.bossPelletsHitHostile}/${input.bossPelletsFired})`)
       : null;
+
+  const bossSurvLine =
+    input.hadBoss && input.bossArenaDamageTaken !== undefined
+      ? padStat('BOSS DMG', `${Math.round(input.bossArenaDamageTaken)} (arena)`)
+      : null;
+
+  const campaignLines =
+    input.episodeComplete && input.campaign ? buildCampaignCompositeLines(input.campaign) : [];
 
   const medalLines: string[] =
     input.medals !== undefined && input.medals.length > 0
       ? [
-          '── MARKS ──',
-          ...input.medals.map((id) => `▸ ${formatRaycastSectorMedalLabel(id)}`)
+          ' ▒ MARKS ▒',
+          ...input.medals.map((id) => `  ▸ ${formatRaycastSectorMedalLabel(id)}`)
         ]
       : [];
 
-  return [
-    '══ SECTOR REPORT ══',
-    input.difficultyLabel ? `DIFFICULTY ${input.difficultyLabel.toUpperCase()}` : null,
+  const hintLine =
+    input.episodeComplete && input.score !== undefined && input.includeRank !== false
+      ? ' PUSH // Higher ACC, lower DMG, faster wall time → higher tier'
+      : null;
+
+  const header = input.episodeComplete ? '══ SIGNAL REPORT // RUN COMPLETE ══' : '══ SECTOR REPORT ══';
+
+  const coreBlock = [
+    header,
+    input.difficultyLabel ? padStat('DIFFICULTY', input.difficultyLabel.toUpperCase()) : null,
     scoreBlock,
     highOnly,
-    rankLine,
-    input.fullArcClear ? 'FULL ARC — EPISODE 1 + WORLD 2 CLEAR' : null,
-    '── TIME ──',
-    `ELAPSED ${formatRunDuration(input.elapsedMs)}`,
-    '── COMBAT ──',
-    `HOSTILES TERMINATED ${input.enemiesKilled}`,
+    rankFormatted,
+    hintLine,
+    input.fullArcClear ? ' FULL ARC — EPISODE 1 + WORLD 2 CLEAR' : null,
+    ...campaignLines,
+    campaignLines.length > 0 ? ' ─────────────────────' : null,
+    ' ◆ TIME ◆',
+    input.episodeComplete && input.campaign
+      ? padStat('SECTOR TIME', formatRunDuration(input.elapsedMs))
+      : padStat('ELAPSED', formatRunDuration(input.elapsedMs)),
+    ' ◆ COMBAT ◆',
+    padStat('HOSTILES', String(input.enemiesKilled)),
     accuracyLine,
-    `DAMAGE TAKEN ${input.damageTaken}`,
+    padStat('DMG (YOU)', String(Math.round(input.damageTaken))),
     bossLine,
-    '── INTEL ──',
-    `SECRETS ${input.secretsFound}/${input.secretTotal}`,
-    `TOKENS ${input.tokensFound}/${input.tokenTotal}`,
+    bossSurvLine,
+    ' ◆ INTEL ◆',
+    padStat('SECRETS', `${input.secretsFound}/${input.secretTotal}`),
+    padStat('TOKENS', `${input.tokensFound}/${input.tokenTotal}`),
     ...medalLines
   ].filter((line): line is string => line !== null);
+
+  return coreBlock;
 }

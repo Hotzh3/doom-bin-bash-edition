@@ -70,11 +70,12 @@ export const RAYCAST_LEVEL_WORLD2_FRACTURE: RaycastLevel = {
       once: true,
       doorId: 'rift-seam-gate',
       objectiveText: 'Split the ion shaft',
-      activationText: 'Basalt seam tearing: pressure spike inbound',
+      activationText: 'Basalt seam tearing: tri-flank spike inbound',
       spawns: [
         { x: 9.5, y: 2.5, kind: 'RANGED' },
         { x: 13.5, y: 6.5, kind: 'GRUNT' },
-        { x: 13.5, y: 3.5, kind: 'STALKER' }
+        { x: 13.5, y: 3.5, kind: 'STALKER' },
+        { x: 11.2, y: 4.6, kind: 'GRUNT' }
       ]
     },
     {
@@ -177,7 +178,8 @@ export const RAYCAST_LEVEL_WORLD2_FRACTURE: RaycastLevel = {
     {
       id: 'rift-gully-read',
       zoneId: 'rift-gully',
-      message: 'Basalt tread forks — cache left for intel, or drop toward the ion well for the flare'
+      message:
+        'Basalt abyss — not Foundry heat — tread forks: cache left for intel, or commit toward the ion well'
     },
     {
       id: 'rift-seam-hum',
@@ -199,6 +201,11 @@ export const RAYCAST_LEVEL_WORLD2_FRACTURE: RaycastLevel = {
       directorState: 'RECOVERY',
       requiresTriggerId: 'rift-split-push',
       message: 'Ion pressure dips — recover before the next spike'
+    },
+    {
+      id: 'rift-ion-shaft-commit',
+      zoneId: 'ion-run',
+      message: 'Shaft line denies sprint-through — slice diagonals between slabs before rifles crown'
     }
   ],
   hudObjectiveLabels: {
@@ -222,17 +229,17 @@ export const RAYCAST_LEVEL_WORLD2_FRACTURE: RaycastLevel = {
       openingSpawnCount: 0,
       baseSpawnCooldownMs: 5200,
       buildUpSpawnCooldownMs: 4200,
-      ambushSpawnCooldownMs: 2100,
+      ambushSpawnCooldownMs: 2360,
       highIntensitySpawnCooldownMs: 3400,
-      recoveryDurationMs: 4600,
-      ambushDurationMs: 5800,
-      highIntensityDurationMs: 8600,
-      buildUpAfterMs: 6500,
-      idlePressureMs: 1800,
+      recoveryDurationMs: 5600,
+      ambushDurationMs: 6600,
+      highIntensityDurationMs: 9000,
+      buildUpAfterMs: 6400,
+      idlePressureMs: 1900,
       dominanceNoDamageMs: 8800,
       lowHealthThreshold: 35,
       comfortableHealthThreshold: 65,
-      debugEnabled: true
+      debugEnabled: false
     },
     spawnPoints: [
       { id: 'rift-start-rear', zoneId: 'rift-start', x: 5.5, y: 10.5, minPlayerDistance: 2.2 },
@@ -447,15 +454,15 @@ export const RAYCAST_LEVEL_WORLD2_THRESHOLD: RaycastLevel = {
       buildUpSpawnCooldownMs: 3400,
       ambushSpawnCooldownMs: 1850,
       highIntensitySpawnCooldownMs: 2900,
-      recoveryDurationMs: 4000,
-      ambushDurationMs: 6600,
-      highIntensityDurationMs: 9800,
+      recoveryDurationMs: 5000,
+      ambushDurationMs: 6800,
+      highIntensityDurationMs: 10000,
       buildUpAfterMs: 5600,
-      idlePressureMs: 1500,
+      idlePressureMs: 1520,
       dominanceNoDamageMs: 7600,
       lowHealthThreshold: 35,
       comfortableHealthThreshold: 65,
-      debugEnabled: true
+      debugEnabled: false
     },
     spawnPoints: [
       { id: 'threshold-start-flank', zoneId: 'threshold-start', x: 1.5, y: 9.5, minPlayerDistance: 2.0 },
@@ -527,6 +534,7 @@ export const RAYCAST_LEVEL_WORLD2_SULFUR_LATTICE: RaycastLevel = {
       doorId: 'lattice-vault-seal',
       objectiveText: 'Conduit surge: split the lane',
       activationText: 'Yellow shear inbound: anchor + rifle pair',
+      setpieceCue: 'ALARM_SURGE',
       spawns: [
         { x: 11.5, y: 3.5, kind: 'RANGED' },
         { x: 15.5, y: 5.5, kind: 'BRUTE' },
@@ -557,6 +565,7 @@ export const RAYCAST_LEVEL_WORLD2_SULFUR_LATTICE: RaycastLevel = {
       once: true,
       objectiveText: 'Lower loop stirred',
       activationText: 'Spores wake stragglers in the crawl',
+      setpieceCue: 'CORRIDOR_HUNT',
       spawns: [
         { x: 3.5, y: 9.5, kind: 'STALKER' },
         { x: 5.5, y: 11.5, kind: 'GRUNT' }
@@ -634,7 +643,9 @@ export const RAYCAST_LEVEL_WORLD2_SULFUR_LATTICE: RaycastLevel = {
     {
       id: 'bloom-archive-read',
       zoneId: 'bloom-archive',
-      message: 'Sulfur bloom clotting the archive — grab the spore before the vault hum peaks'
+      message:
+        'Lattice archive — sulfur bloom, not infernal rust: harvest spore before vault coupling peaks',
+      setpieceCue: 'RITUAL_PULSE'
     },
     {
       id: 'sulfur-loop-breathe',
@@ -686,15 +697,15 @@ export const RAYCAST_LEVEL_WORLD2_SULFUR_LATTICE: RaycastLevel = {
       buildUpSpawnCooldownMs: 3700,
       ambushSpawnCooldownMs: 1950,
       highIntensitySpawnCooldownMs: 3100,
-      recoveryDurationMs: 4200,
-      ambushDurationMs: 6000,
-      highIntensityDurationMs: 9000,
+      recoveryDurationMs: 4600,
+      ambushDurationMs: 6400,
+      highIntensityDurationMs: 9400,
       buildUpAfterMs: 5800,
       idlePressureMs: 1650,
       dominanceNoDamageMs: 8200,
       lowHealthThreshold: 35,
       comfortableHealthThreshold: 65,
-      debugEnabled: true
+      debugEnabled: false
     },
     spawnPoints: [
       { id: 'sulfur-start-flank', zoneId: 'sulfur-start', x: 5.5, y: 13.5, minPlayerDistance: 2.2 },

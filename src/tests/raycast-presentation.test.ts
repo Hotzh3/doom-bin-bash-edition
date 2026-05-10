@@ -49,6 +49,19 @@ describe('raycast presentation helpers', () => {
     expect(buildRaycastDeathOverlayHint()).toContain('RESTART');
   });
 
+  it('builds a World 3 banner when the meridian arc is active', () => {
+    const banner = buildRaycastEpisodeBanner({
+      currentLevelNumber: 1,
+      totalLevels: 6,
+      levelName: 'Ember Ramp',
+      worldThreeSector: { index: 1, total: 3 }
+    });
+
+    expect(banner).toContain('WORLD 3 // EMBER MERIDIAN');
+    expect(banner).toContain('THIRD HELL');
+    expect(banner).toContain('SECTOR 1/3');
+  });
+
   it('builds a World 2 banner when the rift arc is active', () => {
     const banner = buildRaycastEpisodeBanner({
       currentLevelNumber: 1,
@@ -57,9 +70,9 @@ describe('raycast presentation helpers', () => {
       worldTwoSector: { index: 1, total: 2 }
     });
 
-    expect(banner).toContain('WORLD 2 // ION STRATUM');
+    expect(banner).toContain('WORLD 2 // ABYSS STRATUM');
+    expect(banner).toContain('NOT THE FORGE');
     expect(banner).toContain('SECTOR 1/2');
-    expect(banner).toContain('ION STRATUM');
   });
 
   it('builds clear overlay hints for both next-level and finale states', () => {
@@ -103,7 +116,7 @@ describe('raycast presentation helpers', () => {
       'Boss purged. Press N to descend into World 2, R to replay boss, ESC for menu.'
     );
     expect(buildRaycastStatusMessage(true, false, true, true, false, false, true)).toBe(
-      'Archon down — ion stratum breach opens. Press N to descend the rift, R to replay boss, ESC for menu.'
+      'Archon down — abyss stratum tears open (not the same hell). Press N to descend the rift, R to replay boss, ESC for menu.'
     );
     expect(buildRaycastStatusMessage(false, false, false)).toBe('Signal lost. Press R to retry or ESC for menu.');
   });

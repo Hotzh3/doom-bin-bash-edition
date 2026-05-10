@@ -29,7 +29,11 @@ export type AudioFeedbackCue =
   | 'directorAmbush'
   | 'directorRecovery'
   | 'damage'
-  | 'ambient';
+  | 'ambient'
+  | 'ambientIndustrial'
+  | 'ambientCorrupt'
+  | 'bossPhaseShift'
+  | 'stingerDread';
 
 export interface AudioFeedbackLayerConfig {
   frequency: number;
@@ -173,7 +177,8 @@ export const AUDIO_FEEDBACK_CONFIG: Record<AudioFeedbackCue, AudioFeedbackConfig
   lowHealthWarning: {
     layers: [
       { frequency: 156, endFrequency: 132, duration: 0.08, volume: 0.017, type: 'sine' },
-      { frequency: 156, endFrequency: 132, duration: 0.08, volume: 0.014, type: 'sine', delay: 0.15 }
+      { frequency: 156, endFrequency: 132, duration: 0.08, volume: 0.014, type: 'sine', delay: 0.15 },
+      { frequency: 820, endFrequency: 540, duration: 0.055, volume: 0.008, type: 'triangle', delay: 0.088 }
     ],
     throttleMs: 1800
   },
@@ -239,6 +244,41 @@ export const AUDIO_FEEDBACK_CONFIG: Record<AudioFeedbackCue, AudioFeedbackConfig
       { frequency: 112, endFrequency: 76, duration: 0.14, volume: 0.0065, type: 'triangle', delay: 0.045 }
     ],
     throttleMs: 520
+  },
+  /** Director pressure / boss pit — grinding machinery undertones (still short procedural blips). */
+  ambientIndustrial: {
+    layers: [
+      { frequency: 72, endFrequency: 96, duration: 0.18, volume: 0.014, type: 'sawtooth' },
+      { frequency: 156, endFrequency: 118, duration: 0.14, volume: 0.009, type: 'square', delay: 0.028 },
+      { frequency: 240, endFrequency: 180, duration: 0.11, volume: 0.0055, type: 'triangle', delay: 0.055 }
+    ],
+    throttleMs: 480
+  },
+  /** Ion stratum / corrupted signal bed — whisper HF decay + low crawl. */
+  ambientCorrupt: {
+    layers: [
+      { frequency: 58, endFrequency: 74, duration: 0.2, volume: 0.011, type: 'sine' },
+      { frequency: 620, endFrequency: 420, duration: 0.09, volume: 0.0045, type: 'triangle', delay: 0.04 },
+      { frequency: 118, endFrequency: 92, duration: 0.12, volume: 0.007, type: 'sawtooth', delay: 0.018 }
+    ],
+    throttleMs: 540
+  },
+  /** Boss phase transition — sub-heavy sweep distinct from director ambush spawn sting. */
+  bossPhaseShift: {
+    layers: [
+      { frequency: 48, endFrequency: 28, duration: 0.18, volume: 0.042, type: 'triangle' },
+      { frequency: 180, endFrequency: 72, duration: 0.14, volume: 0.022, type: 'sawtooth', delay: 0.02 },
+      { frequency: 520, endFrequency: 160, duration: 0.08, volume: 0.012, type: 'sine', delay: 0.045 }
+    ],
+    throttleMs: 2400
+  },
+  /** Telegraph edge — thin harmonic stab; paired with directorWarning, heavily throttled. */
+  stingerDread: {
+    layers: [
+      { frequency: 280, endFrequency: 120, duration: 0.065, volume: 0.022, type: 'triangle' },
+      { frequency: 920, endFrequency: 380, duration: 0.045, volume: 0.011, type: 'sine', delay: 0.018 }
+    ],
+    throttleMs: 950
   }
 };
 

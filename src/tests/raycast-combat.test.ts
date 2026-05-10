@@ -87,7 +87,7 @@ describe('raycast combat', () => {
 
     expect(getRaycastCrosshairTargetInfo(player, [enemy], 10, 1000)).toEqual({
       id: 'close',
-      kindLabel: 'TURRET',
+      kindLabel: 'TURRET·ZONE',
       health: 24,
       maxHealth: 48,
       healthRatio: 0.5,

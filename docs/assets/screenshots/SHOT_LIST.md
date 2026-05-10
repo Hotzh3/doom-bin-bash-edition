@@ -1,89 +1,58 @@
-# Portfolio & demo shot list (Phase 27A)
+# Portfolio shot list — Phase 32 (final)
 
-Use this list so captures stay **consistent** (same resolution path: `npm run dev`, browser **960×540** or **1280×720** window with Phaser FIT scaling — pick one and reuse). Hide browser chrome; **debug HUD off** (`TAB` unless you intentionally show it). Pointer lock is optional for static shots (click canvas once if the scene expects focus).
+Captures must share one **window geometry**: Playwright / manual **`960×540`** viewport (see [`scripts/capture-portfolio.mjs`](../../../scripts/capture-portfolio.mjs)). No browser chrome; **debug HUD off** (`TAB`). Optional pointer lock: click canvas once if focus is needed.
 
----
+**Order of capture (automated stills + GIF source):** menu → prologue → sector HUD → walk → exploration → combat → *(recording ends)*. Run:
 
-## Screenshots (target: **5**)
-
-### 1. `raycast-menu.webp`
-
-| | |
-|---|---|
-| **Purpose** | First impression: product framing (3D episode vs 2D arena, difficulty line). |
-| **Must show** | Title, **Press A: 3D Mode**, **Press B: 2D Arena**, difficulty hint (`[D] CYCLE`). |
-| **Moment** | `MenuScene` after fade-in (~0.5–1 s on menu). |
-| **How** | Launch game → wait on menu → capture. |
-
-### 2. `raycast-prologue.webp`
-
-| | |
-|---|---|
-| **Purpose** | Narrative / tone — terminal corruption, clean-room disclaimer via copy. |
-| **Must show** | Prologue body text + continue/back lines (raycast copy). |
-| **Moment** | `PrologueScene` right after pressing **`A`** from menu, before second **`A`**. |
-| **How** | From menu press **`A`** → capture before continuing. |
-
-### 3. `raycast-sector-hud.webp`
-
-| | |
-|---|---|
-| **Purpose** | Core gameplay readability: raycast view + HUD + objective. |
-| **Must show** | First-person view, crosshair, health/objective strip, weapon line — ideally a readable corridor. |
-| **Moment** | `RaycastScene` sector 1, **~2–4 s** after leaving prologue (second **`A`** / Space / Enter). |
-| **How** | Prologue → continue → small movement forward so the frame is not empty black/wall-only. |
-
-### 4. `raycast-combat-director.webp`
-
-| | |
-|---|---|
-| **Purpose** | Action + systems story: combat feedback and pressure (director / encounter). |
-| **Must show** | Enemy/billboard or hit feedback visible; HUD still readable. |
-| **Moment** | First or second combat pocket after engagement starts (not menu/prologue). |
-| **How** | Play until an encounter triggers; capture mid-fight or right after kill flash. |
-
-### 5. `raycast-level-clear.webp`
-
-| | | |
-|---|---|---|
-| **Purpose** | Run summary / scoring / replay loop — “serious product” proof. |
-| **Must show** | Level-clear overlay with **══ SECTOR REPORT ══**, score/high score, rank line, time, combat/intel lines. |
-| **Moment** | Exit trigger after objectives met — **`showRunCompleteOverlay`** (not death). |
-| **How** | Complete one sector normally (or speed-run on easiest difficulty). Pause overlay; no cursor over text. |
-
-**Bonus still (often automated):** `raycast-exploration.webp` — corridor read after a short forward walk; pairs with (3) for README grids.
-
-**Optional swap:** If World 2 is part of the story you want to tell, add later: `raycast-world2-atmosphere.webp` (rift palette + banner visible).
+```bash
+npm run capture:media
+```
 
 ---
 
-## Animated GIFs (target: **2**)
+## Screenshots (**5** — README grid)
 
-### A. `raycast-boot-to-sector.gif` (~6–9 s loop or once-through)
+| # | File | Purpose | Moment in-game |
+|---|------|---------|----------------|
+| 1 | `raycast-menu.webp` | First frame: dual mode + difficulty | `MenuScene` ~0.5–1 s after load |
+| 2 | `raycast-prologue.webp` | Terminal tone + clean-room positioning | `PrologueScene` after **`A`**, before second continue |
+| 3 | `raycast-sector-hud.webp` | Core product: FP view + HUD + objective | `RaycastScene` sector 1, ~2–4 s after spawn |
+| 4 | `raycast-exploration.webp` | Movement / corridor readability | Short forward walk from spawn |
+| 5 | `raycast-combat-director.webp` | Combat + feedback (director pressure optional) | After firing / engagement in sector 1 |
 
-| | |
-|---|---|
-| **Purpose** | Show the **full entry funnel**: menu → prologue → first sector in one glance (great for README / LinkedIn). |
-| **Must show** | Menu → prologue screen → transition into playable raycast (brief walk optional). |
-| **Moment** | Single continuous recording from cold menu; cut dead air at start/end. |
-| **Encoding** | Keep width ≤ **720 px**, ~10–12 fps, duration under **12 s**, optimized palette (ffmpeg `palettegen`/`paletteuse`). |
+**Combined budget:** five WebPs typically **~95–110 KB** — keep **under ~250 KB** total if tuning quality. Refresh the root [`README.md`](../../../README.md) subline after `npm run capture:media`.
 
-### B. `raycast-combat-loop.gif` (~3–5 s)
+### Optional sixth (manual — “serious portfolio”)
 
-| | |
-|---|---|
-| **Purpose** | Short “feel” clip: movement + firing + enemy reaction (director pressure optional). |
-| **Must show** | Strafe or forward motion + at least one weapon discharge + readable HUD. |
-| **Moment** | Any combat-heavy stretch in Episode 1 (sector 1–2). |
-| **Encoding** | Same as above; prioritize **clarity** over length. |
+| File | Purpose | Moment |
+|------|---------|--------|
+| `raycast-level-clear.webp` | Score, rank, sector report — shipped finish line | Level-clear overlay (`showRunCompleteOverlay`), easiest difficulty OK |
+
+Not generated by `capture:media` (needs full sector clear). Add to README only when captured.
+
+### Optional seventh (manual — World 2 pitch)
+
+`raycast-world2-atmosphere.webp` — first World 2 sector with **ABYSS STRATUM** / **NOT THE FORGE** banner legible (rift identity).
 
 ---
 
-## Checklist before committing assets
+## Animated GIFs (**2**)
 
-- [ ] Same aspect ratio / window size across all stills.  
-- [ ] No personal bookmarks / browser UI in frame.  
-- [ ] WebP or compressed PNG; total stills budget **< ~1.5 MB** when possible.  
-- [ ] GIFs **< ~2–4 MB** each after optimization (shorter beats prettier).  
+| File | Purpose | Source trim | Encoding (pipeline) |
+|------|---------|-------------|---------------------|
+| `raycast-boot-to-sector.gif` | Full funnel: menu → prologue → play | First **~6 s** of session video | `fps=8`, `scale=400`, palette GIF |
+| `raycast-combat-loop.gif` | Movement + fire + HUD | **~3 s** from mid-session (`-ss 4.5`) | same |
 
-See [`README.md`](./README.md) in this folder for naming and optimization commands.
+Regenerate: `npm run capture:media` (requires **ffmpeg** on `PATH`). Target **≤ ~700 KB each** when possible; recent passes landed about **~230 KB + ~265 KB** — if a run exceeds budget, shorten `-t` in the script before lowering resolution.
+
+---
+
+## Pre-commit checklist
+
+- [ ] Same aspect ratio for all stills.  
+- [ ] No bookmarks / browser UI.  
+- [ ] WebP stills combined within budget above.  
+- [ ] GIFs under **~1 MB** each; prefer trimming duration over crushing palette quality.  
+- [ ] Root [`README.md`](../../../README.md) footer matches measured totals after `npm run capture:media`.  
+
+See [`README.md`](./README.md) and [`../gifs/README.md`](../gifs/README.md).

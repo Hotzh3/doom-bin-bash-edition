@@ -4,9 +4,11 @@
 
 # doom-bin-bash-edition
 
-**Retro-horror raycast FPS** — a **browser-playable** vertical slice built with **Phaser 3**, **TypeScript**, and **Vite**. The main product is **`RaycastScene`**: a first-person mini-campaign (Episode 1, boss, optional World 2 rift), compact combat, **`GameDirector`** pacing, HUD / minimap, run summary with score and rank, and generated WebAudio. **`ArenaScene`** remains a **secondary** 2D sandbox for regression coverage.
+**Retro-horror raycast FPS** — a **browser-playable** vertical slice built with **Phaser 3**, **TypeScript**, and **Vite**. **`RaycastScene`** is the pitch: Episode 1 (five sectors + boss), optional **World 2** abyss arc (**four** data-driven sectors), **`GameDirector`** pacing, HUD / minimap, sector reports with score and rank, and generated WebAudio. **`ArenaScene`** is a **secondary** 2D sandbox for regression coverage.
 
-**Status:** Shippable portfolio slice — `vitest` coverage on core systems, ESLint, production build, GitHub Actions CI.
+**Status:** Portfolio-ready — core logic covered by **Vitest**, ESLint, production **Vite** build, GitHub Actions CI.
+
+**Showcase:** Everything in **Gameplay preview** is a **live capture** (960×540, no UI chrome). Regenerate stills and GIFs with **`npm run capture:media`** ([`scripts/capture-portfolio.mjs`](scripts/capture-portfolio.mjs)). Moodboard images at the bottom are style references only.
 
 ---
 
@@ -32,7 +34,7 @@
   <img src="docs/assets/gifs/raycast-combat-loop.gif" width="48%" alt="Short combat segment"/>
 </p>
 
-<p align="center"><sub>Level-clear overlay capture: follow <a href="docs/assets/screenshots/SHOT_LIST.md">docs/assets/screenshots/SHOT_LIST.md</a> · Regenerate stills/GIFs: <code>npm run capture:media</code></sub></p>
+<p align="center"><sub>Portfolio stills (5× WebP) ~97 KB total · GIFs ~230 KB + ~265 KB · Level-clear still (optional): <a href="docs/assets/screenshots/SHOT_LIST.md">SHOT_LIST.md</a> · Regenerate: <code>npm run capture:media</code> (script prints exact sizes)</sub></p>
 
 ---
 
@@ -48,7 +50,7 @@ No copied gameplay assets, maps, proprietary data, or reverse-engineered impleme
 
 ## What ships today
 
-- **Raycast episode:** menu → terminal prologue → **Episode 1** (five sectors + **Volt Archon** boss) → optional **World 2** two-sector rift (data-driven).
+- **Raycast episode:** menu → terminal prologue → **Episode 1** (five sectors + **Volt Archon** boss) → optional **World 2** four-sector rift (data-driven).
 - **Gameplay:** WASD, mouse / keys look, hitscan weapons, doors / keys / secrets, ambush triggers, objectives, pause / death / clear flows.
 - **Presentation:** Compact HUD, minimap, difficulty presets, sector report (score, high score, rank, timing, medals).
 - **Systems:** `GameDirector` pacing (calm → pressure → ambush → recovery), enemy roles (`GRUNT`, `STALKER`, `RANGED`, `BRUTE`).
@@ -98,6 +100,7 @@ npm run build
 | [docs/demo/raycast-demo-script.md](docs/demo/raycast-demo-script.md) | Presenter script (3–5 min and longer) |
 | [docs/demo/release-checklist.md](docs/demo/release-checklist.md) | Pre-demo smoke checklist |
 | [docs/assets/screenshots/SHOT_LIST.md](docs/assets/screenshots/SHOT_LIST.md) | Shot list for portfolio captures |
+| [docs/phases/phase-32-portfolio-visual-polish.md](docs/phases/phase-32-portfolio-visual-polish.md) | Phase 32 — portfolio media & pipeline |
 
 ---
 

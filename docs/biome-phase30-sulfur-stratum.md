@@ -58,3 +58,16 @@ Use existing `EnemyKind` only:
 
 - Player can **predict** Bloom Warden danger from **HUD phase strings** and **telegraph color**, not from invisible rules.
 - Full World 2 arc **clears** without relying on grind — difficulty is **positioning + reads**, not sponge HP.
+
+---
+
+## Implementation status (shipped in repo)
+
+| Piece | Location |
+|-------|----------|
+| **30B** — Sulfur Lattice crawl | `RAYCAST_LEVEL_WORLD2_SULFUR_LATTICE` in `RaycastWorldTwoLevels.ts` — authored triggers, director spawns, encounter beats, `toxic-green` / basalt zones. |
+| **30C** — Bloom Warden pit | `RAYCAST_LEVEL_WORLD2_WARDEN_PIT` — `RAYCAST_MAP_BOSS`, `bossConfig.behavior: 'bloom-warden'`, director **off**. Volleys + labels in `RaycastBoss.ts`. |
+| **30D** — Polish | Director `debugEnabled: false` on World 2 sectors; Bloom Warden pellets use **toxic yellow-green** (`BLOOM_WARDEN_PROJECTILE_COLOR`) vs Archon orange. |
+| **Chain** | `RAYCAST_WORLD_TWO_CATALOG`: Fracture → Threshold → **Sulfur Lattice** → **Bloom Warden pit**; `resolveRaycastNextLevelId` appends after Episode 1. |
+
+**Next expand:** another catalog entry or a new `episodeTheme` block using the same enemy vocabulary — no new `EnemyKind` required until design warrants it.

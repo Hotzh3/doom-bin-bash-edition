@@ -68,6 +68,9 @@ export interface RaycastBillboard {
   style?: 'token' | 'gate' | 'gate-open' | 'secret' | 'exit' | 'health';
 }
 
+/** Preallocated slots reused each frame — avoids per-enemy/projection object literals in hot paths. */
+const PROJECTION_POOL_CAP = 160;
+
 export class RaycastRenderer {
   private readonly graphics: Phaser.GameObjects.Graphics;
   private readonly depthBuffer: number[];
@@ -83,6 +86,26 @@ export class RaycastRenderer {
   ) {
     this.graphics = scene.add.graphics();
     this.depthBuffer = new Array(this.config.rayCount);
+    for (let i = 0; i < PROJECTION_POOL_CAP; i += 1) {
+      this.enemyProjectionScratch.push({
+        enemy: null as unknown as RaycastEnemy,
+        screenX: 0,
+        size: 0,
+        distance: 0
+      });
+      this.projectileProjectionScratch.push({
+        projectile: null as unknown as RaycastEnemyProjectile,
+        screenX: 0,
+        size: 0,
+        distance: 0
+      });
+      this.billboardProjectionScratch.push({
+        billboard: null as unknown as RaycastBillboard,
+        screenX: 0,
+        size: 0,
+        distance: 0
+      });
+    }
   }
 
   render(
@@ -139,9 +162,8 @@ export class RaycastRenderer {
     for (let i = 0; i < enemies.length; i += 1) {
       const enemy = enemies[i];
       if (!enemy.alive && enemy.deathBurstUntil <= time) continue;
-      const projected = this.projectEnemy(player, enemy, width, height);
-      if (projected !== null) {
-        list[n++] = projected;
+      if (this.fillEnemyProjection(player, enemy, width, height, this.ensureEnemyProjectionSlot(n))) {
+        n += 1;
       }
     }
     list.length = n;
@@ -313,9 +335,8 @@ export class RaycastRenderer {
     for (let i = 0; i < projectiles.length; i += 1) {
       const projectile = projectiles[i];
       if (!projectile.alive) continue;
-      const projected = this.projectPoint(player, projectile, width, height);
-      if (projected !== null) {
-        list[n++] = projected;
+      if (this.fillProjectileProjection(player, projectile, width, height, this.ensureProjectileProjectionSlot(n))) {
+        n += 1;
       }
     }
     list.length = n;
@@ -341,9 +362,8 @@ export class RaycastRenderer {
     let n = 0;
     for (let i = 0; i < billboards.length; i += 1) {
       const billboard = billboards[i];
-      const projected = this.projectBillboard(player, billboard, width, height);
-      if (projected !== null) {
-        list[n++] = projected;
+      if (this.fillBillboardProjection(player, billboard, width, height, this.ensureBillboardProjectionSlot(n))) {
+        n += 1;
       }
     }
     list.length = n;
@@ -1272,63 +1292,117 @@ export class RaycastRenderer {
     return (Math.floor(r) << 16) + (Math.floor(g) << 8) + Math.floor(b);
   }
 
-  private projectEnemy(
+  private ensureEnemyProjectionSlot(index: number): EnemyProjection {
+    const list = this.enemyProjectionScratch;
+    while (index >= list.length) {
+      list.push({
+        enemy: null as unknown as RaycastEnemy,
+        screenX: 0,
+        size: 0,
+        distance: 0
+      });
+    }
+    return list[index];
+  }
+
+  private ensureProjectileProjectionSlot(index: number): ProjectileProjection {
+    const list = this.projectileProjectionScratch;
+    while (index >= list.length) {
+      list.push({
+        projectile: null as unknown as RaycastEnemyProjectile,
+        screenX: 0,
+        size: 0,
+        distance: 0
+      });
+    }
+    return list[index];
+  }
+
+  private ensureBillboardProjectionSlot(index: number): BillboardProjection {
+    const list = this.billboardProjectionScratch;
+    while (index >= list.length) {
+      list.push({
+        billboard: null as unknown as RaycastBillboard,
+        screenX: 0,
+        size: 0,
+        distance: 0
+      });
+    }
+    return list[index];
+  }
+
+  private fillEnemyProjection(
     player: RaycastPlayerState,
     enemy: RaycastEnemy,
     width: number,
-    height: number
-  ): EnemyProjection | null {
+    height: number,
+    out: EnemyProjection
+  ): boolean {
     const dx = enemy.x - player.x;
     const dy = enemy.y - player.y;
     const distance = Math.hypot(dx, dy);
     const angleToEnemy = Math.atan2(dy, dx);
     const angleDelta = normalizeAngle(angleToEnemy - player.angle);
 
-    if (Math.abs(angleDelta) > this.config.fovRadians * 0.58) return null;
+    if (Math.abs(angleDelta) > this.config.fovRadians * 0.58) return false;
 
     const screenX = width * 0.5 + (angleDelta / (this.config.fovRadians * 0.5)) * width * 0.5;
     const correctedDistance = Math.max(0.001, distance * Math.cos(angleDelta));
     const size = Phaser.Math.Clamp(height / correctedDistance / 1.7, 18, 210);
-    return { enemy, screenX, size, distance: correctedDistance };
+    out.enemy = enemy;
+    out.screenX = screenX;
+    out.size = size;
+    out.distance = correctedDistance;
+    return true;
   }
 
-  private projectPoint(
+  private fillProjectileProjection(
     player: RaycastPlayerState,
     projectile: RaycastEnemyProjectile,
     width: number,
-    height: number
-  ): ProjectileProjection | null {
+    height: number,
+    out: ProjectileProjection
+  ): boolean {
     const dx = projectile.x - player.x;
     const dy = projectile.y - player.y;
     const distance = Math.hypot(dx, dy);
     const angleToPoint = Math.atan2(dy, dx);
     const angleDelta = normalizeAngle(angleToPoint - player.angle);
 
-    if (Math.abs(angleDelta) > this.config.fovRadians * 0.52) return null;
+    if (Math.abs(angleDelta) > this.config.fovRadians * 0.52) return false;
 
     const screenX = width * 0.5 + (angleDelta / (this.config.fovRadians * 0.5)) * width * 0.5;
     const correctedDistance = Math.max(0.001, distance * Math.cos(angleDelta));
     const size = Phaser.Math.Clamp(height / correctedDistance / 28, 3, 14);
-    return { projectile, screenX, size, distance: correctedDistance };
+    out.projectile = projectile;
+    out.screenX = screenX;
+    out.size = size;
+    out.distance = correctedDistance;
+    return true;
   }
 
-  private projectBillboard(
+  private fillBillboardProjection(
     player: RaycastPlayerState,
     billboard: RaycastBillboard,
     width: number,
-    height: number
-  ): BillboardProjection | null {
+    height: number,
+    out: BillboardProjection
+  ): boolean {
     const dx = billboard.x - player.x;
     const dy = billboard.y - player.y;
     const distance = Math.hypot(dx, dy);
     const angleToPoint = Math.atan2(dy, dx);
     const angleDelta = normalizeAngle(angleToPoint - player.angle);
-    if (Math.abs(angleDelta) > this.config.fovRadians * 0.52) return null;
+    if (Math.abs(angleDelta) > this.config.fovRadians * 0.52) return false;
 
     const screenX = width * 0.5 + (angleDelta / (this.config.fovRadians * 0.5)) * width * 0.5;
     const correctedDistance = Math.max(0.001, distance * Math.cos(angleDelta));
     const size = Phaser.Math.Clamp((height / correctedDistance / 18) * billboard.radius, 5, 28);
-    return { billboard, screenX, size, distance: correctedDistance };
+    out.billboard = billboard;
+    out.screenX = screenX;
+    out.size = size;
+    out.distance = correctedDistance;
+    return true;
   }
 }
 

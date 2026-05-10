@@ -4,10 +4,12 @@
  * Requires: playwright (chromium), ffmpeg on PATH for GIF palette optimization.
  *
  * Usage: npm run capture:media
+ * Point at a running dev server: CAPTURE_URL=http://127.0.0.1:5173 npm run capture:media
  * Manual: see docs/assets/screenshots/SHOT_LIST.md (level-clear still).
  */
 
 import { spawn, spawnSync } from 'node:child_process';
+import { statSync } from 'node:fs';
 import sharp from 'sharp';
 import { mkdir, mkdtemp, readdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -127,11 +129,12 @@ async function main() {
     const src = join(tmpVidDir, webm);
     const bootGif = join(OUT_GIFS, 'raycast-boot-to-sector.gif');
     const combatGif = join(OUT_GIFS, 'raycast-combat-loop.gif');
+    /** Portfolio targets: ≤~700 KB/GIF — 400px wide, 8 fps (matches Phase 28 README budget). */
     const palette =
-      'fps=12,scale=640:-1:flags=lanczos,split[s0][s1];[s0]palettegen=stats_mode=diff[p];[s1][p]paletteuse=dither=bayer:bayer_scale=5';
+      'fps=8,scale=400:-1:flags=lanczos,split[s0][s1];[s0]palettegen=stats_mode=diff[p];[s1][p]paletteuse=dither=bayer:bayer_scale=2';
     const boot = spawnSync(
       'ffmpeg',
-      ['-y', '-i', src, '-t', '10', '-vf', palette, bootGif],
+      ['-y', '-i', src, '-t', '6', '-vf', palette, bootGif],
       { encoding: 'utf8' }
     );
     if (boot.status !== 0) {
@@ -139,7 +142,7 @@ async function main() {
     }
     const combat = spawnSync(
       'ffmpeg',
-      ['-y', '-ss', '5', '-i', src, '-t', '4', '-vf', palette, combatGif],
+      ['-y', '-ss', '4.5', '-i', src, '-t', '3', '-vf', palette, combatGif],
       { encoding: 'utf8' }
     );
     if (combat.status !== 0) {
@@ -155,7 +158,38 @@ async function main() {
     vite.kill('SIGKILL');
   }
 
+  const kb = (n) => `${(n / 1024).toFixed(1)} KB`;
+  const shotNames = [
+    'raycast-menu.webp',
+    'raycast-prologue.webp',
+    'raycast-sector-hud.webp',
+    'raycast-exploration.webp',
+    'raycast-combat-director.webp'
+  ];
+  let shotsTotal = 0;
   console.log('Capture done → docs/assets/screenshots/*.webp, docs/assets/gifs/ (if ffmpeg OK)');
+  console.log('WebP stills:');
+  for (const name of shotNames) {
+    try {
+      const s = statSync(join(OUT_SHOTS, name)).size;
+      shotsTotal += s;
+      console.log(`  ${name}: ${kb(s)}`);
+    } catch {
+      console.log(`  ${name}: (missing)`);
+    }
+  }
+  console.log(`  Combined: ${kb(shotsTotal)}`);
+  for (const pair of [
+    ['raycast-boot-to-sector.gif', 'Boot GIF'],
+    ['raycast-combat-loop.gif', 'Combat GIF']
+  ]) {
+    try {
+      const s = statSync(join(OUT_GIFS, pair[0])).size;
+      console.log(`${pair[1]}: ${kb(s)}`);
+    } catch {
+      console.log(`${pair[1]}: (missing — ffmpeg not on PATH or failed)`);
+    }
+  }
 }
 
 main().catch((e) => {

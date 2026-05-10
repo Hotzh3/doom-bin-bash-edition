@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  formatRaycastEnemyTargetLabel,
   buildRaycastHudLayout,
   buildRaycastDebugLine,
   buildRaycastFocusedEnemyLine,
@@ -116,6 +117,15 @@ describe('raycast HUD', () => {
   it('builds a focused target line with enemy health and windup state', () => {
     expect(buildRaycastFocusedEnemyLine({ label: 'BRUTE', health: 96, maxHealth: 190, isWindingUp: true })).toBe(
       'TARGET BRUTE 96/190 ARMED'
+    );
+  });
+
+  it('tags focused targets with a compact tactical role abbreviation', () => {
+    expect(formatRaycastEnemyTargetLabel('GRUNT')).toBe('SCAV·PRS');
+    expect(formatRaycastEnemyTargetLabel('STALKER')).toBe('STALK·FLK');
+    expect(formatRaycastEnemyTargetLabel('RANGED')).toBe('TURRET·ZONE');
+    expect(buildRaycastFocusedEnemyLine({ kind: 'BRUTE', health: 120, maxHealth: 190, isWindingUp: false })).toContain(
+      'BRUTE·DEN'
     );
   });
 

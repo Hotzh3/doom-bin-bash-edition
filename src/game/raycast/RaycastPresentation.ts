@@ -4,6 +4,8 @@ export interface RaycastEpisodeBannerInput {
   levelName: string;
   /** World 2 arc banner (replaces EP 1 line when set). */
   worldTwoSector?: { index: number; total: number };
+  /** World 3 arc banner — checked before World 2 when both could apply (mutually exclusive levels). */
+  worldThreeSector?: { index: number; total: number };
 }
 
 export interface RaycastOverlayHintInput {
@@ -16,6 +18,8 @@ export interface RaycastOverlayHintInput {
   worldTwoLocked?: boolean;
   /** Boss down and next sector is World 2 — emphasize N continue. */
   continueToWorldTwo?: boolean;
+  /** World 2 finale cleared and next sector is World 3 — emphasize N continue. */
+  continueToWorldThree?: boolean;
 }
 
 export interface RaycastDifficultyMenuCopyInput {
@@ -82,8 +86,11 @@ export function buildRaycastDeathOverlayHint(): string {
 }
 
 export function buildRaycastEpisodeBanner(input: RaycastEpisodeBannerInput): string {
+  if (input.worldThreeSector) {
+    return `WORLD 3 // EMBER MERIDIAN — THIRD HELL  |  SECTOR ${input.worldThreeSector.index}/${input.worldThreeSector.total}  ${input.levelName.toUpperCase()}`;
+  }
   if (input.worldTwoSector) {
-    return `WORLD 2 // ION STRATUM  |  SECTOR ${input.worldTwoSector.index}/${input.worldTwoSector.total}  ${input.levelName.toUpperCase()}`;
+    return `WORLD 2 // ABYSS STRATUM — NOT THE FORGE  |  SECTOR ${input.worldTwoSector.index}/${input.worldTwoSector.total}  ${input.levelName.toUpperCase()}`;
   }
   return `EP 1 MINI EPISODE  |  LVL ${input.currentLevelNumber}/${input.totalLevels} ${input.levelName.toUpperCase()}`;
 }
@@ -91,6 +98,9 @@ export function buildRaycastEpisodeBanner(input: RaycastEpisodeBannerInput): str
 export function buildRaycastOverlayHint(input: RaycastOverlayHintInput): string {
   if (input.episodeComplete && input.finaleBossCleared && input.worldTwoLocked) {
     return 'W WORLD 2 (LOCKED)  |  R REPLAY BOSS  |  ESC MENU';
+  }
+  if (!input.episodeComplete && input.finaleBossCleared && input.continueToWorldThree) {
+    return 'N CONTINUE TO WORLD 3 — EMBER MERIDIAN  |  R RESTART SECTOR  |  ESC MENU';
   }
   if (!input.episodeComplete && input.finaleBossCleared && input.continueToWorldTwo) {
     return 'N CONTINUE TO WORLD 2  |  R REPLAY BOSS  |  ESC MENU';
@@ -111,14 +121,14 @@ export function buildRaycastStatusMessage(
 ): string {
   if (levelComplete) {
     if (fullArcClear) {
-      return 'Full arc clear — Episode 1 + World 2. Press R to retry sector or ESC for menu.';
+      return 'Full arc clear — Episode 1 + World 2 + Ember Meridian (World 3). Press R to retry sector or ESC for menu.';
     }
     if (episodeComplete && finaleBossCleared && worldTwoLocked) {
       return 'Boss purged. W for World 2 signal, R to replay boss, ESC for menu.';
     }
     if (!episodeComplete && finaleBossCleared && !worldTwoLocked) {
       return worldTwoTransition
-        ? 'Archon down — ion stratum breach opens. Press N to descend the rift, R to replay boss, ESC for menu.'
+        ? 'Archon down — abyss stratum tears open (not the same hell). Press N to descend the rift, R to replay boss, ESC for menu.'
         : 'Boss purged. Press N to descend into World 2, R to replay boss, ESC for menu.';
     }
     return episodeComplete

@@ -5,12 +5,16 @@ import {
   addRaycastSectorPerformanceBonus,
   computeBossPelletEfficiency,
   computePelletAccuracyRatio,
+  computeRaycastCampaignCompletionBonus,
   computeRaycastSectorMedals,
+  createEmptyCampaignMetrics,
+  mergeCampaignMetrics,
   RAYCAST_FULL_ARC_CLEAR_BONUS,
   RAYCAST_HIGH_SCORE_STORAGE_KEY,
   RAYCAST_SECTOR_PERFORMANCE_BONUS_CAP,
   RAYCAST_SECRET_DISCOVER_POINTS,
   RAYCAST_WORLD2_ENTRY_POINTS,
+  RAYCAST_WORLD3_ENTRY_POINTS,
   raycastPointsForKill,
   readRaycastHighScore,
   writeRaycastHighScoreIfBetter,
@@ -23,6 +27,7 @@ describe('raycast score', () => {
     expect(raycastPointsForKill('STALKER')).toBe(150);
     expect(raycastPointsForKill('RANGED')).toBe(175);
     expect(raycastPointsForKill('BRUTE')).toBe(250);
+    expect(raycastPointsForKill('SCRAMBLER')).toBe(130);
   });
 
   it('accumulates score from kill kinds', () => {
@@ -58,6 +63,7 @@ describe('raycast score', () => {
 
   it('exposes World 2 run bonuses for campaign continuation', () => {
     expect(RAYCAST_WORLD2_ENTRY_POINTS).toBe(520);
+    expect(RAYCAST_WORLD3_ENTRY_POINTS).toBe(480);
     expect(RAYCAST_FULL_ARC_CLEAR_BONUS).toBe(1100);
   });
 
@@ -120,7 +126,7 @@ describe('raycast score', () => {
         bossPelletsHitHostile: 4,
         damageTaken: 30
       })
-    ).toContain('ARCHON_STRIKE');
+    ).toContain('BOSS_STRIKE');
     expect(
       computeRaycastSectorMedals({
         ...baseSector(),
@@ -128,5 +134,76 @@ describe('raycast score', () => {
         secretTotal: 2
       })
     ).toContain('FULL_INTEL');
+  });
+
+  it('merges sector snapshots into campaign totals deterministically', () => {
+    let c = createEmptyCampaignMetrics();
+    const s1: RaycastSectorMetrics = {
+      pelletsFired: 10,
+      pelletsHitHostile: 5,
+      damageTaken: 12,
+      secretsFound: 1,
+      secretTotal: 2,
+      elapsedMs: 60_000,
+      enemiesKilled: 3,
+      bossPelletsFired: 8,
+      bossPelletsHitHostile: 3,
+      bossDamageTaken: 20,
+      hadBoss: true
+    };
+    c = mergeCampaignMetrics(c, s1);
+    expect(c.sectorsCleared).toBe(1);
+    expect(c.cumulativeElapsedMs).toBe(60_000);
+    expect(c.cumulativePelletsFired).toBe(10);
+    expect(c.bossSectorsPlayed).toBe(1);
+    const s2: RaycastSectorMetrics = { ...s1, elapsedMs: 30_000, hadBoss: false, bossPelletsFired: 0, bossPelletsHitHostile: 0 };
+    c = mergeCampaignMetrics(c, s2);
+    expect(c.sectorsCleared).toBe(2);
+    expect(c.cumulativeElapsedMs).toBe(90_000);
+    expect(c.bossSectorsPlayed).toBe(1);
+  });
+
+  it('tilts sector performance bonus toward low boss-arena damage when a boss is present', () => {
+    const shared = {
+      ...baseSector(),
+      pelletsFired: 24,
+      pelletsHitHostile: 14,
+      bossPelletsFired: 12,
+      bossPelletsHitHostile: 6,
+      hadBoss: true
+    };
+    const lowBossDmg = addRaycastSectorPerformanceBonus(1000, { ...shared, bossDamageTaken: 12 }) - 1000;
+    const highBossDmg = addRaycastSectorPerformanceBonus(1000, { ...shared, bossDamageTaken: 70 }) - 1000;
+    expect(lowBossDmg).toBeGreaterThan(highBossDmg);
+  });
+
+  it('awards BOSS_GRACE when boss arena damage stays controlled', () => {
+    expect(
+      computeRaycastSectorMedals({
+        ...baseSector(),
+        hadBoss: true,
+        bossPelletsFired: 8,
+        bossDamageTaken: 28
+      })
+    ).toContain('BOSS_GRACE');
+  });
+
+  it('adds a bounded campaign completion bonus', () => {
+    const c = mergeCampaignMetrics(createEmptyCampaignMetrics(), {
+      pelletsFired: 80,
+      pelletsHitHostile: 40,
+      damageTaken: 40,
+      secretsFound: 2,
+      secretTotal: 2,
+      elapsedMs: 30 * 60 * 1000,
+      enemiesKilled: 10,
+      bossPelletsFired: 20,
+      bossPelletsHitHostile: 10,
+      bossDamageTaken: 30,
+      hadBoss: true
+    });
+    const bonus = computeRaycastCampaignCompletionBonus(c);
+    expect(bonus).toBeGreaterThan(0);
+    expect(bonus).toBeLessThanOrEqual(1200);
   });
 });

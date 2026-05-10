@@ -1,4 +1,5 @@
 import type { EnemyKind } from '../types/game';
+import { ENEMY_TACTICAL_ROLE_ABBR, getEnemyConfig } from '../entities/enemyConfig';
 
 export interface RaycastHudState {
   health: number;
@@ -84,11 +85,20 @@ export function formatRaycastEnemyKindLabel(kind: EnemyKind): string {
   if (kind === 'GRUNT') return 'SCAV';
   if (kind === 'BRUTE') return 'BRUTE';
   if (kind === 'STALKER') return 'STALK';
+  if (kind === 'SCRAMBLER') return 'SCRAM';
   return 'TURRET';
 }
 
+/** Short codename + tactical role tag for focused HUD / crosshair (raycast balance profile). */
+export function formatRaycastEnemyTargetLabel(kind: EnemyKind): string {
+  const roleAbbr = ENEMY_TACTICAL_ROLE_ABBR[getEnemyConfig(kind, 'raycast').tacticalRole];
+  return `${formatRaycastEnemyKindLabel(kind)}·${roleAbbr}`;
+}
+
 export function buildRaycastFocusedEnemyLine(state: RaycastFocusedEnemyState): string {
-  const label = state.label ?? formatRaycastEnemyKindLabel(state.kind ?? 'GRUNT');
+  const label =
+    state.label ??
+    (state.kind !== undefined ? formatRaycastEnemyTargetLabel(state.kind) : formatRaycastEnemyTargetLabel('GRUNT'));
   const posture = state.isTelegraphing ? 'EMERGE' : state.isWindingUp ? 'ARMED' : 'LOCKED';
   return `TARGET ${label} ${state.health}/${state.maxHealth} ${posture}`;
 }

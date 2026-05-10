@@ -23,6 +23,19 @@ describe('raycast visual theme', () => {
     expect(zone?.landmark).toBe('key');
   });
 
+  it('World 2 fracture primary walls use basalt noise vs ion shaft slabs (distinct from Episode 1)', () => {
+    const basaltSurface = sampleRaycastSurfaceContext(RAYCAST_LEVEL_WORLD2_FRACTURE.zones, 3.0, 8.5, 0);
+    const ionSurface = sampleRaycastSurfaceContext(RAYCAST_LEVEL_WORLD2_FRACTURE.zones, 12.5, 5.0, 0);
+    expect(getRaycastWallVisualStyle(1, basaltSurface)).toMatchObject({
+      pattern: 'data-noise-cells',
+      pulseSignal: false
+    });
+    expect(getRaycastWallVisualStyle(1, ionSurface)).toMatchObject({
+      pattern: 'terminal-panels',
+      pulseSignal: true
+    });
+  });
+
   it('World 2 fracture separates basalt gully from ion-well key landmark', () => {
     const ionWell = getRaycastZoneVisual(RAYCAST_LEVEL_WORLD2_FRACTURE.zones, 4.5, 3.5);
     expect(ionWell?.id).toBe('ion-well');

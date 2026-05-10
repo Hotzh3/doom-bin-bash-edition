@@ -6,7 +6,7 @@ import { castRay } from './RaycastMap';
 import { isRaycastEnemyTelegraphing, isRaycastEnemyWindingUp, type RaycastEnemy } from './RaycastEnemy';
 import type { RaycastPlayerState } from './RaycastPlayerController';
 import type { ProjectileSpawn, WeaponKind } from '../systems/WeaponTypes';
-import { formatRaycastEnemyKindLabel } from './RaycastHud';
+import { formatRaycastEnemyTargetLabel } from './RaycastHud';
 import type { EnemyKind } from '../types/game';
 
 export interface RaycastCombatResult {
@@ -218,7 +218,7 @@ export function getRaycastCrosshairTargetInfo(
   if (!enemy) return null;
   return {
     id: enemy.id,
-    kindLabel: formatRaycastEnemyKindLabel(enemy.kind),
+    kindLabel: formatRaycastEnemyTargetLabel(enemy.kind),
     health: enemy.health,
     maxHealth: enemy.maxHealth,
     healthRatio: enemy.maxHealth <= 0 ? 0 : enemy.health / enemy.maxHealth,

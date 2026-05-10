@@ -1,6 +1,11 @@
-import { RAYCAST_LEVEL_CATALOG, RAYCAST_WORLD_TWO_CATALOG, getRaycastLevelById } from './RaycastLevel';
+import {
+  RAYCAST_LEVEL_CATALOG,
+  RAYCAST_WORLD_THREE_CATALOG,
+  RAYCAST_WORLD_TWO_CATALOG,
+  getRaycastLevelById
+} from './RaycastLevel';
 
-export { RAYCAST_WORLD_TWO_CATALOG } from './RaycastLevel';
+export { RAYCAST_WORLD_TWO_CATALOG, RAYCAST_WORLD_THREE_CATALOG } from './RaycastLevel';
 
 export interface RaycastEpisodeState {
   currentLevelId: string;
@@ -36,7 +41,15 @@ export function resolveRaycastNextLevelId(levelId: string): string | null {
 
   const w2Index = RAYCAST_WORLD_TWO_CATALOG.findIndex((entry) => entry.id === levelId);
   if (w2Index >= 0) {
-    return RAYCAST_WORLD_TWO_CATALOG[w2Index + 1]?.id ?? null;
+    if (w2Index + 1 < RAYCAST_WORLD_TWO_CATALOG.length) {
+      return RAYCAST_WORLD_TWO_CATALOG[w2Index + 1].id;
+    }
+    return RAYCAST_WORLD_THREE_CATALOG[0]?.id ?? null;
+  }
+
+  const w3Index = RAYCAST_WORLD_THREE_CATALOG.findIndex((entry) => entry.id === levelId);
+  if (w3Index >= 0) {
+    return RAYCAST_WORLD_THREE_CATALOG[w3Index + 1]?.id ?? null;
   }
 
   return null;

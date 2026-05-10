@@ -53,11 +53,13 @@ describe('raycast enemy system', () => {
     const enemy = createRaycastEnemy({ id: 'stalker', kind: 'STALKER', x: 2.5, y: 10.08 });
 
     const windup = updateRaycastEnemies(RAYCAST_MAP, [enemy], { x: 2.5, y: 10.4, alive: true }, 1000, 16);
-    const hit = updateRaycastEnemies(RAYCAST_MAP, [enemy], { x: 2.5, y: 10.4, alive: true }, 1081, 16);
-    const second = updateRaycastEnemies(RAYCAST_MAP, [enemy], { x: 2.5, y: 10.4, alive: true }, 1100, 16);
 
     expect(windup.meleeDamage).toBe(0);
-    expect(isRaycastEnemyWindingUp(enemy, 1040)).toBe(false);
+    expect(isRaycastEnemyWindingUp(enemy, 1040)).toBe(true);
+
+    const hit = updateRaycastEnemies(RAYCAST_MAP, [enemy], { x: 2.5, y: 10.4, alive: true }, 1110, 16);
+    const second = updateRaycastEnemies(RAYCAST_MAP, [enemy], { x: 2.5, y: 10.4, alive: true }, 1140, 16);
+
     expect(hit.meleeDamage).toBeGreaterThan(0);
     expect(second.meleeDamage).toBe(0);
   });
@@ -72,18 +74,17 @@ describe('raycast enemy system', () => {
 
   it('keeps telegraphed spawns inactive until the breach window resolves', () => {
     const enemy = createTelegraphedRaycastEnemy(
-      { id: 'breach-stalker', kind: 'STALKER', x: 2.5, y: 10.08 },
+      { id: 'breach-grunt', kind: 'GRUNT', x: 2.5, y: 10.08 },
       { telegraphStartedAt: 1000, telegraphDurationMs: 900 }
     );
 
     expect(isRaycastEnemyTelegraphing(enemy, 1400)).toBe(true);
     expect(getRaycastEnemySpawnTelegraphProgress(enemy, 1400)).toBeGreaterThan(0.4);
     const early = updateRaycastEnemies(RAYCAST_MAP, [enemy], { x: 2.5, y: 10.4, alive: true }, 1400, 16);
-    const ready = updateRaycastEnemies(RAYCAST_MAP, [enemy], { x: 2.5, y: 10.4, alive: true }, 1900, 16);
-    const hit = updateRaycastEnemies(RAYCAST_MAP, [enemy], { x: 2.5, y: 10.4, alive: true }, 1981, 16);
+    const ready = updateRaycastEnemies(RAYCAST_MAP, [enemy], { x: 2.5, y: 10.4, alive: true }, 1910, 16);
+    const hit = updateRaycastEnemies(RAYCAST_MAP, [enemy], { x: 2.5, y: 10.4, alive: true }, 2040, 16);
 
     expect(early.meleeDamage).toBe(0);
-    expect(enemy.attackWindupUntil).toBe(0);
     expect(ready.meleeDamage).toBe(0);
     expect(enemy.spawnTelegraphUntil).toBe(0);
     expect(hit.meleeDamage).toBeGreaterThan(0);
@@ -105,7 +106,7 @@ describe('raycast enemy system', () => {
     const enemy = createRaycastEnemy({ id: 'dodge-stalker', kind: 'STALKER', x: 2.5, y: 10.08 });
 
     updateRaycastEnemies(RAYCAST_MAP, [enemy], { x: 2.5, y: 10.4, alive: true }, 1000, 16);
-    const result = updateRaycastEnemies(RAYCAST_MAP, [enemy], { x: 3.5, y: 10.4, alive: true }, 1081, 16);
+    const result = updateRaycastEnemies(RAYCAST_MAP, [enemy], { x: 3.5, y: 10.4, alive: true }, 1105, 16);
 
     expect(result.meleeDamage).toBe(0);
   });
@@ -146,7 +147,7 @@ describe('raycast enemy system', () => {
     const enemy = createRaycastEnemy({ id: 'ranged', kind: 'RANGED', x: 1.5, y: 7.8 });
     const windup = updateRaycastEnemies(RAYCAST_MAP, [enemy], { x: 1.5, y: 10.4, alive: true }, 2000, 16);
     const early = updateRaycastEnemies(RAYCAST_MAP, [enemy], { x: 1.5, y: 10.4, alive: true }, 2200, 16);
-    const result = updateRaycastEnemies(RAYCAST_MAP, [enemy], { x: 1.5, y: 10.4, alive: true }, 2400, 16);
+    const result = updateRaycastEnemies(RAYCAST_MAP, [enemy], { x: 1.5, y: 10.4, alive: true }, 2440, 16);
 
     expect(windup.spawnedProjectiles).toHaveLength(0);
     expect(early.spawnedProjectiles).toHaveLength(0);
@@ -168,7 +169,7 @@ describe('raycast enemy system', () => {
     const enemy = createRaycastEnemy({ id: 'ranged', kind: 'RANGED', x: 1.5, y: 7.8 });
 
     updateRaycastEnemies(RAYCAST_MAP, [enemy], { x: 1.5, y: 10.4, alive: true }, 2000, 16);
-    const shot = updateRaycastEnemies(RAYCAST_MAP, [enemy], { x: 1.5, y: 10.4, alive: true }, 2400, 16);
+    const shot = updateRaycastEnemies(RAYCAST_MAP, [enemy], { x: 1.5, y: 10.4, alive: true }, 2440, 16);
     const cooldown = updateRaycastEnemies(RAYCAST_MAP, [enemy], { x: 1.5, y: 10.4, alive: true }, 2500, 16);
 
     expect(shot.spawnedProjectiles).toHaveLength(1);
@@ -178,7 +179,7 @@ describe('raycast enemy system', () => {
   it('ranged projectiles damage player after clear telegraph', () => {
     const enemy = createRaycastEnemy({ id: 'ranged', kind: 'RANGED', x: 1.5, y: 7.8 });
     updateRaycastEnemies(RAYCAST_MAP, [enemy], { x: 1.5, y: 10.4, alive: true }, 2000, 16);
-    const result = updateRaycastEnemies(RAYCAST_MAP, [enemy], { x: 1.5, y: 10.4, alive: true }, 2400, 16);
+    const result = updateRaycastEnemies(RAYCAST_MAP, [enemy], { x: 1.5, y: 10.4, alive: true }, 2440, 16);
     const projectile = result.spawnedProjectiles[0];
     expect(Math.hypot(projectile.vx, projectile.vy)).toBeCloseTo((getEnemyConfig('RANGED', 'raycast').projectileSpeed ?? 0) / 100);
     const damage = updateRaycastEnemyProjectiles(RAYCAST_MAP, [projectile], { x: 1.5, y: 10.4, alive: true }, 3100, 700);

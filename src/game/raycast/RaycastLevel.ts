@@ -1,4 +1,5 @@
 import { isPointInsideRect, type KeyPickup, type LevelTrigger, type LockedDoor, type RectArea, type SecretPickup } from '../level/arenaLayout';
+import type { RaycastSetpieceCue } from './RaycastSetpiece';
 import type { DirectorConfig } from '../systems/DirectorConfig';
 import type { SpawnPoint } from '../systems/GameDirector';
 import type { EnemyKind } from '../types/game';
@@ -31,13 +32,23 @@ import {
   RAYCAST_LEVEL_WORLD2_WARDEN_PIT,
   RAYCAST_WORLD_TWO_CATALOG
 } from './RaycastWorldTwoLevels';
+import {
+  RAYCAST_LEVEL_WORLD3_ASH_JUDGE,
+  RAYCAST_LEVEL_WORLD3_EMBER_RAMP,
+  RAYCAST_LEVEL_WORLD3_GATE_CUT,
+  RAYCAST_WORLD_THREE_CATALOG
+} from './RaycastWorldThreeLevels';
 
 export {
   RAYCAST_LEVEL_WORLD2_FRACTURE,
   RAYCAST_LEVEL_WORLD2_SULFUR_LATTICE,
   RAYCAST_LEVEL_WORLD2_THRESHOLD,
   RAYCAST_LEVEL_WORLD2_WARDEN_PIT,
-  RAYCAST_WORLD_TWO_CATALOG
+  RAYCAST_WORLD_TWO_CATALOG,
+  RAYCAST_LEVEL_WORLD3_EMBER_RAMP,
+  RAYCAST_LEVEL_WORLD3_GATE_CUT,
+  RAYCAST_LEVEL_WORLD3_ASH_JUDGE,
+  RAYCAST_WORLD_THREE_CATALOG
 };
 
 export interface RaycastEnemySpawn {
@@ -66,6 +77,8 @@ export interface RaycastDoor extends LockedDoor {
 
 export interface RaycastTrigger extends LevelTrigger {
   activationText: string;
+  /** Presentation-only tension staging when the trigger fires. */
+  setpieceCue?: RaycastSetpieceCue;
 }
 
 export interface RaycastSecret extends SecretPickup {
@@ -95,6 +108,8 @@ export interface RaycastEncounterBeat {
   triggerId?: string;
   directorState?: 'RECOVERY';
   requiresTriggerId?: string;
+  /** Optional authored presentation hook (stacked after beat audio/message). */
+  setpieceCue?: RaycastSetpieceCue;
 }
 
 export interface RaycastLevel {
@@ -132,7 +147,7 @@ export interface RaycastLevel {
     spawnPoints: RaycastDirectorSpawnPoint[];
   };
   /** Post–Episode 1 arc — drives fog palette + HUD banner (default infernal World 1). */
-  worldSegment?: 'world1' | 'world2';
+  worldSegment?: 'world1' | 'world2' | 'world3';
 }
 
 export const RAYCAST_LEVEL_1: RaycastLevel = {
@@ -153,6 +168,15 @@ export const RAYCAST_LEVEL_1: RaycastLevel = {
     { id: 'side-pressure', x: 11.8, y: 10.5, width: 5.2, height: 3.0, visualTheme: 'corrupted-metal' },
     { id: 'east-terrace', x: 18.2, y: 8.8, width: 9.2, height: 5.4, visualTheme: 'toxic-green' },
     { id: 'east-sleeve', x: 22.2, y: 3.8, width: 5.4, height: 10.2, visualTheme: 'warning-amber' },
+    {
+      id: 'east-exit-snare',
+      x: 24.0,
+      y: 2.6,
+      width: 3.4,
+      height: 3.0,
+      visualTheme: 'warning-amber',
+      landmark: 'gate'
+    },
     { id: 'east-overlook', x: 23.8, y: 2.2, width: 3.6, height: 4.2, visualTheme: 'void-stone' },
     { id: 'secret', x: 6.1, y: 12.3, width: 2.6, height: 1.4, visualTheme: 'void-stone', landmark: 'secret' },
     { id: 'south-catacombs', x: 3.2, y: 14.5, width: 13.2, height: 3.4, visualTheme: 'corrupted-metal' },
@@ -211,6 +235,7 @@ export const RAYCAST_LEVEL_1: RaycastLevel = {
       doorId: 'rust-gate',
       objectiveText: 'Ambush protocol: clear the node',
       activationText: 'Corruption spike: ambush active',
+      setpieceCue: 'ALARM_SURGE',
       spawns: [
         { x: 10.5, y: 7.5, kind: 'STALKER' },
         { x: 13.5, y: 9.5, kind: 'GRUNT' },
@@ -226,11 +251,11 @@ export const RAYCAST_LEVEL_1: RaycastLevel = {
       once: true,
       doorId: 'rust-gate',
       objectiveText: 'Side pressure: keep moving',
-      activationText: 'Side channel breach: lateral pressure',
+      activationText: 'Side channel breach: brute anchors the choke',
       spawns: [
         { x: 9.5, y: 11.5, kind: 'GRUNT' },
         { x: 14.5, y: 11.5, kind: 'STALKER' },
-        { x: 16.5, y: 11.5, kind: 'GRUNT' }
+        { x: 16.5, y: 11.5, kind: 'BRUTE' }
       ]
     },
     {
@@ -257,11 +282,13 @@ export const RAYCAST_LEVEL_1: RaycastLevel = {
       height: 2.2,
       once: true,
       objectiveText: 'Catacomb drain disturbed',
-      activationText: 'Drain surge: bottom-feeders inbound',
+      activationText: 'Drain surge: anchor brute claws up — trap room live',
+      setpieceCue: 'BLACKOUT_PULSE',
       spawns: [
         { x: 7.5, y: 14.5, kind: 'GRUNT' },
         { x: 11.5, y: 15.5, kind: 'STALKER' },
-        { x: 13.5, y: 15.5, kind: 'GRUNT' }
+        { x: 13.5, y: 15.5, kind: 'GRUNT' },
+        { x: 9.5, y: 14.5, kind: 'BRUTE' }
       ]
     },
     {
@@ -384,6 +411,14 @@ export const RAYCAST_LEVEL_1: RaycastLevel = {
       radius: 0.35,
       objectiveText: 'Access node purged',
       billboardLabel: 'EXIT'
+    },
+    {
+      id: 'foundry-east-exit',
+      x: 25.5,
+      y: 3.5,
+      radius: 0.34,
+      objectiveText: 'East annex purge logged — same clearance token as roof hatch',
+      billboardLabel: 'EXIT?'
     }
   ],
   initialSpawns: [
@@ -425,6 +460,17 @@ export const RAYCAST_LEVEL_1: RaycastLevel = {
       id: 'south-backtrack',
       zoneId: 'south-catacombs',
       message: 'Drain loop detected — map routes home through the catacombs'
+    },
+    {
+      id: 'east-decoy-read',
+      zoneId: 'east-exit-snare',
+      message: 'EXIT? gleams early — same clearance rules as roof hatch; shortcut once route armed',
+      setpieceCue: 'FAKE_CALM'
+    },
+    {
+      id: 'holdout-lateral',
+      triggerId: 'lateral-pressure',
+      message: 'Holdout choke: anchor brute pins the lane — peel before rifles respawn'
     }
   ],
   hudObjectiveLabels: {
@@ -443,22 +489,22 @@ export const RAYCAST_LEVEL_1: RaycastLevel = {
   director: {
     enabled: true,
     config: {
-      maxEnemiesAlive: 4,
-      maxTotalSpawns: 9,
+      maxEnemiesAlive: 5,
+      maxTotalSpawns: 10,
       openingSpawnCount: 0,
-      baseSpawnCooldownMs: 5600,
-      buildUpSpawnCooldownMs: 4600,
-      ambushSpawnCooldownMs: 2200,
-      highIntensitySpawnCooldownMs: 3800,
-      recoveryDurationMs: 5200,
-      ambushDurationMs: 6000,
-      highIntensityDurationMs: 9000,
-      buildUpAfterMs: 7200,
-      idlePressureMs: 2000,
-      dominanceNoDamageMs: 9500,
+      baseSpawnCooldownMs: 5400,
+      buildUpSpawnCooldownMs: 4400,
+      ambushSpawnCooldownMs: 2100,
+      highIntensitySpawnCooldownMs: 3600,
+      recoveryDurationMs: 5000,
+      ambushDurationMs: 6400,
+      highIntensityDurationMs: 9200,
+      buildUpAfterMs: 6800,
+      idlePressureMs: 1850,
+      dominanceNoDamageMs: 9200,
       lowHealthThreshold: 35,
       comfortableHealthThreshold: 65,
-      debugEnabled: true
+      debugEnabled: false
     },
     spawnPoints: [
       { id: 'first-contact-rear', zoneId: 'first-contact', x: 3.5, y: 7.5, minPlayerDistance: 1.6 },
@@ -561,10 +607,11 @@ export const RAYCAST_LEVEL_2: RaycastLevel = {
       height: 1.0,
       once: true,
       objectiveText: 'Cache disturbed',
-      activationText: 'Void trench stirred: flankers inbound',
+      activationText: 'Void trench stirred: flankers + perch rifle',
       spawns: [
         { x: 3.5, y: 8.5, kind: 'STALKER' },
-        { x: 5.5, y: 10.5, kind: 'GRUNT' }
+        { x: 5.5, y: 10.5, kind: 'GRUNT' },
+        { x: 5.5, y: 9.5, kind: 'RANGED' }
       ]
     }
   ],
@@ -660,6 +707,11 @@ export const RAYCAST_LEVEL_2: RaycastLevel = {
       directorState: 'RECOVERY',
       requiresTriggerId: 'furnace-ambush',
       message: 'Pressure dip: use the recovery window'
+    },
+    {
+      id: 'cistern-sigil-risk',
+      zoneId: 'cistern',
+      message: 'Sigil pocket is a kill box — grab + bail or kite guardians into the trench fork'
     }
   ],
   hudObjectiveLabels: {
@@ -693,7 +745,7 @@ export const RAYCAST_LEVEL_2: RaycastLevel = {
       dominanceNoDamageMs: 8800,
       lowHealthThreshold: 35,
       comfortableHealthThreshold: 65,
-      debugEnabled: true
+      debugEnabled: false
     },
     spawnPoints: [
       { id: 'start-rear', zoneId: 'start', x: 5.5, y: 10.5, minPlayerDistance: 2.2 },
@@ -1488,6 +1540,8 @@ export function getRaycastLevelById(levelId: string | null | undefined): Raycast
   if (!levelId) return RAYCAST_LEVEL;
   const worldTwo = RAYCAST_WORLD_TWO_CATALOG.find((level) => level.id === levelId);
   if (worldTwo) return worldTwo;
+  const worldThree = RAYCAST_WORLD_THREE_CATALOG.find((level) => level.id === levelId);
+  if (worldThree) return worldThree;
   return RAYCAST_LEVEL_CATALOG.find((level) => level.id === levelId) ?? RAYCAST_LEVEL;
 }
 

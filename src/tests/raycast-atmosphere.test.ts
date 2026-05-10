@@ -4,9 +4,12 @@ import {
   getAtmosphereForDirector,
   getRaycastCombatMessageForSegment,
   getRaycastIntroMessageForSegment,
+  getRaycastBossHudLines,
   RAYCAST_ATMOSPHERE,
   RAYCAST_ATMOSPHERE_WORLD2,
+  RAYCAST_ATMOSPHERE_WORLD3,
   RAYCAST_WORLD2_SEGMENT_LAYER,
+  RAYCAST_WORLD3_SEGMENT_LAYER,
   calculateEnemyVisibility,
   calculateFogShade
 } from '../game/raycast/RaycastAtmosphere';
@@ -87,6 +90,14 @@ describe('raycast atmosphere', () => {
     });
   });
 
+  it('layers ember atmosphere for World 3 without breaking fog ordering or caps', () => {
+    const base = getAtmosphereForDirector('PRESSURE', 4);
+    const w3 = applyWorldSegmentToAtmosphere(base, 'world3');
+    expect(w3.fogColor).toBe(RAYCAST_ATMOSPHERE_WORLD3.fogColor);
+    expect(w3.fogEnd).toBeLessThanOrEqual(RAYCAST_WORLD3_SEGMENT_LAYER.fogEndCap);
+    expect(w3.corruptionAlpha).toBeCloseTo(base.corruptionAlpha * RAYCAST_WORLD3_SEGMENT_LAYER.corruptionAlphaScale, 6);
+  });
+
   it('leaves World 1 atmosphere unchanged when segment is world1', () => {
     const base = getAtmosphereForDirector('AMBUSH', 4);
     const w1 = applyWorldSegmentToAtmosphere(base, 'world1');
@@ -94,13 +105,31 @@ describe('raycast atmosphere', () => {
   });
 
   it('surfaces distinct World 2 intro copy for segment helpers', () => {
-    expect(getRaycastIntroMessageForSegment('world2')).toContain('STRATUM RIFT');
+    expect(getRaycastIntroMessageForSegment('world2')).toContain('ABYSS STRATUM');
+    expect(getRaycastIntroMessageForSegment('world2')).toContain('NOT THE FORGE');
     expect(getRaycastIntroMessageForSegment('world1')).toBe(RAYCAST_ATMOSPHERE.messages.intro);
+  });
+
+  it('surfaces distinct World 3 intro copy for segment helpers', () => {
+    expect(getRaycastIntroMessageForSegment('world3')).toContain('EMBER MERIDIAN');
+    expect(getRaycastIntroMessageForSegment('world3')).toContain('THIRD HELL');
   });
 
   it('layers stratified combat copy for World 2 while preserving World 1 strings', () => {
     expect(getRaycastCombatMessageForSegment('world2', 'pressure')).toContain('ION SHEAR');
     expect(getRaycastCombatMessageForSegment('world1', 'pressure')).toBe(RAYCAST_ATMOSPHERE.messages.pressure);
+  });
+
+  it('tailors boss strip copy to Archon vs Bloom Warden display names', () => {
+    const archon = getRaycastBossHudLines('Volt Archon');
+    const bloom = getRaycastBossHudLines('Bloom Warden');
+    const ash = getRaycastBossHudLines('Ash Judge');
+    expect(archon.phase2Overdrive).toContain('ARCHON');
+    expect(archon.coreShattered).toContain('ARCHON');
+    expect(bloom.phase2Overdrive).toContain('BLOOM');
+    expect(bloom.coreShattered).toContain('WARDEN');
+    expect(ash.phase2Overdrive).toContain('ASH HALO');
+    expect(ash.coreShattered).toContain('VERDICT');
   });
 
   it('centralizes readable terminal corruption messages and feedback colors', () => {
