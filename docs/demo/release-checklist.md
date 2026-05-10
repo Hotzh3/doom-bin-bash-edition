@@ -39,7 +39,7 @@ npm run build
 - After UI or raycast visual changes, refresh: `npx playwright install chromium` (once per machine) then `npm run capture:media` (needs `ffmpeg` on `PATH`). Use **`CAPTURE_URL=...`** if Vite is already running — see [`scripts/capture-portfolio.mjs`](../../scripts/capture-portfolio.mjs).
 - The capture script prints **per-file sizes** when it finishes; align root [`README.md`](../../README.md) subline with combined WebP + GIF totals.
 - Quick sanity check: five WebPs typically **~95–110 KB** combined; two GIFs **under ~1 MB** each (recent passes ≈ **~230 KB + ~265 KB** — rerun `capture:media` and update [`README.md`](../../README.md) if totals shift).
-- Verify relative links: README references `docs/assets/screenshots/*.webp`, `docs/assets/gifs/*.gif`, and [`docs/assets/doombanner-cover.png`](../assets/doombanner.png) — `ls` those paths before tagging.
+- Verify relative links: README references `docs/assets/screenshots/*.webp`, `docs/assets/gifs/*.gif`, and [`docs/assets/doombanner-cover.png`](../assets/doombanner-cover.png) — `ls` those paths before tagging.
 
 ## Handoff Links
 
