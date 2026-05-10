@@ -4,137 +4,55 @@
 
 # doom-bin-bash-edition
 
-Original retro horror raycast FPS prototype built with Phaser 3, TypeScript, and Vite. The primary product direction is `RaycastScene`: a clean-room first-person mini episode with original levels, compact combat, and `GameDirector` pacing. `ArenaScene` remains available as a preserved secondary sandbox for the earlier 2D systems.
+**Original retro-horror raycast FPS** — browser-playable vertical slice built with **Phaser 3**, **TypeScript**, and **Vite**. The shipped experience is **`RaycastScene`**: a clean-room first-person mini-campaign (Episode 1, boss, optional World 2 arc), compact combat, **`GameDirector`** pacing, HUD/minimap, score/run summary, and generated WebAudio. **`ArenaScene`** remains a **secondary** 2D sandbox for regression coverage.
+
+**Status:** Demo-ready / portfolio-ready slice — logic tested (`vitest`), linted, production build verified; CI via GitHub Actions.
+
+---
 
 ## Disclaimer
 
-This is an original portfolio / learning project. It is inspired by the feel of classic retro FPS games, but it is not affiliated with Doom or Doom 64 and does not reuse their code, assets, maps, names, sprites, sounds, or copyrighted content.
+Portfolio / learning project. Inspired by the **feel** of classic retro FPS titles; **not** affiliated with Doom or Doom 64. No reuse of their code, assets, maps, names, sprites, sounds, or copyrighted content.
 
-## Clean-room / Original Content Boundary
+## Clean-room boundary
 
-This repository does not copy code, assets, maps, sounds, names, constants, proprietary data, or reverse-engineered implementations from existing games. It also does not use content from DOOM64-RE.
+No copied gameplay assets, maps, proprietary data, or reverse-engineered implementations. No content from DOOM64-RE. References are **high-level only** (movement clarity, strafe play, pacing, readable horror atmosphere). Layouts, tuning, names, and visuals in this repo are original.
 
-Reference points are limited to high-level feel goals such as fast movement, immediate input, strong strafe play, wide FOV, hitscan combat, ambush triggers, calm-to-chaos pacing, and a readable horror atmosphere. Code, tuning, layouts, visuals, audio, names, and gameplay data are original to this repo.
+---
 
-## Current Project
+## Features (current slice)
 
-`doom-bin-bash-edition` currently presents a compact original raycast FPS vertical slice as the main experience. The gameplay is split across scenes, raycast modules, entities, and pure systems so the project stays testable and easy to hand off.
+- **Raycast episode:** menu → terminal prologue → **Episode 1** (five sectors + **Volt Archon** boss) → optional **World 2** two-sector rift (data-driven).
+- **Gameplay:** WASD movement, mouse / keys turning, hitscan weapons, doors/keys/secrets, ambush triggers, objectives, pause/death/clear flows.
+- **Presentation:** compact HUD, minimap, difficulty presets, run summary with score/high score/rank, atmospheric palette (Episode 1 vs World 2 segment).
+- **Systems:** `GameDirector` (calm → warning → pressure → ambush → recovery), enemy roles (`GRUNT`, `STALKER`, `RANGED`, `BRUTE`), anti-camp pressure.
+- **Quality:** extensive **unit tests** for raycast/combat/director/presentation paths that do not require Phaser canvas.
+- **Arena (secondary):** local 2-player arena sandbox — preserved, not the primary product.
 
-The current slice focuses on a short but complete flow: boot menu, terminal prologue, **Episode 1** (five authored sectors + boss), optional **World 2 Rift** continuation, objective-driven progression, procedural WebAudio feedback, and a `GameDirector` that shapes pressure without a huge content footprint.
+---
 
-## Current Features
-
-- `RaycastScene` como modo principal FPS/raycast.
-- `GameDirector` pacing that shifts between calm, warning, pressure, ambush, and recovery states.
-- Compact **Episode 1** campaign (five sectors + boss) plus an authored **World 2** two-sector rift arc after the finale when enabled in data.
-- First-person movement with `WASD`, mouse / key turning, instant fire, and weapon switching.
-- Doors, keys, secrets, and ambush triggers that support short guided runs.
-- Compact HUD with health, weapon, token, secret, objective, and critical messaging.
-- Level-clear, episode-clear, retry, and menu-return flows.
-- Generated WebAudio feedback with no external sound files.
-- `ArenaScene` preserved as a secondary 2D sandbox for legacy systems and regression safety.
-- Movimiento first-person con `WASD`, giro con flechas/`Q`/`E`, strafe central y cámara horizontal.
-- Mouse turn horizontal con pointer lock al hacer click dentro del canvas.
-- Render raycast con atmósfera oscura, contraste jugable y billboards.
-- Combate con disparo instantáneo, auto-aim permisivo, feedback de muzzle flash, hit flash, impactos y cambio de armas.
-- Enemigos simples pero peligrosos en grupo, con daño al jugador, windup visible y proyectiles enemigos.
-- Puertas, llaves, secretos, zonas y triggers de emboscada.
-- Catálogo compacto de niveles raycast con dos mapas originales enlazados como mini episodio.
-- HUD raycast compacto con vida, arma, tokens, secretos, objetivo, mensajes críticos y debug oculto por toggle.
-- Loop completo con pantalla de muerte (`SIGNAL TERMINATED`), pausa con menú dedicado, retry por nivel, avance al siguiente mapa y cierre de episodio / arco con resumen y rank.
-- Audio básico generado con WebAudio, opcional y sin archivos externos.
-- `ArenaScene` conservada como modo secundario/sandbox 2D.
-- Arena responsive/fullscreen con dos jugadores locales y combate PvP + PvE.
-- Proyectiles, daño, muerte de jugadores/enemigos y reinicio de arena en el modo 2D.
-- Arquetipos de enemigos: `GRUNT`, `BRUTE`, `STALKER`, `RANGED`.
-- Siluetas diferenciadas por arquetipo usando primitives de Phaser.
-- FSM simple de enemigos con estados `SPAWN`, `CHASE`, `ATTACK`, `DEAD`.
-- Spawn pacing adaptativo según tiempo, kills, vida y enemigos vivos.
-- Spawn telegraph visual antes de crear enemigos nuevos en sistemas 2D.
-- Límite de enemigos vivos y presupuesto finito de spawns.
-- Estado mínimo de partida: `GAME_OVER` y `ROUND_CLEAR`.
-- Cleanup de proyectiles por bounds/lifetime.
-- HUD de arena con barras de vida, kills, enemigos vivos/derrotados, estado e intensidad del director.
-- Feedback visual: hit flash, muzzle flash, death burst, screenshake sutil y arena decorativa.
-- Tests de lógica crítica para raycast, combate, FSM, configuración de enemigos, TargetSelector, audio config y GameDirector.
-
-## Controls
-
-- Menú: `A` inicia modo raycast (vía prólogo); `B` abre `ArenaScene`; `D` cicla dificultad del raycast (Assist / Standard / Hard).
-- Raycast: mover con `WASD`; girar con mouse horizontal, flechas izquierda/derecha o `Q`/`E`; disparar con `F`, `SPACE` o click; cambiar arma con `1`/`2`/`3`; `R` reinicia el nivel actual; `N` avanza al siguiente nivel cuando el clear overlay está activo; `ESC` vuelve al menú; `TAB`/backtick alterna debug.
-- Arena secundaria: `R` reinicia arena; Player 1 mueve con `WASD` y dispara con `F`; Player 2 mueve con flechas y dispara con `L`.
-
-## Stack Técnico
-
-- Phaser 3
-- TypeScript
-- Vite
-- Vitest
-- ESLint
-- Prettier
-- GitHub Actions para CI básico
-
-## Arquitectura
-
-```text
-src/
-  game/
-    scenes/
-      MenuScene.ts
-      RaycastScene.ts
-      ArenaScene.ts
-    raycast/
-      RaycastRenderer.ts
-      RaycastMap.ts
-      RaycastLevel.ts
-      RaycastMovement.ts
-      RaycastCombatSystem.ts
-      RaycastEnemy.ts
-      RaycastHud.ts
-      RaycastRunSummary.ts
-    entities/
-      Player.ts
-      Enemy.ts
-      Projectile.ts
-      enemyConfig.ts
-    systems/
-      CombatSystem.ts
-      EnemyFSM.ts
-      GameDirector.ts
-      HUDSystem.ts
-      InputManager.ts
-      TargetSelector.ts
-      AudioFeedbackSystem.ts
-  tests/
-    combat.test.ts
-    raycast-combat.test.ts
-    raycast-level.test.ts
-    raycast-map.test.ts
-    raycast-movement.test.ts
-    enemy-config.test.ts
-    enemy-fsm.test.ts
-    game-director.test.ts
-    target-selector.test.ts
-    audio-feedback.test.ts
-```
-
-- `scenes`: coordinan el flujo visual y de gameplay (`MenuScene`, `RaycastScene`, `ArenaScene`).
-- `raycast`: contiene renderer, mapa, nivel, movimiento, combate, enemigos y HUD del modo FPS.
-- `entities`: representan objetos jugables y de combate del modo 2D (`Player`, `Enemy`, `Projectile`).
-- `systems`: contienen lógica aislada como daño, input, HUD, FSM, puertas, llaves, triggers y dirección de spawns.
-- `GameDirector`: calcula intensidad, decide si spawnear, respeta límites y selecciona tipo de enemigo en sistemas testeables.
-- `TargetSelector`: elige el jugador vivo más cercano con lógica pura y testeable.
-- `AudioFeedbackSystem`: genera cues cortos con WebAudio y falla de forma segura si el navegador bloquea audio.
-- `tests`: cubren lógica pura para reducir riesgo sin depender de rendering de Phaser.
-
-## Run And Verify
+## Quick start
 
 ```bash
 npm ci
 npm run dev
 ```
 
-Verification commands:
+Open the Vite URL (usually `http://localhost:5173`). From the menu: **click “Press A: 3D Mode”** or press **`A`** to start the raycast path (prologue → episode). **`B`** opens the 2D arena. **`D`** cycles raycast difficulty.
+
+---
+
+## Controls
+
+| Context | Keys |
+|---------|------|
+| **Menu** | **A** — raycast episode · **B** — 2D arena · **D** — cycle difficulty |
+| **Raycast** | Move **WASD** · Turn mouse / **Q** **E** / arrows · Fire **F** / Space / click · Weapons **1–3** · Restart **R** · Next level **N** (when clear overlay) · **ESC** menu · **TAB**/backtick debug |
+| **Arena** | P1 **WASD** + **F** · P2 arrows + **L** · **R** restart arena |
+
+---
+
+## Verification
 
 ```bash
 npm run test
@@ -142,68 +60,97 @@ npm run lint
 npm run build
 ```
 
-## Manual QA
+---
 
-- Demo script and handoff flow: [docs/demo/raycast-demo-script.md](docs/demo/raycast-demo-script.md)
-- Pre-demo / pre-PR release checklist: [docs/demo/release-checklist.md](docs/demo/release-checklist.md)
-- Raycast feel and regression checklist: [docs/playtest/raycast-feel-checklist.md](docs/playtest/raycast-feel-checklist.md)
+## Documentation
 
-## Technical Highlights
+| Doc | Description |
+|-----|-------------|
+| [docs/README.md](docs/README.md) | Full documentation index |
+| [docs/architecture.md](docs/architecture.md) | Raycast-first architecture (current) |
+| [docs/roadmap.md](docs/roadmap.md) | Historical roadmap + product pointers |
+| [docs/demo/raycast-demo-script.md](docs/demo/raycast-demo-script.md) | Demo / playtest script |
+| [docs/demo/release-checklist.md](docs/demo/release-checklist.md) | Pre-release smoke checklist |
+| [docs/phase25-release-readiness.md](docs/phase25-release-readiness.md) | Portfolio / release readiness (Phase 25) |
 
-- **Phaser 3 + TypeScript:** vertical slice raycast/FPS con escenas, módulos raycast y sistemas separados.
-- **RaycastScene primary:** entrada principal desde menú para probar movimiento, cámara horizontal, combate, nivel, triggers y atmósfera.
-- **ArenaScene preserved:** modo 2D secundario para mantener compatibilidad con el sandbox local.
-- **GameDirector:** controla ritmo y eventos de presión, además de spawn budget y límite de enemigos vivos.
-- **Clean-room raycast feel:** movimiento inmediato, strafe fuerte, FOV amplio, disparo instantáneo, enemigos legibles, catálogo de mapas originales con llave/puerta/emboscada/secreto/salida y atmósfera procedural original.
-- **TargetSelector:** selección pura del jugador vivo más cercano, evitando targets muertos.
-- **Game states:** `RUNNING`, `GAME_OVER` y `ROUND_CLEAR` con overlay claro y reinicio por `R`.
-- **Critical logic tests:** cobertura de raycast, combate, FSM, configs de enemigos, selección de targets, audio config y director.
-- **Quality gates:** `npm run test`, `npm run lint`, `npm run build` y CI básico con GitHub Actions.
+---
 
-## Visual Inspiration / Moodboard
+## Screenshots & media
 
-Las imágenes siguientes son material visual local para presentación e inspiración de estilo. **Visual inspiration / moodboard, not gameplay screenshot.** No deben leerse como capturas reales del gameplay.
+**Moodboard images** in `docs/assets/` are **visual inspiration only**, not gameplay.
 
-### Moodboard 1
+**Gameplay screenshots:** add optimized captures under [`docs/assets/screenshots/`](docs/assets/screenshots/README.md) and embed them in this README when ready (see folder README for naming).
+
+---
+
+## Demo (3–5 minutes)
+
+1. Menu — show **A** / click 3D mode and optional **D** difficulty.  
+2. Prologue → first sector — movement, fire, objective line.  
+3. Token, door, one combat beat — HUD + director feel.  
+4. Level clear overlay — time, score, **ESC** back.  
+
+Full presenter script: [docs/demo/raycast-demo-script.md](docs/demo/raycast-demo-script.md).
+
+---
+
+## Repository layout (abbrev.)
+
+```text
+src/game/scenes/       MenuScene, PrologueScene, RaycastScene, RaycastWorldLockedScene, ArenaScene
+src/game/raycast/      Renderer, map, levels, combat, enemy, HUD, episode, presentation, …
+src/game/systems/      GameDirector, combat, audio, input, …
+src/tests/             Vitest — raycast, combat, director, presentation, …
+docs/                  Architecture, demo scripts, phase notes, assets
+```
+
+Details: [docs/architecture.md](docs/architecture.md).
+
+---
+
+## Stack
+
+Phaser 3 · TypeScript · Vite · Vitest · ESLint · Prettier · GitHub Actions ([`.github/workflows/ci.yml`](.github/workflows/ci.yml))
+
+---
+
+## Technical highlights
+
+- **Raycast column renderer** + original maps and level data (no external map packs).
+- **Scene graph** separates presentation (`RaycastPresentation`, `RaycastRunSummary`) from simulation.
+- **`GameDirector`** and pacing helpers are unit-tested where logic is pure.
+- **World 2** data lives in `RaycastWorldTwoLevels.ts` (re-exported from level module).
+- **No live service** — high score is **local** (`localStorage`).
+
+---
+
+## Visual inspiration (moodboard)
+
+**Not in-game screenshots.** Style reference only.
 
 <p align="center">
   <img src="docs/assets/im1.png" width="90%" alt="Visual inspiration moodboard 1"/>
 </p>
-
-### Moodboard 2
-
 <p align="center">
   <img src="docs/assets/im2.png" width="90%" alt="Visual inspiration moodboard 2"/>
 </p>
-
-### Moodboard 3
-
 <p align="center">
   <img src="docs/assets/im3.png" width="90%" alt="Visual inspiration moodboard 3"/>
 </p>
 
-## Gameplay Screenshots
+---
 
-No hay screenshots reales del gameplay versionadas todavía en `docs/assets`. Cuando se agreguen capturas reales del juego, deben colocarse en esta sección y etiquetarse explícitamente como gameplay screenshots.
+## Project status & roadmap
 
-## Project Status
+The repo is a **complete-playable vertical slice**: raycast campaign loop, boss, optional World 2 continuation when enabled in data, score persistence, tests and CI.
 
-The project is currently a presentable raycast FPS vertical slice with a boot menu, terminal prologue, **Episode 1** mini-campaign (five sectors + boss), optional **World 2** content, generated WebAudio, original progression, and logic tests around critical systems. `ArenaScene` remains available as a secondary sandbox. The repo does not include copied maps, external commercial assets, or online multiplayer.
+- **Historical** 4-week team roadmap (arena MVP era): [docs/roadmap.md](docs/roadmap.md)  
+- **Engineering / polish phases** (runtime, World 2 identity, encounters, scoring, release): see [docs/README.md](docs/README.md#phase-notes-engineering--planning)
 
-## Roadmap por Fases
+Maintenance-style next steps (optional): add real gameplay screenshots, short recorded GIF for README, micro-tuning from playtest notes — **not** large new mechanics.
 
-1. **Fase 0 - Reorientación raycast:** definir el target de feel FPS, boundary clean-room, README y menú con `RaycastScene` como foco.
-2. **Fase 1 - Vertical Slice:** menú, arena, dos jugadores, disparos, daño, enemigos básicos, HUD y tests mínimos.
-3. **Fase 2 - Enemigos y Director:** arquetipos `GRUNT`, `BRUTE`, `STALKER`, configuración testeable y `GameDirector` básico.
-4. **Fase 3 - Hardening:** ampliar tests de lógica crítica, revisar tipos, lint, build y estabilidad.
-5. **Fase 4 - Loop completo:** estado mínimo de partida, cleanup de proyectiles, target selection correcta y CI básico.
-6. **Fase 5 - Polish de presentación:** feedback visual, HUD más claro, siluetas, arena decorativa, audio básico generado y README honesto.
-7. **Fase 6 - Expansión futura:** contenido y sistemas nuevos marcados como próximos pasos.
+---
 
-## Próximos Pasos
+## License
 
-- Playtest manual de `RaycastScene` para microajustes de ritmo, daño y distancia de spawns.
-- Capturas reales del gameplay en `docs/assets`.
-- Enemigos ranged y grupos más variados.
-- Powerups originales.
-- Polish adicional de efectos y sonido.
+No `LICENSE` file is shipped in this snapshot; treat as **all rights reserved** / private portfolio unless the maintainer adds an explicit license.

@@ -53,7 +53,7 @@ function cooldownMs(phase: 1 | 2): number {
 }
 
 export function getRaycastBossPhaseLabel(phase: 1 | 2): string {
-  return phase === 1 ? 'PHASE 1: TARGET SWEEP' : 'PHASE 2: CORE OVERDRIVE';
+  return phase === 1 ? 'PHASE 1: TARGET SWEEP' : 'PHASE 2: CORE OVERDRIVE // ION BRACKET';
 }
 
 export function createRaycastBossState(config: RaycastBossConfig, time: number): RaycastBossState {
@@ -147,6 +147,37 @@ export function computeRaycastBossWeaponDamage(
     }
   }
   return total;
+}
+
+/** Pellets whose rays intersect the boss hit disk — scoring / accuracy instrumentation (Phase 24). */
+export function countRaycastBossConnectingPellets(
+  state: RaycastBossState,
+  player: RaycastPlayerState,
+  map: RaycastMap,
+  weaponKind: WeaponKind,
+  profile: BalanceProfile
+): number {
+  if (!state.alive) return 0;
+  const projectiles = createProjectileSpawns(
+    {
+      ownerTeam: 'P1',
+      origin: { x: player.x, y: player.y },
+      direction: { x: Math.cos(player.angle), y: Math.sin(player.angle) },
+      weaponKind
+    },
+    profile
+  );
+  let n = 0;
+  for (const p of projectiles) {
+    const ang = Math.atan2(p.vy, p.vx);
+    const ux = Math.cos(ang);
+    const uy = Math.sin(ang);
+    const wallDist = castRay(map, player.x, player.y, ang, player.angle).distance;
+    if (rayIntersectsBossDisk(player.x, player.y, ux, uy, wallDist, state.x, state.y, state.hitRadius)) {
+      n += 1;
+    }
+  }
+  return n;
 }
 
 export function getRaycastBossCrosshairTarget(
@@ -283,10 +314,18 @@ export function tickRaycastBossVolleys(
         volley.push(spawnBossProjectile(state.x, state.y, state.x + Math.cos(a) * 3, state.y + Math.sin(a) * 3, time));
       }
     } else {
+      /** Phase 2: fan + fixed “ion bracket” rails — same damage/speed, forces lateral cut vs hugging center. */
       const count = playerStationary ? 5 : 3;
       for (const a of fanAngles(base, count, playerStationary ? 0.54 : 0.36)) {
         volley.push(spawnBossProjectile(state.x, state.y, state.x + Math.cos(a) * 3, state.y + Math.sin(a) * 3, time));
       }
+      const bracket = 0.52;
+      volley.push(
+        spawnBossProjectile(state.x, state.y, state.x + Math.cos(base - bracket) * 3, state.y + Math.sin(base - bracket) * 3, time)
+      );
+      volley.push(
+        spawnBossProjectile(state.x, state.y, state.x + Math.cos(base + bracket) * 3, state.y + Math.sin(base + bracket) * 3, time)
+      );
     }
     return volley;
   }

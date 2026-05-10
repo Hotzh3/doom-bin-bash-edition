@@ -11,6 +11,8 @@ import type { EnemyKind } from '../types/game';
 
 export interface RaycastCombatResult {
   fired: boolean;
+  /** Pellets spawned this trigger pull — used for accuracy / scoring (Phase 24). */
+  pelletCount: number;
   hitEnemy: RaycastEnemy | null;
   killed: boolean;
   killCount: number;
@@ -58,6 +60,7 @@ export class RaycastCombatSystem {
     if (!result) {
       return {
         fired: false,
+        pelletCount: 0,
         hitEnemy: null,
         killed: false,
         killCount: 0,
@@ -71,6 +74,8 @@ export class RaycastCombatSystem {
       };
     }
 
+    const pelletCount = result.projectiles.length;
+
     const impacts = result.projectiles
       .map((projectile) => this.resolveProjectileHit(player, projectile, enemies, map, time))
       .filter((impact): impact is RaycastProjectileImpact => impact !== null);
@@ -78,6 +83,7 @@ export class RaycastCombatSystem {
     if (impacts.length === 0) {
       return {
         fired: true,
+        pelletCount,
         hitEnemy: null,
         killed: false,
         killCount: 0,
@@ -95,6 +101,7 @@ export class RaycastCombatSystem {
 
     return {
       fired: true,
+      pelletCount,
       hitEnemy: impacts[0].enemy,
       killed: impacts.some((impact) => impact.killed),
       killCount: impacts.reduce((total, impact) => total + impact.killCount, 0),

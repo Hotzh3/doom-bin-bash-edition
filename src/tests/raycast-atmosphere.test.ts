@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { RAYCAST_ATMOSPHERE, calculateEnemyVisibility, calculateFogShade, getAtmosphereForDirector } from '../game/raycast/RaycastAtmosphere';
+import {
+  applyWorldSegmentToAtmosphere,
+  getAtmosphereForDirector,
+  getRaycastIntroMessageForSegment,
+  RAYCAST_ATMOSPHERE,
+  RAYCAST_ATMOSPHERE_WORLD2,
+  RAYCAST_WORLD2_SEGMENT_LAYER,
+  calculateEnemyVisibility,
+  calculateFogShade
+} from '../game/raycast/RaycastAtmosphere';
 
 describe('raycast atmosphere', () => {
   it('darkens distant geometry with fog', () => {
@@ -60,6 +69,32 @@ describe('raycast atmosphere', () => {
 
     expect(calculateEnemyVisibility(12, highIntensity)).toBeGreaterThanOrEqual(0.66);
     expect(calculateEnemyVisibility(12, recovery)).toBeGreaterThanOrEqual(0.58);
+  });
+
+  it('layers ion-stratum atmosphere for World 2 without breaking fog ordering or caps', () => {
+    const states = [null, 'CALM', 'WATCHING', 'WARNING', 'AMBUSH', 'PRESSURE', 'RECOVERY'] as const;
+    states.forEach((state) => {
+      const base = getAtmosphereForDirector(state, 4);
+      const w2 = applyWorldSegmentToAtmosphere(base, 'world2');
+      expect(w2.fogColor).toBe(RAYCAST_ATMOSPHERE_WORLD2.fogColor);
+      expect(w2.fogEnd).toBeLessThanOrEqual(RAYCAST_WORLD2_SEGMENT_LAYER.fogEndCap);
+      expect(w2.fogStart).toBeLessThan(w2.fogEnd);
+      expect(w2.corruptionAlpha).toBeCloseTo(base.corruptionAlpha * RAYCAST_WORLD2_SEGMENT_LAYER.corruptionAlphaScale, 6);
+      expect(w2.pulseAlpha).toBeCloseTo(base.pulseAlpha * RAYCAST_WORLD2_SEGMENT_LAYER.pulseAlphaScale, 6);
+      expect(w2.enemyMinVisibility).toBeGreaterThanOrEqual(base.enemyMinVisibility);
+      expect(w2.enemyMinVisibility).toBeLessThanOrEqual(RAYCAST_WORLD2_SEGMENT_LAYER.enemyMinVisibilityCap);
+    });
+  });
+
+  it('leaves World 1 atmosphere unchanged when segment is world1', () => {
+    const base = getAtmosphereForDirector('AMBUSH', 4);
+    const w1 = applyWorldSegmentToAtmosphere(base, 'world1');
+    expect(w1).toBe(base);
+  });
+
+  it('surfaces distinct World 2 intro copy for segment helpers', () => {
+    expect(getRaycastIntroMessageForSegment('world2')).toContain('STRATUM RIFT');
+    expect(getRaycastIntroMessageForSegment('world1')).toBe(RAYCAST_ATMOSPHERE.messages.intro);
   });
 
   it('centralizes readable terminal corruption messages and feedback colors', () => {

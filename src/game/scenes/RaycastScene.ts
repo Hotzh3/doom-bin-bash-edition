@@ -54,6 +54,7 @@ import {
 } from '../raycast/RaycastScore';
 import {
   computeRaycastBossWeaponDamage,
+  countRaycastBossConnectingPellets,
   createRaycastBossState,
   damageRaycastBoss,
   getRaycastBossPhaseLabel,
@@ -176,6 +177,9 @@ export class RaycastScene extends Phaser.Scene {
   private readonly completedEncounterBeats = new Set<string>();
   private readonly deferredPickupHints = new Map<string, number>();
   private enemiesKilled = 0;
+  /** Pellets fired / hostile-connecting hits — Phase 24 instrumentation for future scoring (not yet shown in HUD overlay). */
+  private runPelletsFired = 0;
+  private runPelletsHitHostile = 0;
   private runScore = 0;
   private carriedScoreFromEpisode = 0;
   private pendingWorldTwoBreachBonus = false;
@@ -885,6 +889,8 @@ export class RaycastScene extends Phaser.Scene {
     this.deferredPickupHints.clear();
     this.completedEncounterBeats.clear();
     this.enemiesKilled = 0;
+    this.runPelletsFired = 0;
+    this.runPelletsHitHostile = 0;
     this.runScore = this.carriedScoreFromEpisode;
     if (this.pendingWorldTwoBreachBonus) {
       this.runScore += RAYCAST_WORLD2_ENTRY_POINTS;
@@ -1023,6 +1029,8 @@ export class RaycastScene extends Phaser.Scene {
     const result = this.combat.fire(this.player, this.enemies, this.map, this.time.now);
     if (!result.fired) return;
 
+    this.runPelletsFired += result.pelletCount;
+
     this.flashMuzzle();
     const weaponAudio = getWeaponAudioPlan(result.weaponKind);
     this.audioFeedback.play(weaponAudio.cue, weaponAudio.intensity, this.time.now);
@@ -1030,6 +1038,13 @@ export class RaycastScene extends Phaser.Scene {
     if (this.bossState?.alive) {
       const bossDamage = computeRaycastBossWeaponDamage(this.bossState, this.player, this.map, result.weaponKind, 'raycast');
       if (bossDamage > 0) {
+        this.runPelletsHitHostile += countRaycastBossConnectingPellets(
+          this.bossState,
+          this.player,
+          this.map,
+          result.weaponKind,
+          'raycast'
+        );
         const killed = damageRaycastBoss(this.bossState, bossDamage, this.time.now);
         if (killed) {
           this.runScore = addRaycastBossClearScore(this.runScore);
@@ -1056,6 +1071,7 @@ export class RaycastScene extends Phaser.Scene {
       return;
     }
 
+    this.runPelletsHitHostile += result.hitCount + result.splashHitCount;
     this.enemiesKilled += result.killCount;
     if (result.killedEnemyKinds.length > 0) {
       this.runScore = addRaycastKillScore(this.runScore, result.killedEnemyKinds);

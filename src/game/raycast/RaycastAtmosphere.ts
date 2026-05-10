@@ -75,6 +75,22 @@ export const RAYCAST_ATMOSPHERE_WORLD2 = {
   }
 } as const;
 
+/**
+ * Layered only in `applyWorldSegmentToAtmosphere` for `world2`.
+ * Ion stratum: slightly deeper fog envelope + softer corrupt pulse vs infernal W1; bump silhouette floor so cold haze stays fair.
+ */
+export const RAYCAST_WORLD2_SEGMENT_LAYER = {
+  fogStartDelta: 0.2,
+  fogEndDelta: 0.5,
+  fogEndCap: 12,
+  corruptionAlphaScale: 0.86,
+  pulseAlphaScale: 0.81,
+  ambientDarknessBump: 0.014,
+  ambientDarknessMax: 0.31,
+  enemyMinVisibilityDelta: 0.034,
+  enemyMinVisibilityCap: 0.73
+} as const;
+
 export type RaycastWorldSegmentId = 'world1' | 'world2';
 
 export function getRaycastIntroMessageForSegment(segment: RaycastWorldSegmentId): string {
@@ -91,13 +107,19 @@ export function applyWorldSegmentToAtmosphere(
   segment: RaycastWorldSegmentId
 ): RaycastAtmosphereRenderOptions {
   if (segment !== 'world2') return base;
+  const L = RAYCAST_WORLD2_SEGMENT_LAYER;
+  const fogEnd = Math.min(L.fogEndCap, base.fogEnd + L.fogEndDelta);
+  const fogStart = Math.min(base.fogStart + L.fogStartDelta, fogEnd - 0.35);
   return {
     ...base,
     fogColor: RAYCAST_ATMOSPHERE_WORLD2.fogColor,
     corruptionTint: RAYCAST_ATMOSPHERE_WORLD2.corruptionTint,
-    corruptionAlpha: base.corruptionAlpha * 0.88,
-    pulseAlpha: base.pulseAlpha * 0.85,
-    ambientDarkness: Math.min(0.31, base.ambientDarkness + 0.012)
+    fogStart,
+    fogEnd,
+    corruptionAlpha: base.corruptionAlpha * L.corruptionAlphaScale,
+    pulseAlpha: base.pulseAlpha * L.pulseAlphaScale,
+    ambientDarkness: Math.min(L.ambientDarknessMax, base.ambientDarkness + L.ambientDarknessBump),
+    enemyMinVisibility: Math.min(L.enemyMinVisibilityCap, base.enemyMinVisibility + L.enemyMinVisibilityDelta)
   };
 }
 

@@ -103,6 +103,7 @@ describe('raycast combat', () => {
     const shot = combat.fire(player, [enemy], RAYCAST_MAP, 1000);
 
     expect(shot.fired).toBe(true);
+    expect(shot.pelletCount).toBe(1);
     expect(shot.hitEnemy?.id).toBe(enemy.id);
     expect(enemy.alive).toBe(false);
   });
@@ -122,6 +123,7 @@ describe('raycast combat', () => {
     const shot = combat.fire(blockedPlayer, [enemy], wallTestMap, 1000);
 
     expect(shot.fired).toBe(true);
+    expect(shot.pelletCount).toBe(1);
     expect(shot.hitEnemy).toBeNull();
     expect(shot.wallHit).toBe(true);
     expect(enemy.alive).toBe(true);
@@ -148,6 +150,7 @@ describe('raycast combat', () => {
     const shot = combat.fire(player, [enemy], RAYCAST_MAP, 1000);
 
     expect(shot.fired).toBe(true);
+    expect(shot.pelletCount).toBe(9);
     expect(shot.hitCount).toBeGreaterThan(1);
     expect(shot.totalDamage).toBeGreaterThan(16);
     expect(shot.killed).toBe(true);
