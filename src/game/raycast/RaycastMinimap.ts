@@ -111,7 +111,11 @@ export function buildRaycastMinimapModel(state: RaycastMinimapState): RaycastMin
     }))
   ];
 
-  const enemyBlips = state.enemies ? Array.from(state.enemies) : [];
+  const enemyBlips = state.enemies
+    ? Array.isArray(state.enemies)
+      ? state.enemies
+      : Array.from(state.enemies)
+    : [];
 
   return {
     width: state.map.grid[0]?.length ?? 0,

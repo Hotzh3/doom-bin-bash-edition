@@ -1,20 +1,40 @@
-# Gameplay screenshots
+# Gameplay screenshots (portfolio)
 
-Add **real gameplay captures** here for README / portfolio (not moodboard art).
+Real **in-game** captures for README, talks, and résumé links. Not moodboard art (`docs/assets/im*.png`).
 
 ## Naming convention
 
-Use lowercase with hyphens, WebP or compressed PNG:
+Pattern: **`raycast-{moment}-{subject}.webp`** (lowercase, hyphenated).
 
-- `menu.png` or `menu.webp` — main menu with options visible  
-- `raycast-hud-combat.webp` — combat + HUD  
-- `level-clear.webp` — victory overlay with summary lines  
-- `minimap.webp` — optional, if showcasing map readability  
+| File | Role |
+|------|------|
+| `raycast-menu.webp` | Main menu — mode split + difficulty. |
+| `raycast-prologue.webp` | Terminal prologue copy. |
+| `raycast-sector-hud.webp` | First-person HUD + objective (sector start). |
+| `raycast-exploration.webp` | Movement / corridor read (optional fifth still). |
+| `raycast-combat-director.webp` | Combat beat — pacing / feedback visible. |
+| `raycast-level-clear.webp` | Level-clear overlay with sector report *(manual capture — see below).* |
 
-## How to capture
+Stills are **WebP** (~960×540 logical game frame). Regenerated PNG intermediates should not be committed.
 
-1. Run `npm run dev`, use a fixed window size (e.g. 1280×720) for consistency.  
-2. Hide browser UI for capture; avoid debug HUD unless intentional (`TAB` off).  
-3. Optimize images (e.g. `pngquant`, `cwebp`) before committing to keep the repo lean.  
+## Capture checklist
 
-Update the **Gameplay Screenshots** section in the root `README.md` with `<img>` tags pointing here once files exist.
+1. `npm run dev` — fixed window size (**960×540** outer viewport matches canvas intent).
+2. Browser chrome hidden; **debug HUD off** (`TAB`).
+3. Follow **[SHOT_LIST.md](./SHOT_LIST.md)** for intent per frame.
+
+### Level-clear still (`raycast-level-clear.webp`)
+
+Not produced by `capture:media` (needs a full sector exit). Complete any sector, pause on the clear overlay, capture once.
+
+## Automated pipeline
+
+```bash
+npm run capture:media
+```
+
+Uses Playwright + **sharp** (WebP). Requires Chromium installed via `npx playwright install chromium`.
+
+## Manual optimization
+
+If WebP needs trimming further: re-export from source PNG with `sharp` quality ~78–82, or run **pngquant** on PNG intermediates before WebP.

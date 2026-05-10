@@ -43,8 +43,8 @@ describe('raycast boss', () => {
     boss.health = 59;
     syncRaycastBossPhase(boss);
     expect(boss.phase).toBe(2);
-    expect(getRaycastBossPhaseLabel(boss.phase)).toContain('PHASE 2');
-    expect(getRaycastBossPhaseLabel(boss.phase)).toContain('ION BRACKET');
+    expect(getRaycastBossPhaseLabel(boss)).toContain('PHASE 2');
+    expect(getRaycastBossPhaseLabel(boss)).toContain('ION BRACKET');
   });
 
   it('applies weapon damage along pellet rays against boss disk', () => {
@@ -107,6 +107,45 @@ describe('raycast boss', () => {
     expect(killed).toBe(true);
     expect(boss.alive).toBe(false);
     expect(addRaycastBossClearScore(100)).toBe(100 + 2500);
+  });
+
+  it('labels Bloom Warden phases distinctly', () => {
+    const boss = createRaycastBossState(
+      { ...CONFIG, behavior: 'bloom-warden', id: 'bloom-warden', displayName: 'Bloom Warden' },
+      0
+    );
+    boss.phase = 2;
+    expect(getRaycastBossPhaseLabel(boss)).toContain('BLOOM CROSS');
+  });
+
+  it('fires Bloom Warden volleys: twin rails then bloom cross pattern', () => {
+    const cfg: RaycastBossConfig = {
+      ...CONFIG,
+      id: 'bloom-warden',
+      displayName: 'Bloom Warden',
+      behavior: 'bloom-warden'
+    };
+    const boss = createRaycastBossState(cfg, 0);
+    boss.phase = 1;
+    boss.nextVolleyReadyAt = 0;
+    boss.pendingVolleyAt = 0;
+    const t0 = 5000;
+    tickRaycastBossVolleys(boss, { x: 2.5, y: 7.5, alive: true }, t0);
+    const p1 = tickRaycastBossVolleys(boss, { x: 2.5, y: 7.5, alive: true }, boss.pendingVolleyAt + 1);
+    expect(p1.length).toBe(2);
+
+    boss.phase = 2;
+    boss.nextVolleyReadyAt = 0;
+    boss.pendingVolleyAt = 0;
+    tickRaycastBossVolleys(boss, { x: 2.5, y: 7.5, alive: true, stationaryMs: 0 }, 6000);
+    const p2move = tickRaycastBossVolleys(boss, { x: 2.5, y: 7.5, alive: true, stationaryMs: 0 }, boss.pendingVolleyAt + 1);
+    expect(p2move.length).toBe(6);
+
+    boss.nextVolleyReadyAt = 0;
+    boss.pendingVolleyAt = 0;
+    tickRaycastBossVolleys(boss, { x: 2.5, y: 7.5, alive: true, stationaryMs: 1200 }, 7000);
+    const p2camp = tickRaycastBossVolleys(boss, { x: 2.5, y: 7.5, alive: true, stationaryMs: 1200 }, boss.pendingVolleyAt + 1);
+    expect(p2camp.length).toBe(8);
   });
 
   it('keeps exit ray from player to boss unblocked on boss map', () => {

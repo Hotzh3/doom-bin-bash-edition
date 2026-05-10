@@ -4,9 +4,35 @@
 
 # doom-bin-bash-edition
 
-**Original retro-horror raycast FPS** — browser-playable vertical slice built with **Phaser 3**, **TypeScript**, and **Vite**. The shipped experience is **`RaycastScene`**: a clean-room first-person mini-campaign (Episode 1, boss, optional World 2 arc), compact combat, **`GameDirector`** pacing, HUD/minimap, score/run summary, and generated WebAudio. **`ArenaScene`** remains a **secondary** 2D sandbox for regression coverage.
+**Retro-horror raycast FPS** — a **browser-playable** vertical slice built with **Phaser 3**, **TypeScript**, and **Vite**. The main product is **`RaycastScene`**: a first-person mini-campaign (Episode 1, boss, optional World 2 rift), compact combat, **`GameDirector`** pacing, HUD / minimap, run summary with score and rank, and generated WebAudio. **`ArenaScene`** remains a **secondary** 2D sandbox for regression coverage.
 
-**Status:** Demo-ready / portfolio-ready slice — logic tested (`vitest`), linted, production build verified; CI via GitHub Actions.
+**Status:** Shippable portfolio slice — `vitest` coverage on core systems, ESLint, production build, GitHub Actions CI.
+
+---
+
+## Gameplay preview
+
+<p align="center">
+  <img src="docs/assets/screenshots/raycast-menu.webp" width="31%" alt="Main menu with 3D and arena modes"/>
+  &nbsp;
+  <img src="docs/assets/screenshots/raycast-prologue.webp" width="31%" alt="Terminal prologue"/>
+  &nbsp;
+  <img src="docs/assets/screenshots/raycast-sector-hud.webp" width="31%" alt="Raycast first-person HUD"/>
+</p>
+
+<p align="center">
+  <img src="docs/assets/screenshots/raycast-combat-director.webp" width="47%" alt="Combat with HUD"/>
+  &nbsp;
+  <img src="docs/assets/screenshots/raycast-exploration.webp" width="47%" alt="Sector exploration"/>
+</p>
+
+<p align="center">
+  <img src="docs/assets/gifs/raycast-boot-to-sector.gif" width="48%" alt="Recording from menu through first sector"/>
+  &nbsp;
+  <img src="docs/assets/gifs/raycast-combat-loop.gif" width="48%" alt="Short combat segment"/>
+</p>
+
+<p align="center"><sub>Level-clear overlay capture: follow <a href="docs/assets/screenshots/SHOT_LIST.md">docs/assets/screenshots/SHOT_LIST.md</a> · Regenerate stills/GIFs: <code>npm run capture:media</code></sub></p>
 
 ---
 
@@ -20,14 +46,14 @@ No copied gameplay assets, maps, proprietary data, or reverse-engineered impleme
 
 ---
 
-## Features (current slice)
+## What ships today
 
 - **Raycast episode:** menu → terminal prologue → **Episode 1** (five sectors + **Volt Archon** boss) → optional **World 2** two-sector rift (data-driven).
-- **Gameplay:** WASD movement, mouse / keys turning, hitscan weapons, doors/keys/secrets, ambush triggers, objectives, pause/death/clear flows.
-- **Presentation:** compact HUD, minimap, difficulty presets, run summary with score/high score/rank, atmospheric palette (Episode 1 vs World 2 segment).
-- **Systems:** `GameDirector` (calm → warning → pressure → ambush → recovery), enemy roles (`GRUNT`, `STALKER`, `RANGED`, `BRUTE`), anti-camp pressure.
-- **Quality:** extensive **unit tests** for raycast/combat/director/presentation paths that do not require Phaser canvas.
-- **Arena (secondary):** local 2-player arena sandbox — preserved, not the primary product.
+- **Gameplay:** WASD, mouse / keys look, hitscan weapons, doors / keys / secrets, ambush triggers, objectives, pause / death / clear flows.
+- **Presentation:** Compact HUD, minimap, difficulty presets, sector report (score, high score, rank, timing, medals).
+- **Systems:** `GameDirector` pacing (calm → pressure → ambush → recovery), enemy roles (`GRUNT`, `STALKER`, `RANGED`, `BRUTE`).
+- **Quality:** Broad **unit tests** for raycast, combat, director, and presentation logic without requiring a live canvas.
+- **Arena:** Local 2-player sandbox — preserved, not the primary pitch.
 
 ---
 
@@ -38,7 +64,7 @@ npm ci
 npm run dev
 ```
 
-Open the Vite URL (usually `http://localhost:5173`). From the menu: **click “Press A: 3D Mode”** or press **`A`** to start the raycast path (prologue → episode). **`B`** opens the 2D arena. **`D`** cycles raycast difficulty.
+Open the Vite URL (usually `http://localhost:5173`). From the menu: **`A`** or **“Press A: 3D Mode”** starts the raycast path (prologue → episode). **`B`** opens the 2D arena. **`D`** cycles raycast difficulty.
 
 ---
 
@@ -47,8 +73,8 @@ Open the Vite URL (usually `http://localhost:5173`). From the menu: **click “P
 | Context | Keys |
 |---------|------|
 | **Menu** | **A** — raycast episode · **B** — 2D arena · **D** — cycle difficulty |
-| **Raycast** | Move **WASD** · Turn mouse / **Q** **E** / arrows · Fire **F** / Space / click · Weapons **1–3** · Restart **R** · Next level **N** (when clear overlay) · **ESC** menu · **TAB**/backtick debug |
-| **Arena** | P1 **WASD** + **F** · P2 arrows + **L** · **R** restart arena |
+| **Raycast** | Move **WASD** · Turn mouse / **Q** **E** / arrows · Fire **F** / Space / click · Weapons **1–3** · Restart **R** · Next **N** (when clear overlay) · **ESC** menu · **TAB** debug |
+| **Arena** | P1 **WASD** + **F** · P2 arrows + **L** · **R** restart |
 
 ---
 
@@ -66,31 +92,23 @@ npm run build
 
 | Doc | Description |
 |-----|-------------|
-| [docs/README.md](docs/README.md) | Full documentation index |
-| [docs/architecture.md](docs/architecture.md) | Raycast-first architecture (current) |
-| [docs/roadmap.md](docs/roadmap.md) | Historical roadmap + product pointers |
-| [docs/demo/raycast-demo-script.md](docs/demo/raycast-demo-script.md) | Demo / playtest script |
-| [docs/demo/release-checklist.md](docs/demo/release-checklist.md) | Pre-release smoke checklist |
-| [docs/phase25-release-readiness.md](docs/phase25-release-readiness.md) | Portfolio / release readiness (Phase 25) |
+| [docs/README.md](docs/README.md) | Documentation index |
+| [docs/architecture.md](docs/architecture.md) | Raycast-first architecture |
+| [docs/roadmap.md](docs/roadmap.md) | Historical roadmap + pointers |
+| [docs/demo/raycast-demo-script.md](docs/demo/raycast-demo-script.md) | Presenter script (3–5 min and longer) |
+| [docs/demo/release-checklist.md](docs/demo/release-checklist.md) | Pre-demo smoke checklist |
+| [docs/assets/screenshots/SHOT_LIST.md](docs/assets/screenshots/SHOT_LIST.md) | Shot list for portfolio captures |
 
 ---
 
-## Screenshots & media
+## Demo (about 4 minutes)
 
-**Moodboard images** in `docs/assets/` are **visual inspiration only**, not gameplay.
+1. **Menu** — modes and difficulty (`D`).
+2. **Prologue → sector 1** — movement, fire, objective line.
+3. **Progression** — token, door, one combat pocket (HUD + director).
+4. **Clear overlay** — sector report, score, rank; **ESC** to menu.
 
-**Gameplay screenshots:** add optimized captures under [`docs/assets/screenshots/`](docs/assets/screenshots/README.md) and embed them in this README when ready (see folder README for naming).
-
----
-
-## Demo (3–5 minutes)
-
-1. Menu — show **A** / click 3D mode and optional **D** difficulty.  
-2. Prologue → first sector — movement, fire, objective line.  
-3. Token, door, one combat beat — HUD + director feel.  
-4. Level clear overlay — time, score, **ESC** back.  
-
-Full presenter script: [docs/demo/raycast-demo-script.md](docs/demo/raycast-demo-script.md).
+Full script: [docs/demo/raycast-demo-script.md](docs/demo/raycast-demo-script.md).
 
 ---
 
@@ -99,9 +117,9 @@ Full presenter script: [docs/demo/raycast-demo-script.md](docs/demo/raycast-demo
 ```text
 src/game/scenes/       MenuScene, PrologueScene, RaycastScene, RaycastWorldLockedScene, ArenaScene
 src/game/raycast/      Renderer, map, levels, combat, enemy, HUD, episode, presentation, …
-src/game/systems/      GameDirector, combat, audio, input, …
+src/game/systems/      GameDirector, audio, input, …
 src/tests/             Vitest — raycast, combat, director, presentation, …
-docs/                  Architecture, demo scripts, phase notes, assets
+docs/                  Architecture, demo scripts, phase notes, portfolio assets
 ```
 
 Details: [docs/architecture.md](docs/architecture.md).
@@ -116,17 +134,17 @@ Phaser 3 · TypeScript · Vite · Vitest · ESLint · Prettier · GitHub Actions
 
 ## Technical highlights
 
-- **Raycast column renderer** + original maps and level data (no external map packs).
-- **Scene graph** separates presentation (`RaycastPresentation`, `RaycastRunSummary`) from simulation.
-- **`GameDirector`** and pacing helpers are unit-tested where logic is pure.
-- **World 2** data lives in `RaycastWorldTwoLevels.ts` (re-exported from level module).
-- **No live service** — high score is **local** (`localStorage`).
+- **Raycast column renderer** and authored maps / level data (no external map packs).
+- **Separation** of presentation (`RaycastPresentation`, `RaycastRunSummary`) from simulation.
+- **`GameDirector`** and pacing helpers covered by unit tests where logic is pure.
+- **World 2** data in `RaycastWorldTwoLevels.ts` (re-exported from the level module).
+- **No backend** — high score is **local** (`localStorage`).
 
 ---
 
 ## Visual inspiration (moodboard)
 
-**Not in-game screenshots.** Style reference only.
+**Not gameplay.** Style reference only.
 
 <p align="center">
   <img src="docs/assets/im1.png" width="90%" alt="Visual inspiration moodboard 1"/>
@@ -137,17 +155,6 @@ Phaser 3 · TypeScript · Vite · Vitest · ESLint · Prettier · GitHub Actions
 <p align="center">
   <img src="docs/assets/im3.png" width="90%" alt="Visual inspiration moodboard 3"/>
 </p>
-
----
-
-## Project status & roadmap
-
-The repo is a **complete-playable vertical slice**: raycast campaign loop, boss, optional World 2 continuation when enabled in data, score persistence, tests and CI.
-
-- **Historical** 4-week team roadmap (arena MVP era): [docs/roadmap.md](docs/roadmap.md)  
-- **Engineering / polish phases** (runtime, World 2 identity, encounters, scoring, release): see [docs/README.md](docs/README.md#phase-notes-engineering--planning)
-
-Maintenance-style next steps (optional): add real gameplay screenshots, short recorded GIF for README, micro-tuning from playtest notes — **not** large new mechanics.
 
 ---
 

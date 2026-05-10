@@ -38,13 +38,13 @@ export const RAYCAST_PALETTE = {
   gateSignal: 0xe83048,
   telegraphRose: 0xf05870,
   telegraphAmber: 0xffc850,
-  /** World 2 — cold rift stratum (distinct from infernal rust/teal). */
-  riftFog: 0x050818,
-  riftVeil: 0x241844,
-  riftIon: 0x6ae8f0,
-  riftViolet: 0x8860c8,
-  riftBasalt: 0x1a2438,
-  riftBone: 0xc8c4d8
+  /** World 2 — cold ion stratum (blue-black void + violet interference; not infernal rust/teal). */
+  riftFog: 0x030714,
+  riftVeil: 0x321850,
+  riftIon: 0x5cf0ff,
+  riftViolet: 0x9868e8,
+  riftBasalt: 0x141e34,
+  riftBone: 0xd0d4e8
 } as const;
 
 /** CSS strings for Phaser text and DOM-adjacent HUD. */
@@ -58,3 +58,21 @@ export const RAYCAST_CSS = {
   mutedText: '#6f8f82',
   accentText: '#58f2e4'
 } as const;
+
+/** World 2 HUD — cooler cyan/violet legibility over blue-black canvas (same keys as RAYCAST_CSS). */
+export const RAYCAST_CSS_WORLD2 = {
+  hudPanel: '#030818cc',
+  debugText: '#7a9cb8',
+  systemText: '#a8ecff',
+  warningText: '#ff7aa8',
+  keyText: '#e8e4ff',
+  bodyText: '#d4dce8',
+  mutedText: '#5c7a94',
+  accentText: '#78f0ff'
+} as const;
+
+export type RaycastHudCssBundle = { [K in keyof typeof RAYCAST_CSS]: string };
+
+export function getRaycastHudCss(segment: 'world1' | 'world2'): RaycastHudCssBundle {
+  return segment === 'world2' ? RAYCAST_CSS_WORLD2 : RAYCAST_CSS;
+}

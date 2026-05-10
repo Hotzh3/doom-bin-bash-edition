@@ -38,6 +38,27 @@ export { RAYCAST_RENDERER_CONFIG, type RaycastRendererConfig } from './RaycastRe
 
 const WALL_COLORS: Record<number, number> = RAYCAST_ATMOSPHERE.wallColors;
 
+interface EnemyProjection {
+  enemy: RaycastEnemy;
+  screenX: number;
+  size: number;
+  distance: number;
+}
+
+interface ProjectileProjection {
+  projectile: RaycastEnemyProjectile;
+  screenX: number;
+  size: number;
+  distance: number;
+}
+
+interface BillboardProjection {
+  billboard: RaycastBillboard;
+  screenX: number;
+  size: number;
+  distance: number;
+}
+
 export interface RaycastBillboard {
   x: number;
   y: number;
@@ -49,7 +70,10 @@ export interface RaycastBillboard {
 
 export class RaycastRenderer {
   private readonly graphics: Phaser.GameObjects.Graphics;
-  private depthBuffer: number[] = [];
+  private readonly depthBuffer: number[];
+  private readonly enemyProjectionScratch: EnemyProjection[] = [];
+  private readonly projectileProjectionScratch: ProjectileProjection[] = [];
+  private readonly billboardProjectionScratch: BillboardProjection[] = [];
 
   constructor(
     scene: Phaser.Scene,
@@ -58,6 +82,7 @@ export class RaycastRenderer {
     private readonly config = RAYCAST_RENDERER_CONFIG
   ) {
     this.graphics = scene.add.graphics();
+    this.depthBuffer = new Array(this.config.rayCount);
   }
 
   render(
@@ -109,14 +134,23 @@ export class RaycastRenderer {
     time: number,
     atmosphere: RaycastAtmosphereRenderOptions = getAtmosphereForDirector(null, 0)
   ): void {
-    const visibleEnemies = enemies
-      .filter((enemy) => enemy.alive || enemy.deathBurstUntil > time)
-      .map((enemy) => this.projectEnemy(player, enemy, width, height))
-      .filter((projection): projection is EnemyProjection => projection !== null)
-      .sort((a, b) => b.distance - a.distance);
+    const list = this.enemyProjectionScratch;
+    let n = 0;
+    for (let i = 0; i < enemies.length; i += 1) {
+      const enemy = enemies[i];
+      if (!enemy.alive && enemy.deathBurstUntil <= time) continue;
+      const projected = this.projectEnemy(player, enemy, width, height);
+      if (projected !== null) {
+        list[n++] = projected;
+      }
+    }
+    list.length = n;
+    list.sort((a, b) => b.distance - a.distance);
 
-    visibleEnemies.forEach((projection) => {
-      const column = Phaser.Math.Clamp(Math.floor(projection.screenX / (width / this.config.rayCount)), 0, this.config.rayCount - 1);
+    const columnScale = width / this.config.rayCount;
+    for (let j = 0; j < list.length; j += 1) {
+      const projection = list[j];
+      const column = Phaser.Math.Clamp(Math.floor(projection.screenX / columnScale), 0, this.config.rayCount - 1);
       if (projection.distance > (this.depthBuffer[column] ?? Number.POSITIVE_INFINITY) + 0.05) return;
 
       if (!projection.enemy.alive) {
@@ -185,7 +219,10 @@ export class RaycastRenderer {
         this.graphics.fillCircle(projection.screenX, height * 0.5, size * (0.46 + windupProgress * 0.08));
       }
       this.graphics.fillStyle(color, 0.95 * visibility);
-      this.drawEnemySilhouette({ ...projection, size }, height, color, visibility, enemyStyle, telegraphMix);
+      const savedSilhouetteSize = projection.size;
+      projection.size = size;
+      this.drawEnemySilhouette(projection, height, color, visibility, enemyStyle, telegraphMix);
+      projection.size = savedSilhouetteSize;
       if (isWindingUp) {
         this.graphics.lineStyle(4, enemyStyle.accentColor, (0.78 + pulse * 0.14) * visibility);
         this.graphics.strokeEllipse(projection.screenX, height * 0.5 + size * 0.08, size * 1.48, size * 1.56);
@@ -199,7 +236,7 @@ export class RaycastRenderer {
           height * 0.5 - size * 0.89
         );
       }
-    });
+    }
   }
 
   renderBoss(
@@ -271,52 +308,72 @@ export class RaycastRenderer {
     width: number,
     height: number
   ): void {
-    projectiles
-      .filter((projectile) => projectile.alive)
-      .map((projectile) => this.projectPoint(player, projectile, width, height))
-      .filter((projection): projection is ProjectileProjection => projection !== null)
-      .sort((a, b) => b.distance - a.distance)
-      .forEach((projection) => {
-        const column = Phaser.Math.Clamp(Math.floor(projection.screenX / (width / this.config.rayCount)), 0, this.config.rayCount - 1);
-        if (projection.distance > (this.depthBuffer[column] ?? Number.POSITIVE_INFINITY) + 0.05) return;
+    const list = this.projectileProjectionScratch;
+    let n = 0;
+    for (let i = 0; i < projectiles.length; i += 1) {
+      const projectile = projectiles[i];
+      if (!projectile.alive) continue;
+      const projected = this.projectPoint(player, projectile, width, height);
+      if (projected !== null) {
+        list[n++] = projected;
+      }
+    }
+    list.length = n;
+    list.sort((a, b) => b.distance - a.distance);
 
-        this.graphics.fillStyle(RAYCAST_ATMOSPHERE.projectileHalo, 0.24);
-        this.graphics.fillCircle(projection.screenX, height * 0.5, projection.size + 5);
-        this.graphics.fillStyle(projection.projectile.color, 0.98);
-        this.graphics.fillCircle(projection.screenX, height * 0.5, projection.size);
-        this.graphics.lineStyle(2, 0xffffff, 0.38);
-        this.graphics.strokeCircle(projection.screenX, height * 0.5, projection.size + 2);
-      });
+    const columnScale = width / this.config.rayCount;
+    for (let j = 0; j < list.length; j += 1) {
+      const projection = list[j];
+      const column = Phaser.Math.Clamp(Math.floor(projection.screenX / columnScale), 0, this.config.rayCount - 1);
+      if (projection.distance > (this.depthBuffer[column] ?? Number.POSITIVE_INFINITY) + 0.05) continue;
+
+      this.graphics.fillStyle(RAYCAST_ATMOSPHERE.projectileHalo, 0.24);
+      this.graphics.fillCircle(projection.screenX, height * 0.5, projection.size + 5);
+      this.graphics.fillStyle(projection.projectile.color, 0.98);
+      this.graphics.fillCircle(projection.screenX, height * 0.5, projection.size);
+      this.graphics.lineStyle(2, 0xffffff, 0.38);
+      this.graphics.strokeCircle(projection.screenX, height * 0.5, projection.size + 2);
+    }
   }
 
   renderBillboards(player: RaycastPlayerState, billboards: RaycastBillboard[], width: number, height: number): void {
-    billboards
-      .map((billboard) => this.projectBillboard(player, billboard, width, height))
-      .filter((projection): projection is BillboardProjection => projection !== null)
-      .sort((a, b) => b.distance - a.distance)
-      .forEach((projection) => {
-        const column = Phaser.Math.Clamp(Math.floor(projection.screenX / (width / this.config.rayCount)), 0, this.config.rayCount - 1);
-        if (projection.distance > (this.depthBuffer[column] ?? Number.POSITIVE_INFINITY) + 0.05) return;
+    const list = this.billboardProjectionScratch;
+    let n = 0;
+    for (let i = 0; i < billboards.length; i += 1) {
+      const billboard = billboards[i];
+      const projected = this.projectBillboard(player, billboard, width, height);
+      if (projected !== null) {
+        list[n++] = projected;
+      }
+    }
+    list.length = n;
+    list.sort((a, b) => b.distance - a.distance);
 
-        const isOpenGate = projection.billboard.style === 'gate-open';
-        const haloColor = isOpenGate ? getBillboardColor('gate-open', true) : RAYCAST_ATMOSPHERE.pickupHalo;
-        this.graphics.fillStyle(haloColor, isOpenGate ? 0.24 : 0.18);
-        this.graphics.fillCircle(projection.screenX, height * 0.5, projection.size + (isOpenGate ? 9 : 6));
-        this.graphics.fillStyle(projection.billboard.color, 0.94);
-        this.graphics.fillCircle(projection.screenX, height * 0.5, projection.size);
-        this.graphics.lineStyle(2, 0xffffff, 0.45);
-        this.graphics.strokeCircle(projection.screenX, height * 0.5, projection.size);
-        this.graphics.lineStyle(1, haloColor, isOpenGate ? 0.42 : 0.34);
-        this.graphics.strokeCircle(projection.screenX, height * 0.5, projection.size * 0.62);
+    const columnScale = width / this.config.rayCount;
+    for (let j = 0; j < list.length; j += 1) {
+      const projection = list[j];
+      const column = Phaser.Math.Clamp(Math.floor(projection.screenX / columnScale), 0, this.config.rayCount - 1);
+      if (projection.distance > (this.depthBuffer[column] ?? Number.POSITIVE_INFINITY) + 0.05) continue;
 
-        if (projection.billboard.label) {
-          this.graphics.fillStyle(0x020408, 0.8);
-          this.graphics.fillRect(projection.screenX - 24, height * 0.5 - projection.size - 18, 48, 12);
-          this.graphics.fillStyle(projection.billboard.color, 0.95);
-          this.graphics.fillRect(projection.screenX - 18, height * 0.5 - projection.size - 12, 36, 2);
-        }
-        this.drawBillboardGlyph(projection, height);
-      });
+      const isOpenGate = projection.billboard.style === 'gate-open';
+      const haloColor = isOpenGate ? getBillboardColor('gate-open', true) : RAYCAST_ATMOSPHERE.pickupHalo;
+      this.graphics.fillStyle(haloColor, isOpenGate ? 0.24 : 0.18);
+      this.graphics.fillCircle(projection.screenX, height * 0.5, projection.size + (isOpenGate ? 9 : 6));
+      this.graphics.fillStyle(projection.billboard.color, 0.94);
+      this.graphics.fillCircle(projection.screenX, height * 0.5, projection.size);
+      this.graphics.lineStyle(2, 0xffffff, 0.45);
+      this.graphics.strokeCircle(projection.screenX, height * 0.5, projection.size);
+      this.graphics.lineStyle(1, haloColor, isOpenGate ? 0.42 : 0.34);
+      this.graphics.strokeCircle(projection.screenX, height * 0.5, projection.size * 0.62);
+
+      if (projection.billboard.label) {
+        this.graphics.fillStyle(0x020408, 0.8);
+        this.graphics.fillRect(projection.screenX - 24, height * 0.5 - projection.size - 18, 48, 12);
+        this.graphics.fillStyle(projection.billboard.color, 0.95);
+        this.graphics.fillRect(projection.screenX - 18, height * 0.5 - projection.size - 12, 36, 2);
+      }
+      this.drawBillboardGlyph(projection, height);
+    }
   }
 
   renderWeaponOverlay(weapon: WeaponKind, width: number, height: number, muzzleAlpha: number): void {
@@ -1273,27 +1330,6 @@ export class RaycastRenderer {
     const size = Phaser.Math.Clamp((height / correctedDistance / 18) * billboard.radius, 5, 28);
     return { billboard, screenX, size, distance: correctedDistance };
   }
-}
-
-interface EnemyProjection {
-  enemy: RaycastEnemy;
-  screenX: number;
-  size: number;
-  distance: number;
-}
-
-interface ProjectileProjection {
-  projectile: RaycastEnemyProjectile;
-  screenX: number;
-  size: number;
-  distance: number;
-}
-
-interface BillboardProjection {
-  billboard: RaycastBillboard;
-  screenX: number;
-  size: number;
-  distance: number;
 }
 
 function normalizeAngle(angle: number): number {

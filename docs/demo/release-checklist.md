@@ -33,6 +33,11 @@ npm run build
 - Say inspiration is limited to classic genre feel, not copied content
 - Do not imply Doom or Doom 64 assets, maps, code, names, or content are present
 
+## Portfolio media (optional)
+
+- Stills / GIFs live under `docs/assets/screenshots/` and `docs/assets/gifs/` ([shot list](../assets/screenshots/SHOT_LIST.md)).
+- Regenerate automated captures after visual changes: `npx playwright install chromium` (once) then `npm run capture:media`.
+
 ## Handoff Links
 
 - Demo script: [docs/demo/raycast-demo-script.md](./raycast-demo-script.md)

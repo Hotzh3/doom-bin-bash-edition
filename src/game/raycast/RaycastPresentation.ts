@@ -35,6 +35,8 @@ export interface RaycastPriorityMessageInput {
   finaleBossCleared?: boolean;
   worldTwoLocked?: boolean;
   fullArcClear?: boolean;
+  /** When continuing from Episode 1 boss into World 2 — colder transition copy */
+  worldTwoTransition?: boolean;
   playerAlive: boolean;
   playerHealth: number;
   objective: string;
@@ -81,7 +83,7 @@ export function buildRaycastDeathOverlayHint(): string {
 
 export function buildRaycastEpisodeBanner(input: RaycastEpisodeBannerInput): string {
   if (input.worldTwoSector) {
-    return `WORLD 2 RIFT  |  SECTOR ${input.worldTwoSector.index}/${input.worldTwoSector.total} ${input.levelName.toUpperCase()}`;
+    return `WORLD 2 // ION STRATUM  |  SECTOR ${input.worldTwoSector.index}/${input.worldTwoSector.total}  ${input.levelName.toUpperCase()}`;
   }
   return `EP 1 MINI EPISODE  |  LVL ${input.currentLevelNumber}/${input.totalLevels} ${input.levelName.toUpperCase()}`;
 }
@@ -104,7 +106,8 @@ export function buildRaycastStatusMessage(
   playerAlive: boolean,
   finaleBossCleared = false,
   worldTwoLocked = true,
-  fullArcClear = false
+  fullArcClear = false,
+  worldTwoTransition = false
 ): string {
   if (levelComplete) {
     if (fullArcClear) {
@@ -114,7 +117,9 @@ export function buildRaycastStatusMessage(
       return 'Boss purged. W for World 2 signal, R to replay boss, ESC for menu.';
     }
     if (!episodeComplete && finaleBossCleared && !worldTwoLocked) {
-      return 'Boss purged. Press N to descend into World 2, R to replay boss, ESC for menu.';
+      return worldTwoTransition
+        ? 'Archon down — ion stratum breach opens. Press N to descend the rift, R to replay boss, ESC for menu.'
+        : 'Boss purged. Press N to descend into World 2, R to replay boss, ESC for menu.';
     }
     return episodeComplete
       ? 'Episode clear. Press R to replay the finale or ESC for menu.'
@@ -168,7 +173,8 @@ export function buildRaycastPriorityMessage(input: RaycastPriorityMessageInput):
         true,
         Boolean(input.finaleBossCleared),
         input.worldTwoLocked !== false,
-        Boolean(input.fullArcClear)
+        Boolean(input.fullArcClear),
+        Boolean(input.worldTwoTransition)
       ),
       tone: 'info'
     };

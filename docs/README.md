@@ -13,9 +13,12 @@ Quick map for reviewers, demos, and handoff.
 
 | Doc | Purpose |
 |-----|---------|
-| [demo/raycast-demo-script.md](./demo/raycast-demo-script.md) |Presenter script (short and long). |
+| [demo/raycast-demo-script.md](./demo/raycast-demo-script.md) | Presenter script (4-minute + extended). |
 | [demo/release-checklist.md](./demo/release-checklist.md) | Pre-demo / pre-tag smoke + commands. |
 | [playtest/raycast-feel-checklist.md](./playtest/raycast-feel-checklist.md) | Feel and regression notes. |
+| [assets/screenshots/SHOT_LIST.md](./assets/screenshots/SHOT_LIST.md) | Portfolio screenshot / GIF capture plan. |
+| [assets/screenshots/README.md](./assets/screenshots/README.md) | Naming + regeneration (`npm run capture:media`). |
+| [assets/gifs/README.md](./assets/gifs/README.md) | Animated GIF conventions. |
 
 ## Phase notes (engineering / planning)
 

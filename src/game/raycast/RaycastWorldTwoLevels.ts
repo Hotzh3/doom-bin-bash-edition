@@ -3,9 +3,13 @@
  * Byte-identical data; no gameplay changes.
  */
 import {
+  RAYCAST_MAP_BOSS,
   RAYCAST_MAP_LEVEL_2,
+  RAYCAST_MAP_LEVEL_3,
   RAYCAST_MAP_LEVEL_4,
+  RAYCAST_PLAYER_START_BOSS,
   RAYCAST_PLAYER_START_LEVEL_2,
+  RAYCAST_PLAYER_START_LEVEL_3,
   RAYCAST_PLAYER_START_LEVEL_4
 } from './RaycastMap';
 import type { RaycastLevel } from './RaycastLevel';
@@ -25,7 +29,7 @@ export const RAYCAST_LEVEL_WORLD2_FRACTURE: RaycastLevel = {
     { id: 'rift-secret', x: 1.1, y: 7.1, width: 2.2, height: 1.2, visualTheme: 'basalt-rift', landmark: 'secret' },
     { id: 'seam-gate', x: 7.4, y: 4.8, width: 2.0, height: 1.8, visualTheme: 'ion-shaft', landmark: 'gate' },
     { id: 'split-push', x: 9.2, y: 4.6, width: 3.8, height: 2.0, visualTheme: 'ion-shaft', landmark: 'ambush' },
-    { id: 'ion-run', x: 11.0, y: 1.2, width: 3.8, height: 7.0, visualTheme: 'ion-shaft' },
+    { id: 'ion-run', x: 11.0, y: 1.2, width: 3.8, height: 7.3, visualTheme: 'ion-shaft' },
     { id: 'nadir-ledge', x: 13.0, y: 1.0, width: 1.8, height: 2.4, visualTheme: 'nadir-glow', landmark: 'exit' }
   ],
   keys: [
@@ -173,7 +177,7 @@ export const RAYCAST_LEVEL_WORLD2_FRACTURE: RaycastLevel = {
     {
       id: 'rift-gully-read',
       zoneId: 'rift-gully',
-      message: 'Basalt gully forks — skim the fissure cache or sprint for the ion flare'
+      message: 'Basalt tread forks — cache left for intel, or drop toward the ion well for the flare'
     },
     {
       id: 'rift-seam-hum',
@@ -408,7 +412,7 @@ export const RAYCAST_LEVEL_WORLD2_THRESHOLD: RaycastLevel = {
     {
       id: 'spiral-breathe',
       zoneId: 'spiral-cold',
-      message: 'Spiral breathes — hub rush or flank the cold loop'
+      message: 'Cold spiral tightens — commit through hub or peel the flank before the seal stacks'
     },
     { id: 'seal-tick', doorId: 'threshold-seal', message: 'Signal seal ticking: defenders stacking at the glass neck' },
     { id: 'spiral-beat', triggerId: 'threshold-spiral', message: 'Neck breach: shear the cross-climb' },
@@ -466,7 +470,337 @@ export const RAYCAST_LEVEL_WORLD2_THRESHOLD: RaycastLevel = {
   }
 };
 
+/** World 2 — sulfur bloom crawl on Catacomb Split topology; encounter-forward director pacing. */
+export const RAYCAST_LEVEL_WORLD2_SULFUR_LATTICE: RaycastLevel = {
+  id: 'sulfur-lattice',
+  name: 'Sulfur Lattice — Bloom Crawl',
+  episodeTheme: 'sulfur-lattice',
+  worldSegment: 'world2',
+  map: RAYCAST_MAP_LEVEL_3,
+  playerStart: RAYCAST_PLAYER_START_LEVEL_3,
+  zones: [
+    { id: 'sulfur-start', x: 5.0, y: 13.1, width: 7.2, height: 1.6, visualTheme: 'basalt-rift' },
+    { id: 'sulfur-loop', x: 1.2, y: 9.0, width: 5.2, height: 3.4, visualTheme: 'basalt-rift' },
+    { id: 'bloom-archive', x: 1.1, y: 1.4, width: 5.6, height: 5.0, visualTheme: 'toxic-green', landmark: 'key' },
+    { id: 'sulfur-secret', x: 1.1, y: 7.8, width: 2.2, height: 1.4, visualTheme: 'void-stone', landmark: 'secret' },
+    { id: 'lattice-seal', x: 9.1, y: 6.2, width: 2.0, height: 2.0, visualTheme: 'ion-shaft', landmark: 'gate' },
+    { id: 'sulfur-threshold', x: 11.0, y: 5.8, width: 2.2, height: 2.2, visualTheme: 'ion-shaft', landmark: 'ambush' },
+    { id: 'sulfur-conduit', x: 11.0, y: 1.2, width: 7.0, height: 10.2, visualTheme: 'toxic-green' },
+    { id: 'sulfur-overlook', x: 13.2, y: 1.0, width: 4.2, height: 2.4, visualTheme: 'nadir-glow', landmark: 'exit' }
+  ],
+  keys: [
+    {
+      id: 'sulfur-spore',
+      label: 'Sulfur Spore',
+      x: 5.5,
+      y: 3.5,
+      radius: 0.28,
+      unlocksDoorId: 'lattice-vault-seal',
+      pickupObjectiveText: 'Spore harvested: breach the lattice vault',
+      billboardLabel: 'SPORE'
+    }
+  ],
+  doors: [
+    {
+      id: 'lattice-vault-seal',
+      tileX: 10,
+      tileY: 7,
+      x: 10.5,
+      y: 7.5,
+      width: 1,
+      height: 1,
+      keyId: 'sulfur-spore',
+      killsRequired: 0,
+      openObjectiveText: 'Lattice seal cracked — conduit floodgates armed',
+      lockedObjectiveText: 'Vault lattice sealed: sulfur spore required',
+      billboardLabel: 'VAULT'
+    }
+  ],
+  triggers: [
+    {
+      id: 'lattice-conduit-surge',
+      x: 11.2,
+      y: 6.2,
+      width: 1.6,
+      height: 1.6,
+      once: true,
+      doorId: 'lattice-vault-seal',
+      objectiveText: 'Conduit surge: split the lane',
+      activationText: 'Yellow shear inbound: anchor + rifle pair',
+      spawns: [
+        { x: 11.5, y: 3.5, kind: 'RANGED' },
+        { x: 15.5, y: 5.5, kind: 'BRUTE' },
+        { x: 17.5, y: 7.5, kind: 'STALKER' }
+      ]
+    },
+    {
+      id: 'lattice-overlook-lock',
+      x: 14.2,
+      y: 1.2,
+      width: 2.4,
+      height: 1.8,
+      once: true,
+      doorId: 'lattice-vault-seal',
+      objectiveText: 'Overlook lockdown',
+      activationText: 'Bloom spike on the climb — stalkers peel the ridge',
+      spawns: [
+        { x: 17.5, y: 1.5, kind: 'RANGED' },
+        { x: 15.5, y: 9.5, kind: 'STALKER' }
+      ]
+    },
+    {
+      id: 'lattice-cache-stir',
+      x: 1.2,
+      y: 8.0,
+      width: 1.6,
+      height: 1.0,
+      once: true,
+      objectiveText: 'Lower loop stirred',
+      activationText: 'Spores wake stragglers in the crawl',
+      spawns: [
+        { x: 3.5, y: 9.5, kind: 'STALKER' },
+        { x: 5.5, y: 11.5, kind: 'GRUNT' }
+      ]
+    }
+  ],
+  healthPickups: [
+    {
+      id: 'sulfur-loop-cell',
+      kind: 'repair-cell',
+      label: 'Cold Lattice Cell',
+      x: 5.5,
+      y: 13.5,
+      radius: 0.26,
+      restoreAmount: 22,
+      billboardLabel: 'CELL',
+      pickupMessage: 'Lattice repair cell fused',
+      fullHealthMessage: 'Stable: skip the spare cell'
+    },
+    {
+      id: 'sulfur-conduit-pack',
+      kind: 'health-pack',
+      label: 'Bloom Patch',
+      x: 15.5,
+      y: 5.5,
+      radius: 0.26,
+      restoreAmount: 30,
+      billboardLabel: 'PATCH',
+      pickupMessage: 'Bloom patch applied',
+      fullHealthMessage: 'Vitals capped: stash the patch',
+      requiredOpenDoorIds: ['lattice-vault-seal']
+    },
+    {
+      id: 'sulfur-niche-stash',
+      kind: 'repair-cell',
+      label: 'Niche Gel Pack',
+      x: 1.5,
+      y: 8.5,
+      radius: 0.26,
+      restoreAmount: 18,
+      billboardLabel: 'STASH',
+      pickupMessage: 'Niche gel drained before the vault rush',
+      fullHealthMessage: 'Reserve OK: leave the gel'
+    }
+  ],
+  secrets: [
+    {
+      id: 'sulfur-niche',
+      label: 'Bloom Niche',
+      x: 1.5,
+      y: 8.5,
+      radius: 0.24,
+      objectiveText: 'Bloom niche indexed',
+      billboardLabel: 'NICHE'
+    }
+  ],
+  exits: [
+    {
+      id: 'sulfur-exit',
+      x: 16.5,
+      y: 1.5,
+      radius: 0.35,
+      objectiveText: 'Lattice route vented — Bloom Warden awaits',
+      billboardLabel: 'EXIT'
+    }
+  ],
+  initialSpawns: [
+    { id: 'sulfur-scout', kind: 'GRUNT', x: 5.5, y: 12.5 },
+    { id: 'archive-skirmisher', kind: 'STALKER', x: 5.5, y: 4.5 },
+    { id: 'conduit-rifle', kind: 'RANGED', x: 11.5, y: 3.5 },
+    { id: 'lane-anchor', kind: 'BRUTE', x: 15.5, y: 6.5 },
+    { id: 'ridge-flank', kind: 'STALKER', x: 14.5, y: 9.5 }
+  ],
+  encounterBeats: [
+    {
+      id: 'bloom-archive-read',
+      zoneId: 'bloom-archive',
+      message: 'Sulfur bloom clotting the archive — grab the spore before the vault hum peaks'
+    },
+    {
+      id: 'sulfur-loop-breathe',
+      zoneId: 'sulfur-loop',
+      message: 'Lower loop forks — pinch rifle sightlines before committing upward'
+    },
+    {
+      id: 'lattice-seal-prep',
+      doorId: 'lattice-vault-seal',
+      message: 'Vault lattice ticking: conduit defenders stacking'
+    },
+    {
+      id: 'lattice-surge-beat',
+      triggerId: 'lattice-conduit-surge',
+      message: 'Surge breach: cut the anchor lane first'
+    },
+    {
+      id: 'lattice-lock-beat',
+      triggerId: 'lattice-overlook-lock',
+      message: 'Overlook lock: clear ridge stalkers before the exit sprint'
+    },
+    {
+      id: 'lattice-recovery',
+      directorState: 'RECOVERY',
+      requiresTriggerId: 'lattice-overlook-lock',
+      message: 'Bloom pressure dips — stitch health before the pit relay'
+    }
+  ],
+  hudObjectiveLabels: {
+    findKey: 'HARVEST SULFUR SPORE // BLOOM ARCHIVE',
+    openDoor: 'CRACK LATTICE VAULT SEAL',
+    surviveAmbush: 'CLEAR CONDUIT SURGE + OVERLOOK LOCK',
+    reachExit: 'REACH WARDEN RELAY THRESHOLD',
+    sectorPurged: 'LATTICE VEIN PURGED'
+  },
+  progression: {
+    requiredExitKeyIds: ['sulfur-spore'],
+    requiredExitDoorIds: ['lattice-vault-seal'],
+    requiredExitTriggerIds: ['lattice-conduit-surge', 'lattice-overlook-lock'],
+    blockedExitMessage: 'LATTICE ACTIVE: ROUTE INCOMPLETE'
+  },
+  director: {
+    enabled: true,
+    config: {
+      maxEnemiesAlive: 5,
+      maxTotalSpawns: 11,
+      openingSpawnCount: 0,
+      baseSpawnCooldownMs: 4800,
+      buildUpSpawnCooldownMs: 3700,
+      ambushSpawnCooldownMs: 1950,
+      highIntensitySpawnCooldownMs: 3100,
+      recoveryDurationMs: 4200,
+      ambushDurationMs: 6000,
+      highIntensityDurationMs: 9000,
+      buildUpAfterMs: 5800,
+      idlePressureMs: 1650,
+      dominanceNoDamageMs: 8200,
+      lowHealthThreshold: 35,
+      comfortableHealthThreshold: 65,
+      debugEnabled: true
+    },
+    spawnPoints: [
+      { id: 'sulfur-start-flank', zoneId: 'sulfur-start', x: 5.5, y: 13.5, minPlayerDistance: 2.2 },
+      { id: 'sulfur-loop-left', zoneId: 'sulfur-loop', x: 3.5, y: 9.5, minPlayerDistance: 1.8 },
+      { id: 'archive-inner', zoneId: 'bloom-archive', x: 5.5, y: 4.5, minPlayerDistance: 1.8 },
+      { id: 'lattice-anchor', zoneId: 'lattice-seal', x: 9.5, y: 7.5, minPlayerDistance: 1.8 },
+      { id: 'sulfur-ranged', zoneId: 'sulfur-threshold', x: 11.5, y: 3.5, minPlayerDistance: 2.0 },
+      { id: 'sulfur-mid', zoneId: 'sulfur-conduit', x: 15.5, y: 5.5, minPlayerDistance: 2.0 },
+      { id: 'sulfur-lower', zoneId: 'sulfur-conduit', x: 15.5, y: 9.5, minPlayerDistance: 2.1 },
+      { id: 'sulfur-overlook-rear', zoneId: 'sulfur-overlook', x: 17.5, y: 1.5, minPlayerDistance: 2.3 }
+    ]
+  }
+};
+
+/** World 2 mini-boss relay — reuses open pit geometry; Bloom Warden kit (not an HP sponge). */
+export const RAYCAST_LEVEL_WORLD2_WARDEN_PIT: RaycastLevel = {
+  id: 'bloom-warden-pit',
+  name: 'Bloom Warden — Lattice Pit',
+  episodeTheme: 'bloom-warden',
+  worldSegment: 'world2',
+  map: RAYCAST_MAP_BOSS,
+  playerStart: RAYCAST_PLAYER_START_BOSS,
+  zones: [
+    { id: 'warden-arena', x: 1.0, y: 1.0, width: 13.0, height: 13.0, visualTheme: 'ion-shaft', landmark: 'ambush' },
+    { id: 'warden-exit', x: 11.0, y: 6.0, width: 3.0, height: 3.0, visualTheme: 'nadir-glow', landmark: 'exit' }
+  ],
+  keys: [],
+  doors: [],
+  triggers: [],
+  healthPickups: [
+    {
+      id: 'warden-patch',
+      kind: 'health-pack',
+      label: 'Combat Patch',
+      x: 4.5,
+      y: 3.5,
+      radius: 0.26,
+      restoreAmount: 32,
+      billboardLabel: 'PATCH',
+      pickupMessage: 'Combat patch applied',
+      fullHealthMessage: 'Vitals capped: leave the spare patch',
+      requiredOpenDoorIds: []
+    },
+    {
+      id: 'warden-cell',
+      kind: 'repair-cell',
+      label: 'Lattice Stabilizer',
+      x: 10.5,
+      y: 11.5,
+      radius: 0.26,
+      restoreAmount: 22,
+      billboardLabel: 'CELL',
+      pickupMessage: 'Lattice stabilizer routed',
+      fullHealthMessage: 'Stable: skip the cell'
+    }
+  ],
+  secrets: [],
+  exits: [
+    {
+      id: 'warden-exit',
+      x: 12.5,
+      y: 7.5,
+      radius: 0.38,
+      objectiveText: 'Bloom Warden collapsed — stratum hush',
+      billboardLabel: 'EXIT'
+    }
+  ],
+  initialSpawns: [],
+  encounterBeats: [
+    {
+      id: 'warden-open',
+      zoneId: 'warden-arena',
+      message: 'Bloom Warden anchors the pit — read twin veins, then respect the cross bloom'
+    }
+  ],
+  hudObjectiveLabels: {
+    surviveAmbush: 'END THE BLOOM WARDEN SIGNAL',
+    reachExit: 'EXTRACTION WHEN LATTICE COLLAPSES',
+    sectorPurged: 'WARDEN DELETED'
+  },
+  progression: {
+    requiredExitKeyIds: [],
+    requiredExitDoorIds: [],
+    requiredExitTriggerIds: [],
+    requireBossDefeated: true,
+    blockedExitMessage: 'WARDEN STILL RESONATING'
+  },
+  bossConfig: {
+    id: 'bloom-warden',
+    displayName: 'Bloom Warden',
+    x: 7.5,
+    y: 7.5,
+    maxHealth: 410,
+    hitRadius: 0.52,
+    behavior: 'bloom-warden'
+  },
+  director: {
+    enabled: false,
+    config: RAYCAST_LEVEL_WORLD2_FRACTURE.director.config,
+    spawnPoints: []
+  }
+};
+
 export const RAYCAST_WORLD_TWO_CATALOG: RaycastLevel[] = [
   RAYCAST_LEVEL_WORLD2_FRACTURE,
-  RAYCAST_LEVEL_WORLD2_THRESHOLD
+  RAYCAST_LEVEL_WORLD2_THRESHOLD,
+  RAYCAST_LEVEL_WORLD2_SULFUR_LATTICE,
+  RAYCAST_LEVEL_WORLD2_WARDEN_PIT
 ];

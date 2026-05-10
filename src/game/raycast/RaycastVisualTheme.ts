@@ -148,24 +148,26 @@ export const RAYCAST_ZONE_THEMES: Record<RaycastZoneThemeId, RaycastZoneTheme> =
     id: 'basalt-rift',
     accentColor: RAYCAST_PALETTE.riftBasalt,
     patternColor: RAYCAST_PALETTE.riftBone,
-    floorColor: 0x040612,
-    ceilingColor: 0x02040a,
+    /** Deeper cold floor vs ion shaft — reads as broken crust / tread lanes */
+    floorColor: 0x020610,
+    ceilingColor: 0x010208,
     signalColor: RAYCAST_PALETTE.riftViolet
   },
   'ion-shaft': {
     id: 'ion-shaft',
-    accentColor: 0x2a7088,
+    accentColor: 0x1e6888,
     patternColor: RAYCAST_PALETTE.riftIon,
-    floorColor: 0x031018,
-    ceilingColor: 0x010810,
+    /** Brighter frost deck — vertical circulation silhouette */
+    floorColor: 0x020e18,
+    ceilingColor: 0x010a14,
     signalColor: RAYCAST_PALETTE.riftIon
   },
   'nadir-glow': {
     id: 'nadir-glow',
-    accentColor: 0x503070,
-    patternColor: 0xe8e0ff,
-    floorColor: 0x060410,
-    ceilingColor: 0x030208,
+    accentColor: 0x402068,
+    patternColor: 0xe8e8ff,
+    floorColor: 0x050818,
+    ceilingColor: 0x02040c,
     signalColor: RAYCAST_PALETTE.riftViolet
   }
 };

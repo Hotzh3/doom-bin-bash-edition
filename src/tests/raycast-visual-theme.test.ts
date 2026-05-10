@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { RAYCAST_LEVEL } from '../game/raycast/RaycastLevel';
+import { RAYCAST_LEVEL_WORLD2_FRACTURE } from '../game/raycast/RaycastWorldTwoLevels';
 import {
   getBillboardColor,
   getRaycastCellVariant,
@@ -20,6 +21,15 @@ describe('raycast visual theme', () => {
     expect(zone?.id).toBe('key-area');
     expect(zone?.visualTheme).toBe('toxic-green');
     expect(zone?.landmark).toBe('key');
+  });
+
+  it('World 2 fracture separates basalt gully from ion-well key landmark', () => {
+    const ionWell = getRaycastZoneVisual(RAYCAST_LEVEL_WORLD2_FRACTURE.zones, 4.5, 3.5);
+    expect(ionWell?.id).toBe('ion-well');
+    expect(ionWell?.visualTheme).toBe('ion-shaft');
+    expect(ionWell?.landmark).toBe('key');
+    const gully = getRaycastZoneVisual(RAYCAST_LEVEL_WORLD2_FRACTURE.zones, 3.0, 8.5);
+    expect(gully?.visualTheme).toBe('basalt-rift');
   });
 
   it('returns stable cell variants for procedural patterning', () => {

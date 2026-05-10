@@ -25,19 +25,23 @@ describe('raycast run summary', () => {
     });
 
     expect(summary).toEqual([
+      '══ SECTOR REPORT ══',
       'DIFFICULTY HARD',
-      'TIME 2:05.9',
-      'ENEMIES KILLED 8',
+      '── TIME ──',
+      'ELAPSED 2:05.9',
+      '── COMBAT ──',
+      'HOSTILES TERMINATED 8',
+      'DAMAGE TAKEN 47',
+      '── INTEL ──',
       'SECRETS 1/2',
-      'TOKENS 1/1',
-      'DAMAGE TAKEN 47'
+      'TOKENS 1/1'
     ]);
   });
 
   it('computes discrete rank tiers from score', () => {
-    expect(computeRaycastRunRank(4500)).toContain('RANK C');
-    expect(computeRaycastRunRank(11_000)).toContain('RANK A');
-    expect(computeRaycastRunRank(15_000)).toContain('RANK S');
+    expect(computeRaycastRunRank(5300)).toContain('RANK C');
+    expect(computeRaycastRunRank(12_500)).toContain('RANK A');
+    expect(computeRaycastRunRank(17_000)).toContain('RANK S');
   });
 
   it('includes score lines when provided', () => {
@@ -50,11 +54,13 @@ describe('raycast run summary', () => {
       secretTotal: 1,
       tokensFound: 0,
       tokenTotal: 1,
-      damageTaken: 10
+      damageTaken: 10,
+      pelletsFired: 20,
+      pelletsHitHostile: 9
     });
 
-    expect(summary).toContain('SCORE 350');
-    expect(summary).toContain('HIGH SCORE 1200');
+    expect(summary).toContain('SCORE 350  │  HIGH SCORE 1200');
     expect(summary.some((line) => line.startsWith('RANK '))).toBe(true);
+    expect(summary).toContain('ACCURACY 45% (9/20 pellets)');
   });
 });

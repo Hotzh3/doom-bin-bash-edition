@@ -10,6 +10,7 @@ import {
   RAYCAST_LEVEL_5,
   RAYCAST_LEVEL_BOSS,
   RAYCAST_LEVEL_CATALOG,
+  RAYCAST_WORLD_TWO_CATALOG,
   cloneRaycastMap,
   findRaycastZoneId,
   getRaycastExitAccess,
@@ -39,6 +40,18 @@ describe('raycast level catalog', () => {
     expect(getRaycastLevelIndex(RAYCAST_LEVEL_BOSS.id)).toBe(5);
   });
 
+  it('keeps World 2 continuation sectors ordered and boss-gated where authored', () => {
+    expect(RAYCAST_WORLD_TWO_CATALOG).toHaveLength(4);
+    expect(new Set(RAYCAST_WORLD_TWO_CATALOG.map((level) => level.id)).size).toBe(4);
+    RAYCAST_WORLD_TWO_CATALOG.forEach((level) => {
+      expect(level.worldSegment).toBe('world2');
+    });
+    const pit = RAYCAST_WORLD_TWO_CATALOG.find((level) => level.id === 'bloom-warden-pit');
+    expect(pit?.bossConfig?.behavior).toBe('bloom-warden');
+    expect(pit?.progression.requireBossDefeated).toBe(true);
+    expect(pit?.director.enabled).toBe(false);
+  });
+
   it('defines required route objects and valid map references for each level', () => {
     RAYCAST_LEVEL_CATALOG.forEach((level) => {
       if (level.bossConfig) {
@@ -51,7 +64,7 @@ describe('raycast level catalog', () => {
         expect(level.initialSpawns).toHaveLength(0);
         expect(level.director.enabled).toBe(false);
         expect(level.progression.requireBossDefeated).toBe(true);
-        expect(level.bossConfig.displayName).toBe('Volt Archon');
+        expect(['Volt Archon', 'Bloom Warden']).toContain(level.bossConfig.displayName);
         return;
       }
       expect(level.keys).toHaveLength(1);

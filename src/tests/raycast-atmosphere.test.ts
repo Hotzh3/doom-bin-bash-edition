@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   applyWorldSegmentToAtmosphere,
   getAtmosphereForDirector,
+  getRaycastCombatMessageForSegment,
   getRaycastIntroMessageForSegment,
   RAYCAST_ATMOSPHERE,
   RAYCAST_ATMOSPHERE_WORLD2,
@@ -95,6 +96,11 @@ describe('raycast atmosphere', () => {
   it('surfaces distinct World 2 intro copy for segment helpers', () => {
     expect(getRaycastIntroMessageForSegment('world2')).toContain('STRATUM RIFT');
     expect(getRaycastIntroMessageForSegment('world1')).toBe(RAYCAST_ATMOSPHERE.messages.intro);
+  });
+
+  it('layers stratified combat copy for World 2 while preserving World 1 strings', () => {
+    expect(getRaycastCombatMessageForSegment('world2', 'pressure')).toContain('ION SHEAR');
+    expect(getRaycastCombatMessageForSegment('world1', 'pressure')).toBe(RAYCAST_ATMOSPHERE.messages.pressure);
   });
 
   it('centralizes readable terminal corruption messages and feedback colors', () => {

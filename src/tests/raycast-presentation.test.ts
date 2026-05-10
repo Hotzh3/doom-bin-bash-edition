@@ -57,7 +57,7 @@ describe('raycast presentation helpers', () => {
       worldTwoSector: { index: 1, total: 2 }
     });
 
-    expect(banner).toContain('WORLD 2 RIFT');
+    expect(banner).toContain('WORLD 2 // ION STRATUM');
     expect(banner).toContain('SECTOR 1/2');
     expect(banner).toContain('ION STRATUM');
   });
@@ -101,6 +101,9 @@ describe('raycast presentation helpers', () => {
     );
     expect(buildRaycastStatusMessage(true, false, true, true, false)).toBe(
       'Boss purged. Press N to descend into World 2, R to replay boss, ESC for menu.'
+    );
+    expect(buildRaycastStatusMessage(true, false, true, true, false, false, true)).toBe(
+      'Archon down — ion stratum breach opens. Press N to descend the rift, R to replay boss, ESC for menu.'
     );
     expect(buildRaycastStatusMessage(false, false, false)).toBe('Signal lost. Press R to retry or ESC for menu.');
   });

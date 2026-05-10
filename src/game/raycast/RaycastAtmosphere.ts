@@ -65,15 +65,34 @@ export const RAYCAST_ATMOSPHERE = {
   }
 } as const;
 
-/** World 2 — colder fog, violet corruption veil (renderer + post stack only). */
+type RaycastAtmosphereMessageKey = keyof typeof RAYCAST_ATMOSPHERE.messages;
+
+/** World 2 — colder fog, violet veil + stratified combat copy (HUD pulls palette separately). */
 export const RAYCAST_ATMOSPHERE_WORLD2 = {
   fogColor: RAYCAST_PALETTE.riftFog,
   corruptionTint: RAYCAST_PALETTE.riftVeil,
-  messages: {
+  messageOverrides: {
     intro: 'STRATUM RIFT — SUBLEVEL SIGNAL FREEZING YOUR TELEMETRY',
-    exit: 'RIFT STRATUM PURGED'
+    exit: 'RIFT NODE COOLED — STRATUM LINE HOLDS',
+    idle: 'STRATUM GLASS READS YOUR TRACE',
+    locked: 'ACCESS DENIED — RIFT SEALED',
+    key: 'ACCESS TOKEN FUSED TO THE STRATUM',
+    doorOpen: 'SEAM DECRYPTED — PATH VENTS',
+    trigger: 'STRATUM PROTOCOL RELEASED',
+    pressure: 'ION SHEAR STRESSES THE ROUTE',
+    surge: 'STRATUM SPIKE — HOSTILES IN THE SHAFT',
+    recovery: 'COLD LULL — RECOVER BEFORE NEXT SPIKE',
+    spawn: 'HOSTILE SURFACED IN FROST AIR',
+    damage: 'THERMAL BLEED',
+    kill: 'HOSTILE SHATTERED IN THE RIFT',
+    secret: 'CONCEALED STRATUM NODE INDEXED',
+    critical: 'CORE HYPOTHERMIC — MOVE OR DROP'
   }
-} as const;
+} as const satisfies {
+  fogColor: number;
+  corruptionTint: number;
+  messageOverrides: Partial<Record<RaycastAtmosphereMessageKey, string>>;
+};
 
 /**
  * Layered only in `applyWorldSegmentToAtmosphere` for `world2`.
@@ -93,12 +112,22 @@ export const RAYCAST_WORLD2_SEGMENT_LAYER = {
 
 export type RaycastWorldSegmentId = 'world1' | 'world2';
 
+export function getRaycastCombatMessageForSegment(
+  segment: RaycastWorldSegmentId,
+  key: RaycastAtmosphereMessageKey
+): string {
+  const base = RAYCAST_ATMOSPHERE.messages[key];
+  if (segment !== 'world2') return base;
+  const hit = RAYCAST_ATMOSPHERE_WORLD2.messageOverrides[key];
+  return hit !== undefined ? hit : base;
+}
+
 export function getRaycastIntroMessageForSegment(segment: RaycastWorldSegmentId): string {
-  return segment === 'world2' ? RAYCAST_ATMOSPHERE_WORLD2.messages.intro : RAYCAST_ATMOSPHERE.messages.intro;
+  return getRaycastCombatMessageForSegment(segment, 'intro');
 }
 
 export function getRaycastExitMessageForSegment(segment: RaycastWorldSegmentId): string {
-  return segment === 'world2' ? RAYCAST_ATMOSPHERE_WORLD2.messages.exit : RAYCAST_ATMOSPHERE.messages.exit;
+  return getRaycastCombatMessageForSegment(segment, 'exit');
 }
 
 /** Biome tint layered on director-driven atmosphere (no second renderer). */
