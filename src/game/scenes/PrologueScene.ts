@@ -48,6 +48,14 @@ export class PrologueScene extends Phaser.Scene {
     const height = this.scale.height;
     this.cameras.main.setBackgroundColor(BG);
 
+    const backdrop = this.add.graphics().setDepth(0);
+    backdrop.fillGradientStyle(0x020408, 0x020408, 0x080c14, 0x04060c, 1);
+    backdrop.fillRect(0, 0, width, height);
+    backdrop.lineStyle(1, 0x1e2a38, 0.28);
+    for (let y = 0; y < height; y += 6) {
+      backdrop.lineBetween(0, y, width, y);
+    }
+
     const copy = getPrologueCopy(this.mode);
     const story = copy.lines.join('\n\n');
     const block = `${story}\n\n${copy.continueLine}\n${copy.backLine}`;
@@ -86,6 +94,8 @@ export class PrologueScene extends Phaser.Scene {
       .setOrigin(0.5, 1)
       .setAlpha(0.55)
       .setDepth(4);
+
+    this.cameras.main.fadeIn(380, 0, 0, 0);
 
     this.registerInputListeners();
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.cleanupInputListeners, this);

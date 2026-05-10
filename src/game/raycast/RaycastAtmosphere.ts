@@ -65,6 +65,42 @@ export const RAYCAST_ATMOSPHERE = {
   }
 } as const;
 
+/** World 2 — colder fog, violet corruption veil (renderer + post stack only). */
+export const RAYCAST_ATMOSPHERE_WORLD2 = {
+  fogColor: RAYCAST_PALETTE.riftFog,
+  corruptionTint: RAYCAST_PALETTE.riftVeil,
+  messages: {
+    intro: 'STRATUM RIFT — SUBLEVEL SIGNAL FREEZING YOUR TELEMETRY',
+    exit: 'RIFT STRATUM PURGED'
+  }
+} as const;
+
+export type RaycastWorldSegmentId = 'world1' | 'world2';
+
+export function getRaycastIntroMessageForSegment(segment: RaycastWorldSegmentId): string {
+  return segment === 'world2' ? RAYCAST_ATMOSPHERE_WORLD2.messages.intro : RAYCAST_ATMOSPHERE.messages.intro;
+}
+
+export function getRaycastExitMessageForSegment(segment: RaycastWorldSegmentId): string {
+  return segment === 'world2' ? RAYCAST_ATMOSPHERE_WORLD2.messages.exit : RAYCAST_ATMOSPHERE.messages.exit;
+}
+
+/** Biome tint layered on director-driven atmosphere (no second renderer). */
+export function applyWorldSegmentToAtmosphere(
+  base: RaycastAtmosphereRenderOptions,
+  segment: RaycastWorldSegmentId
+): RaycastAtmosphereRenderOptions {
+  if (segment !== 'world2') return base;
+  return {
+    ...base,
+    fogColor: RAYCAST_ATMOSPHERE_WORLD2.fogColor,
+    corruptionTint: RAYCAST_ATMOSPHERE_WORLD2.corruptionTint,
+    corruptionAlpha: base.corruptionAlpha * 0.88,
+    pulseAlpha: base.pulseAlpha * 0.85,
+    ambientDarkness: Math.min(0.31, base.ambientDarkness + 0.012)
+  };
+}
+
 export function getAtmosphereForDirector(state: DirectorState | null, intensity: number): RaycastAtmosphereRenderOptions {
   const pressure = Math.max(0, Math.min(1, intensity / 5));
 

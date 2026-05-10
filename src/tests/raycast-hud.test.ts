@@ -115,7 +115,7 @@ describe('raycast HUD', () => {
 
   it('builds a focused target line with enemy health and windup state', () => {
     expect(buildRaycastFocusedEnemyLine({ label: 'BRUTE', health: 96, maxHealth: 190, isWindingUp: true })).toBe(
-      'TARGET BRUTE 96/190 WINDUP'
+      'TARGET BRUTE 96/190 ARMED'
     );
   });
 

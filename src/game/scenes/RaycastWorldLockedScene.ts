@@ -12,7 +12,7 @@ export class RaycastWorldLockedScene extends Phaser.Scene {
     this.cameras.main.setBackgroundColor(RAYCAST_PALETTE.voidBlack);
 
     this.add
-      .text(GAME_WIDTH * 0.5, GAME_HEIGHT * 0.38, 'WORLD 2 SIGNAL LOCKED', {
+      .text(GAME_WIDTH * 0.5, GAME_HEIGHT * 0.38, 'RIFT STRATUM OFFLINE', {
         fontFamily: 'monospace',
         fontSize: '22px',
         fontStyle: '700',
@@ -22,14 +22,19 @@ export class RaycastWorldLockedScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     this.add
-      .text(GAME_WIDTH * 0.5, GAME_HEIGHT * 0.52, 'COMING NEXT — NO ROUTE DATA YET', {
-        fontFamily: 'monospace',
-        fontSize: '15px',
-        fontStyle: '700',
-        color: RAYCAST_CSS.bodyText,
-        align: 'center',
-        wordWrap: { width: GAME_WIDTH - 48 }
-      })
+      .text(
+        GAME_WIDTH * 0.5,
+        GAME_HEIGHT * 0.52,
+        'WORLD 2 PACKAGE NOT LOADED — USED WHEN BUILD SHIPS WITHOUT THE RIFT ARC',
+        {
+          fontFamily: 'monospace',
+          fontSize: '15px',
+          fontStyle: '700',
+          color: RAYCAST_CSS.bodyText,
+          align: 'center',
+          wordWrap: { width: GAME_WIDTH - 48 }
+        }
+      )
       .setOrigin(0.5);
 
     this.add
@@ -47,5 +52,7 @@ export class RaycastWorldLockedScene extends Phaser.Scene {
     };
     kb?.once('keydown-ESC', back);
     kb?.once('keydown-ENTER', back);
+
+    this.cameras.main.fadeIn(400, 0, 0, 0);
   }
 }

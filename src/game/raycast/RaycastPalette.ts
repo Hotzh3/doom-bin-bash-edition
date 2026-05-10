@@ -37,7 +37,14 @@ export const RAYCAST_PALETTE = {
   patternRust: 0xf09848,
   gateSignal: 0xe83048,
   telegraphRose: 0xf05870,
-  telegraphAmber: 0xffc850
+  telegraphAmber: 0xffc850,
+  /** World 2 — cold rift stratum (distinct from infernal rust/teal). */
+  riftFog: 0x050818,
+  riftVeil: 0x241844,
+  riftIon: 0x6ae8f0,
+  riftViolet: 0x8860c8,
+  riftBasalt: 0x1a2438,
+  riftBone: 0xc8c4d8
 } as const;
 
 /** CSS strings for Phaser text and DOM-adjacent HUD. */

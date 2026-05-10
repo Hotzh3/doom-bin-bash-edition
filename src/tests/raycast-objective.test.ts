@@ -2,10 +2,21 @@ import { describe, expect, it } from 'vitest';
 import {
   buildRaycastCurrentObjective,
   buildRaycastHintText,
-  buildRaycastInstructionText
+  buildRaycastInstructionText,
+  formatRaycastObjectiveHudLabel
 } from '../game/raycast/RaycastObjective';
 
 describe('raycast objective helpers', () => {
+  it('maps canonical objectives to optional HUD copy without affecting logic strings', () => {
+    expect(formatRaycastObjectiveHudLabel('FIND KEY', undefined)).toBe('FIND KEY');
+    expect(
+      formatRaycastObjectiveHudLabel('FIND KEY', {
+        findKey: 'TRACE TOKEN // WEST'
+      })
+    ).toBe('TRACE TOKEN // WEST');
+    expect(formatRaycastObjectiveHudLabel('REACH EXIT', { reachExit: 'CUT TO LIFT' })).toBe('CUT TO LIFT');
+  });
+
   it('builds clear objective labels for each progression stage', () => {
     expect(
       buildRaycastCurrentObjective({

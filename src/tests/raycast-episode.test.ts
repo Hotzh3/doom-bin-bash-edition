@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { getRaycastEpisodeState } from '../game/raycast/RaycastEpisode';
+import {
+  getRaycastEpisodeState,
+  resolveRaycastNextLevelId,
+  RAYCAST_WORLD_TWO_CATALOG
+} from '../game/raycast/RaycastEpisode';
 import {
   RAYCAST_LEVEL,
   RAYCAST_LEVEL_2,
@@ -10,6 +14,14 @@ import {
 } from '../game/raycast/RaycastLevel';
 
 describe('raycast episode progression', () => {
+  it('ships a two-sector World 2 arc without affecting Episode 1 ordering', () => {
+    expect(RAYCAST_WORLD_TWO_CATALOG).toHaveLength(2);
+    expect(RAYCAST_WORLD_TWO_CATALOG.map((l) => l.worldSegment)).toEqual(['world2', 'world2']);
+    expect(resolveRaycastNextLevelId(RAYCAST_LEVEL_BOSS.id)).toBe(RAYCAST_WORLD_TWO_CATALOG[0].id);
+    expect(resolveRaycastNextLevelId(RAYCAST_WORLD_TWO_CATALOG[0].id)).toBe(RAYCAST_WORLD_TWO_CATALOG[1].id);
+    expect(resolveRaycastNextLevelId(RAYCAST_WORLD_TWO_CATALOG[1].id)).toBeNull();
+  });
+
   it('advances through five story sectors into the boss map', () => {
     expect(getRaycastEpisodeState(RAYCAST_LEVEL.id)).toEqual({
       currentLevelId: RAYCAST_LEVEL.id,

@@ -10,6 +10,36 @@ export interface RaycastObjectiveState {
   recentBlockedReason?: RaycastBlockedReason | null;
 }
 
+/** Optional per-sector copy for the main OBJECTIVE line — canonical codes stay unchanged for logic. */
+export interface RaycastHudObjectiveLabels {
+  findKey?: string;
+  openDoor?: string;
+  surviveAmbush?: string;
+  reachExit?: string;
+  sectorPurged?: string;
+}
+
+export function formatRaycastObjectiveHudLabel(
+  canonical: string,
+  labels?: RaycastHudObjectiveLabels | null
+): string {
+  if (!labels) return canonical;
+  switch (canonical) {
+    case 'FIND KEY':
+      return labels.findKey ?? canonical;
+    case 'OPEN DOOR':
+      return labels.openDoor ?? canonical;
+    case 'SURVIVE AMBUSH':
+      return labels.surviveAmbush ?? canonical;
+    case 'REACH EXIT':
+      return labels.reachExit ?? canonical;
+    case 'SECTOR PURGED':
+      return labels.sectorPurged ?? canonical;
+    default:
+      return canonical;
+  }
+}
+
 export type RaycastBlockedReason =
   | 'door-key'
   | 'exit-key'

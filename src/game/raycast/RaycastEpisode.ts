@@ -1,4 +1,6 @@
-import { RAYCAST_LEVEL_CATALOG, getRaycastLevelById } from './RaycastLevel';
+import { RAYCAST_LEVEL_CATALOG, RAYCAST_WORLD_TWO_CATALOG, getRaycastLevelById } from './RaycastLevel';
+
+export { RAYCAST_WORLD_TWO_CATALOG } from './RaycastLevel';
 
 export interface RaycastEpisodeState {
   currentLevelId: string;
@@ -20,4 +22,22 @@ export function getRaycastEpisodeState(levelId: string): RaycastEpisodeState {
     nextLevelId: nextLevel?.id ?? null,
     isFinalLevel: nextLevel === null
   };
+}
+
+/** Full-run continuation: Episode 1 boss may chain into World 2 catalog. */
+export function resolveRaycastNextLevelId(levelId: string): string | null {
+  const w1Index = RAYCAST_LEVEL_CATALOG.findIndex((entry) => entry.id === levelId);
+  if (w1Index >= 0) {
+    if (w1Index + 1 < RAYCAST_LEVEL_CATALOG.length) {
+      return RAYCAST_LEVEL_CATALOG[w1Index + 1].id;
+    }
+    return RAYCAST_WORLD_TWO_CATALOG[0]?.id ?? null;
+  }
+
+  const w2Index = RAYCAST_WORLD_TWO_CATALOG.findIndex((entry) => entry.id === levelId);
+  if (w2Index >= 0) {
+    return RAYCAST_WORLD_TWO_CATALOG[w2Index + 1]?.id ?? null;
+  }
+
+  return null;
 }

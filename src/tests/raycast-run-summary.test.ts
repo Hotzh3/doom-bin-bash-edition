@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { buildRaycastRunSummary, formatRunDuration } from '../game/raycast/RaycastRunSummary';
+import {
+  buildRaycastRunSummary,
+  computeRaycastRunRank,
+  formatRunDuration
+} from '../game/raycast/RaycastRunSummary';
 
 describe('raycast run summary', () => {
   it('formats run duration as minutes, seconds, and tenths', () => {
@@ -30,6 +34,12 @@ describe('raycast run summary', () => {
     ]);
   });
 
+  it('computes discrete rank tiers from score', () => {
+    expect(computeRaycastRunRank(4500)).toContain('RANK C');
+    expect(computeRaycastRunRank(11_000)).toContain('RANK A');
+    expect(computeRaycastRunRank(15_000)).toContain('RANK S');
+  });
+
   it('includes score lines when provided', () => {
     const summary = buildRaycastRunSummary({
       elapsedMs: 10_000,
@@ -45,5 +55,6 @@ describe('raycast run summary', () => {
 
     expect(summary).toContain('SCORE 350');
     expect(summary).toContain('HIGH SCORE 1200');
+    expect(summary.some((line) => line.startsWith('RANK '))).toBe(true);
   });
 });

@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   getRaycastCrosshairTargetInfo,
+  RAYCAST_DEATH_BURST_MS,
+  RAYCAST_HIT_FLASH_MS,
   RaycastCombatSystem,
   findEnemyInCrosshair,
   normalizeAngle
@@ -63,6 +65,11 @@ const wallTestMap: RaycastMap = {
 };
 
 describe('raycast combat', () => {
+  it('exports impact timing aligned with renderer feedback', () => {
+    expect(RAYCAST_HIT_FLASH_MS).toBeGreaterThanOrEqual(180);
+    expect(RAYCAST_DEATH_BURST_MS).toBeGreaterThanOrEqual(300);
+  });
+
   it('normalizes angles around the -PI to PI range', () => {
     expect(normalizeAngle(Math.PI * 2)).toBeCloseTo(0);
     expect(normalizeAngle(-Math.PI * 2)).toBeCloseTo(0);

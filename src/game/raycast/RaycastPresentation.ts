@@ -2,6 +2,8 @@ export interface RaycastEpisodeBannerInput {
   currentLevelNumber: number;
   totalLevels: number;
   levelName: string;
+  /** World 2 arc banner (replaces EP 1 line when set). */
+  worldTwoSector?: { index: number; total: number };
 }
 
 export interface RaycastOverlayHintInput {
@@ -10,6 +12,10 @@ export interface RaycastOverlayHintInput {
   episodeComplete: boolean;
   /** Episode finale (boss) cleared — World 2 placeholder available. */
   finaleBossCleared?: boolean;
+  /** True only when World 2 content is not shipped (W-key teaser). */
+  worldTwoLocked?: boolean;
+  /** Boss down and next sector is World 2 — emphasize N continue. */
+  continueToWorldTwo?: boolean;
 }
 
 export interface RaycastDifficultyMenuCopyInput {
@@ -27,6 +33,8 @@ export interface RaycastPriorityMessageInput {
   levelComplete: boolean;
   episodeComplete: boolean;
   finaleBossCleared?: boolean;
+  worldTwoLocked?: boolean;
+  fullArcClear?: boolean;
   playerAlive: boolean;
   playerHealth: number;
   objective: string;
@@ -58,13 +66,32 @@ export interface MainMenuLayout {
   titleFrameCenterY: number;
 }
 
+/** Death overlay — distinct voice from sector-clear screens (still terminal / horror). */
+export function buildRaycastDeathOverlaySummary(levelDisplayLine: string): string[] {
+  return [
+    'UPLINK FLATLINED',
+    'The corridor won your route — patch mistakes with movement and priority picks.',
+    levelDisplayLine
+  ];
+}
+
+export function buildRaycastDeathOverlayHint(): string {
+  return 'R RESTART SECTOR  |  ESC MAIN MENU';
+}
+
 export function buildRaycastEpisodeBanner(input: RaycastEpisodeBannerInput): string {
+  if (input.worldTwoSector) {
+    return `WORLD 2 RIFT  |  SECTOR ${input.worldTwoSector.index}/${input.worldTwoSector.total} ${input.levelName.toUpperCase()}`;
+  }
   return `EP 1 MINI EPISODE  |  LVL ${input.currentLevelNumber}/${input.totalLevels} ${input.levelName.toUpperCase()}`;
 }
 
 export function buildRaycastOverlayHint(input: RaycastOverlayHintInput): string {
-  if (input.episodeComplete && input.finaleBossCleared) {
+  if (input.episodeComplete && input.finaleBossCleared && input.worldTwoLocked) {
     return 'W WORLD 2 (LOCKED)  |  R REPLAY BOSS  |  ESC MENU';
+  }
+  if (!input.episodeComplete && input.finaleBossCleared && input.continueToWorldTwo) {
+    return 'N CONTINUE TO WORLD 2  |  R REPLAY BOSS  |  ESC MENU';
   }
   if (input.episodeComplete) return 'R REPLAY FINALE  |  ESC MENU';
   if (input.canAdvance) return `N CONTINUE  |  R RESTART SECTOR  |  ESC MENU`;
@@ -75,11 +102,19 @@ export function buildRaycastStatusMessage(
   levelComplete: boolean,
   episodeComplete: boolean,
   playerAlive: boolean,
-  finaleBossCleared = false
+  finaleBossCleared = false,
+  worldTwoLocked = true,
+  fullArcClear = false
 ): string {
   if (levelComplete) {
-    if (episodeComplete && finaleBossCleared) {
+    if (fullArcClear) {
+      return 'Full arc clear — Episode 1 + World 2. Press R to retry sector or ESC for menu.';
+    }
+    if (episodeComplete && finaleBossCleared && worldTwoLocked) {
       return 'Boss purged. W for World 2 signal, R to replay boss, ESC for menu.';
+    }
+    if (!episodeComplete && finaleBossCleared && !worldTwoLocked) {
+      return 'Boss purged. Press N to descend into World 2, R to replay boss, ESC for menu.';
     }
     return episodeComplete
       ? 'Episode clear. Press R to replay the finale or ESC for menu.'
@@ -127,7 +162,14 @@ export function buildRaycastPriorityMessage(input: RaycastPriorityMessageInput):
 
   if (input.levelComplete) {
     return {
-      text: buildRaycastStatusMessage(true, input.episodeComplete, true, Boolean(input.finaleBossCleared)),
+      text: buildRaycastStatusMessage(
+        true,
+        input.episodeComplete,
+        true,
+        Boolean(input.finaleBossCleared),
+        input.worldTwoLocked !== false,
+        Boolean(input.fullArcClear)
+      ),
       tone: 'info'
     };
   }
@@ -200,7 +242,7 @@ export function getPrologueCopy(mode: PrologueGameMode): PrologueCopy {
       lines: [
         'You were sent to recover a dead signal under an abandoned terminal complex.',
         'Extraction failed. The buried system woke up and tagged your uplink as hostile.',
-        'Five sectors now rewrite themselves between you and the core access channel.',
+        'Five sectors — each authored with distinct chokepoints — rewrite themselves between you and the core.',
         'Advance fast: every loop the system learns your path and hunts harder.'
       ],
       continueLine: '// CONTINUE // SPACE  |  ENTER  |  A',

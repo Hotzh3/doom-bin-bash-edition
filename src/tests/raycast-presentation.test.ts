@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
+  buildRaycastDeathOverlayHint,
+  buildRaycastDeathOverlaySummary,
   buildRaycastDifficultyMenuLine,
   buildMainMenuLayout,
   buildRaycastEpisodeBanner,
@@ -40,6 +42,26 @@ describe('raycast presentation helpers', () => {
     expect(banner).not.toContain('MOVE WASD');
   });
 
+  it('frames death overlay copy separately from sector-clear summaries', () => {
+    const lines = buildRaycastDeathOverlaySummary('SECTOR 2/6 TEST');
+    expect(lines[0]).toContain('FLATLINED');
+    expect(lines.join('\n')).toContain('SECTOR 2/6 TEST');
+    expect(buildRaycastDeathOverlayHint()).toContain('RESTART');
+  });
+
+  it('builds a World 2 banner when the rift arc is active', () => {
+    const banner = buildRaycastEpisodeBanner({
+      currentLevelNumber: 1,
+      totalLevels: 6,
+      levelName: 'Ion Stratum',
+      worldTwoSector: { index: 1, total: 2 }
+    });
+
+    expect(banner).toContain('WORLD 2 RIFT');
+    expect(banner).toContain('SECTOR 1/2');
+    expect(banner).toContain('ION STRATUM');
+  });
+
   it('builds clear overlay hints for both next-level and finale states', () => {
     expect(
       buildRaycastOverlayHint({
@@ -62,7 +84,8 @@ describe('raycast presentation helpers', () => {
         currentLevelNumber: 6,
         canAdvance: false,
         episodeComplete: true,
-        finaleBossCleared: true
+        finaleBossCleared: true,
+        worldTwoLocked: true
       })
     ).toBe('W WORLD 2 (LOCKED)  |  R REPLAY BOSS  |  ESC MENU');
   });
@@ -73,8 +96,11 @@ describe('raycast presentation helpers', () => {
       'Sector clear. Press N to continue, R to replay, or ESC for menu.'
     );
     expect(buildRaycastStatusMessage(true, true, true)).toBe('Episode clear. Press R to replay the finale or ESC for menu.');
-    expect(buildRaycastStatusMessage(true, true, true, true)).toBe(
+    expect(buildRaycastStatusMessage(true, true, true, true, true)).toBe(
       'Boss purged. W for World 2 signal, R to replay boss, ESC for menu.'
+    );
+    expect(buildRaycastStatusMessage(true, false, true, true, false)).toBe(
+      'Boss purged. Press N to descend into World 2, R to replay boss, ESC for menu.'
     );
     expect(buildRaycastStatusMessage(false, false, false)).toBe('Signal lost. Press R to retry or ESC for menu.');
   });

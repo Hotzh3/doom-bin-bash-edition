@@ -24,8 +24,11 @@ export interface RaycastCombatResult {
 }
 
 const DEFAULT_AIM_TOLERANCE_RADIANS = 0.1;
-const HIT_FLASH_MS = 140;
-const DEATH_BURST_MS = 260;
+/** Exported for renderer/UI sync — slightly longer reads clearly at raycast resolution. */
+export const RAYCAST_HIT_FLASH_MS = 200;
+export const RAYCAST_DEATH_BURST_MS = 330;
+const HIT_FLASH_MS = RAYCAST_HIT_FLASH_MS;
+const DEATH_BURST_MS = RAYCAST_DEATH_BURST_MS;
 const GRID_SCALE = 100;
 
 export class RaycastCombatSystem {

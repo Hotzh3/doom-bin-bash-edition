@@ -89,7 +89,7 @@ export function formatRaycastEnemyKindLabel(kind: EnemyKind): string {
 
 export function buildRaycastFocusedEnemyLine(state: RaycastFocusedEnemyState): string {
   const label = state.label ?? formatRaycastEnemyKindLabel(state.kind ?? 'GRUNT');
-  const posture = state.isTelegraphing ? 'BREACH' : state.isWindingUp ? 'WINDUP' : 'LOCKED';
+  const posture = state.isTelegraphing ? 'EMERGE' : state.isWindingUp ? 'ARMED' : 'LOCKED';
   return `TARGET ${label} ${state.health}/${state.maxHealth} ${posture}`;
 }
 

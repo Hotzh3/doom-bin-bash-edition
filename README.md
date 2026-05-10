@@ -20,13 +20,13 @@ Reference points are limited to high-level feel goals such as fast movement, imm
 
 `doom-bin-bash-edition` currently presents a compact original raycast FPS vertical slice as the main experience. The gameplay is split across scenes, raycast modules, entities, and pure systems so the project stays testable and easy to hand off.
 
-The current slice focuses on a short but complete flow: a menu, a two-level mini episode, objective-driven progression, generated audiovisual feedback, and a `GameDirector` that shapes pressure without requiring a large content footprint.
+The current slice focuses on a short but complete flow: boot menu, terminal prologue, **Episode 1** (five authored sectors + boss), optional **World 2 Rift** continuation, objective-driven progression, procedural WebAudio feedback, and a `GameDirector` that shapes pressure without a huge content footprint.
 
 ## Current Features
 
 - `RaycastScene` como modo principal FPS/raycast.
 - `GameDirector` pacing that shifts between calm, warning, pressure, ambush, and recovery states.
-- Two linked original raycast levels presented as a mini episode.
+- Compact **Episode 1** campaign (five sectors + boss) plus an authored **World 2** two-sector rift arc after the finale when enabled in data.
 - First-person movement with `WASD`, mouse / key turning, instant fire, and weapon switching.
 - Doors, keys, secrets, and ambush triggers that support short guided runs.
 - Compact HUD with health, weapon, token, secret, objective, and critical messaging.
@@ -41,7 +41,7 @@ The current slice focuses on a short but complete flow: a menu, a two-level mini
 - Puertas, llaves, secretos, zonas y triggers de emboscada.
 - Catálogo compacto de niveles raycast con dos mapas originales enlazados como mini episodio.
 - HUD raycast compacto con vida, arma, tokens, secretos, objetivo, mensajes críticos y debug oculto por toggle.
-- Loop completo con `SIGNAL LOST`, retry por nivel, avance al siguiente mapa y cierre de episodio con resumen final.
+- Loop completo con pantalla de muerte (`SIGNAL TERMINATED`), pausa con menú dedicado, retry por nivel, avance al siguiente mapa y cierre de episodio / arco con resumen y rank.
 - Audio básico generado con WebAudio, opcional y sin archivos externos.
 - `ArenaScene` conservada como modo secundario/sandbox 2D.
 - Arena responsive/fullscreen con dos jugadores locales y combate PvP + PvE.
@@ -60,7 +60,7 @@ The current slice focuses on a short but complete flow: a menu, a two-level mini
 
 ## Controls
 
-- Menú: `SPACE` inicia `RaycastScene`; `A` abre `ArenaScene`.
+- Menú: `A` inicia modo raycast (vía prólogo); `B` abre `ArenaScene`; `D` cicla dificultad del raycast (Assist / Standard / Hard).
 - Raycast: mover con `WASD`; girar con mouse horizontal, flechas izquierda/derecha o `Q`/`E`; disparar con `F`, `SPACE` o click; cambiar arma con `1`/`2`/`3`; `R` reinicia el nivel actual; `N` avanza al siguiente nivel cuando el clear overlay está activo; `ESC` vuelve al menú; `TAB`/backtick alterna debug.
 - Arena secundaria: `R` reinicia arena; Player 1 mueve con `WASD` y dispara con `F`; Player 2 mueve con flechas y dispara con `L`.
 
@@ -154,7 +154,7 @@ npm run build
 - **RaycastScene primary:** entrada principal desde menú para probar movimiento, cámara horizontal, combate, nivel, triggers y atmósfera.
 - **ArenaScene preserved:** modo 2D secundario para mantener compatibilidad con el sandbox local.
 - **GameDirector:** controla ritmo y eventos de presión, además de spawn budget y límite de enemigos vivos.
-- **Clean-room raycast feel:** movimiento inmediato, strafe fuerte, FOV amplio, disparo instantáneo, enemigos legibles, dos mapas originales con llave/puerta/emboscada/secreto/salida y atmósfera procedural original.
+- **Clean-room raycast feel:** movimiento inmediato, strafe fuerte, FOV amplio, disparo instantáneo, enemigos legibles, catálogo de mapas originales con llave/puerta/emboscada/secreto/salida y atmósfera procedural original.
 - **TargetSelector:** selección pura del jugador vivo más cercano, evitando targets muertos.
 - **Game states:** `RUNNING`, `GAME_OVER` y `ROUND_CLEAR` con overlay claro y reinicio por `R`.
 - **Critical logic tests:** cobertura de raycast, combate, FSM, configs de enemigos, selección de targets, audio config y director.
@@ -188,7 +188,7 @@ No hay screenshots reales del gameplay versionadas todavía en `docs/assets`. Cu
 
 ## Project Status
 
-The project is currently a presentable raycast FPS vertical slice with a menu, two-level mini episode, generated audio, original progression content, and logic tests around critical systems. `ArenaScene` remains available as a secondary sandbox. The repo does not include copied maps, external commercial assets, bosses, online multiplayer, or large-scale progression systems.
+The project is currently a presentable raycast FPS vertical slice with a boot menu, terminal prologue, **Episode 1** mini-campaign (five sectors + boss), optional **World 2** content, generated WebAudio, original progression, and logic tests around critical systems. `ArenaScene` remains available as a secondary sandbox. The repo does not include copied maps, external commercial assets, or online multiplayer.
 
 ## Roadmap por Fases
 

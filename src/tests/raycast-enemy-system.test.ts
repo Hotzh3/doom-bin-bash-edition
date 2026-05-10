@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ENEMY_CONFIG } from '../game/entities/enemyConfig';
+import { ENEMY_CONFIG, getEnemyConfig } from '../game/entities/enemyConfig';
 import {
   createTelegraphedRaycastEnemy,
   didRaycastEnemyFinishTelegraph,
@@ -180,7 +180,7 @@ describe('raycast enemy system', () => {
     updateRaycastEnemies(RAYCAST_MAP, [enemy], { x: 1.5, y: 10.4, alive: true }, 2000, 16);
     const result = updateRaycastEnemies(RAYCAST_MAP, [enemy], { x: 1.5, y: 10.4, alive: true }, 2400, 16);
     const projectile = result.spawnedProjectiles[0];
-    expect(Math.hypot(projectile.vx, projectile.vy)).toBeCloseTo((ENEMY_CONFIG.RANGED.projectileSpeed ?? 0) / 100);
+    expect(Math.hypot(projectile.vx, projectile.vy)).toBeCloseTo((getEnemyConfig('RANGED', 'raycast').projectileSpeed ?? 0) / 100);
     const damage = updateRaycastEnemyProjectiles(RAYCAST_MAP, [projectile], { x: 1.5, y: 10.4, alive: true }, 3100, 700);
 
     expect(damage).toBeGreaterThan(0);

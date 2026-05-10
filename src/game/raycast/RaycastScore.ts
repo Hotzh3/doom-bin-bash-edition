@@ -24,8 +24,21 @@ export function addRaycastKillScore(currentScore: number, killedKinds: EnemyKind
 /** Episode boss clear bonus (flat points). */
 export const RAYCAST_BOSS_CLEAR_POINTS = 2500;
 
+/** Entering World 2 after Episode 1 boss — one-time carry bonus per run transition. */
+export const RAYCAST_WORLD2_ENTRY_POINTS = 520;
+
+/** Clearing the final World 2 sector (full mini-arc). */
+export const RAYCAST_FULL_ARC_CLEAR_BONUS = 1100;
+
+/** Discovering a hidden sector node — meaningful but bounded vs kill farming. */
+export const RAYCAST_SECRET_DISCOVER_POINTS = 380;
+
 export function addRaycastBossClearScore(currentScore: number): number {
   return currentScore + RAYCAST_BOSS_CLEAR_POINTS;
+}
+
+export function addRaycastSecretScore(currentScore: number): number {
+  return currentScore + RAYCAST_SECRET_DISCOVER_POINTS;
 }
 
 export function readRaycastHighScore(storage: Pick<Storage, 'getItem'> = typeof localStorage !== 'undefined'

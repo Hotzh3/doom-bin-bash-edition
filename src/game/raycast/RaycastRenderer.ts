@@ -20,6 +20,7 @@ import {
 import { RAYCAST_LEVEL, type RaycastLevel } from './RaycastLevel';
 import { RAYCAST_RENDERER_CONFIG } from './RaycastRendererConfig';
 import { RAYCAST_PALETTE } from './RaycastPalette';
+import { RAYCAST_DEATH_BURST_MS } from './RaycastCombatSystem';
 import type { RaycastBossState } from './RaycastBoss';
 import {
   getBillboardColor,
@@ -168,11 +169,12 @@ export class RaycastRenderer {
 
       const isWindingUp = isRaycastEnemyWindingUp(projection.enemy, time);
       const windupProgress = getRaycastEnemyWindupProgress(projection.enemy, time);
-      const pulse = isWindingUp ? Math.sin(time / 38) * 0.5 + 0.5 : 0;
+      const pulse = isWindingUp ? Math.sin(time / 30) * 0.5 + 0.5 : 0;
       const telegraphMix = isWindingUp ? 0.3 + windupProgress * 0.4 + pulse * 0.18 : 0;
-      const color = projection.enemy.hitFlashUntil > time
-        ? 0xffffff
-        : this.blendColors(projection.enemy.color, RAYCAST_PALETTE.telegraphRose, telegraphMix);
+      const color =
+        projection.enemy.hitFlashUntil > time
+          ? this.blendColors(0xfff5f0, projection.enemy.color, 0.42)
+          : this.blendColors(projection.enemy.color, RAYCAST_PALETTE.telegraphRose, telegraphMix);
       const enemyStyle = getRaycastEnemyVisualStyle(projection.enemy.kind, projection.enemy.color);
       const visibility = calculateEnemyVisibility(projection.distance, atmosphere);
       const size = projection.size * (isWindingUp ? 1.04 + windupProgress * 0.08 + pulse * 0.04 : 1);
@@ -227,14 +229,15 @@ export class RaycastRenderer {
     const pulse = telegraph ? 0.55 + Math.sin(time / 42) * 0.45 : 1;
     const cx = screenX;
     const cy = height * 0.5;
-    const coreColor = boss.hitFlashUntil > time ? 0xffffff : 0x6b4ae8;
+    const coreTint = boss.phase === 2 ? 0xff5a4a : 0x6b4ae8;
+    const coreColor = boss.hitFlashUntil > time ? this.blendColors(0xfff8f4, coreTint, 0.38) : coreTint;
 
     this.graphics.fillStyle(0x120618, 0.82 * visibility);
     this.graphics.fillEllipse(cx, cy + size * 0.1, size * 1.5, size * 0.42);
     this.graphics.lineStyle(
-      telegraph ? 5 : 3,
-      telegraph ? 0xff8833 : RAYCAST_PALETTE.plasmaBright,
-      (telegraph ? 0.88 : 0.58) * visibility * pulse
+      telegraph ? (boss.phase === 2 ? 6 : 5) : boss.phase === 2 ? 4 : 3,
+      telegraph ? (boss.phase === 2 ? 0xff3328 : 0xff8833) : RAYCAST_PALETTE.plasmaBright,
+      (telegraph ? 0.91 : 0.58) * visibility * pulse
     );
     this.graphics.strokeEllipse(cx, cy, size * 1.12, size * 1.45);
     this.graphics.fillStyle(coreColor, 0.92 * visibility);
@@ -244,10 +247,11 @@ export class RaycastRenderer {
     this.graphics.fillCircle(cx + size * 0.22, cy - size * 0.18, size * 0.09);
     this.graphics.fillCircle(cx - size * 0.22, cy - size * 0.18, size * 0.09);
     if (telegraph) {
-      const rays = boss.phase === 2 ? 5 : 3;
-      const haloAlpha = (0.2 + pulse * 0.16) * visibility;
-      this.graphics.fillStyle(0xff8833, haloAlpha);
-      this.graphics.fillCircle(cx, cy, size * (0.84 + pulse * 0.1));
+      const rays = boss.phase === 2 ? 7 : 4;
+      const haloAlpha = (0.24 + pulse * 0.2) * visibility;
+      const haloColor = boss.phase === 2 ? 0xff4436 : 0xff8833;
+      this.graphics.fillStyle(haloColor, haloAlpha);
+      this.graphics.fillCircle(cx, cy, size * (0.86 + pulse * 0.12));
       this.graphics.lineStyle(2, 0xfff1c4, (0.35 + pulse * 0.3) * visibility);
       for (let i = 0; i < rays; i += 1) {
         const a = (i / rays) * Math.PI * 2 + time * 0.003;
@@ -317,8 +321,8 @@ export class RaycastRenderer {
 
   renderWeaponOverlay(weapon: WeaponKind, width: number, height: number, muzzleAlpha: number): void {
     const kick = Phaser.Math.Clamp(muzzleAlpha, 0, 1);
-    const recoilY = kick * (weapon === 'LAUNCHER' ? 18 : weapon === 'SHOTGUN' ? 15 : 12);
-    const recoilX = kick * (weapon === 'SHOTGUN' ? 7 : weapon === 'LAUNCHER' ? 5 : 4);
+    const recoilY = kick * (weapon === 'LAUNCHER' ? 22 : weapon === 'SHOTGUN' ? 19 : 10);
+    const recoilX = kick * (weapon === 'SHOTGUN' ? 9 : weapon === 'LAUNCHER' ? 6 : 3);
     const baseY = height - 18 + recoilY;
     const cx = width * 0.5 + recoilX;
     const weaponColor = weapon === 'SHOTGUN' ? 0x6d4028 : weapon === 'LAUNCHER' ? 0x29414d : 0x334150;
@@ -794,17 +798,23 @@ export class RaycastRenderer {
     atmosphere: RaycastAtmosphereRenderOptions
   ): void {
     const remaining = Math.max(0, projection.enemy.deathBurstUntil - time);
-    const alpha = Phaser.Math.Clamp(remaining / 260, 0, 1);
+    const burstDuration = Math.max(1, RAYCAST_DEATH_BURST_MS);
+    const alpha = Phaser.Math.Clamp(remaining / burstDuration, 0, 1);
     const visibility = calculateEnemyVisibility(projection.distance, atmosphere);
-    const burstSize = projection.size * (1.15 + (1 - alpha) * 0.75);
+    const burstSize = projection.size * (1.22 + (1 - alpha) * 0.82);
+    const shard = 1 - alpha;
 
-    this.graphics.fillStyle(projection.enemy.color, alpha * 0.48 * visibility);
-    this.graphics.fillCircle(projection.screenX, height * 0.5, burstSize * 0.42);
-    this.graphics.lineStyle(3, 0xffffff, alpha * 0.7 * visibility);
-    this.graphics.strokeCircle(projection.screenX, height * 0.5, burstSize * 0.34);
+    this.graphics.fillStyle(RAYCAST_PALETTE.telegraphRose, alpha * 0.22 * visibility * shard);
+    this.graphics.fillCircle(projection.screenX, height * 0.5, burstSize * 0.52);
+    this.graphics.fillStyle(projection.enemy.color, alpha * 0.55 * visibility);
+    this.graphics.fillCircle(projection.screenX, height * 0.5, burstSize * 0.44);
+    this.graphics.lineStyle(4, 0xfff5e8, alpha * 0.78 * visibility);
+    this.graphics.strokeCircle(projection.screenX, height * 0.5, burstSize * 0.38);
+    this.graphics.lineStyle(3, projection.enemy.color, alpha * 0.88 * visibility);
+    this.graphics.strokeCircle(projection.screenX, height * 0.5, burstSize * 0.28);
     this.graphics.lineStyle(2, projection.enemy.color, alpha * 0.85 * visibility);
-    this.graphics.lineBetween(projection.screenX - burstSize * 0.5, height * 0.5, projection.screenX + burstSize * 0.5, height * 0.5);
-    this.graphics.lineBetween(projection.screenX, height * 0.5 - burstSize * 0.42, projection.screenX, height * 0.5 + burstSize * 0.42);
+    this.graphics.lineBetween(projection.screenX - burstSize * 0.55, height * 0.5, projection.screenX + burstSize * 0.55, height * 0.5);
+    this.graphics.lineBetween(projection.screenX, height * 0.5 - burstSize * 0.46, projection.screenX, height * 0.5 + burstSize * 0.46);
   }
 
   private drawEnemySilhouette(

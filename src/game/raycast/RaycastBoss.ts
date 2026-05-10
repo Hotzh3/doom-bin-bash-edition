@@ -42,13 +42,14 @@ export interface RaycastBossState {
 }
 
 function telegraphMs(phase: 1 | 2): number {
-  if (phase === 1) return 780;
-  return 520;
+  /* Phase 1: longer read — phase 2: shorter pulse for panic pressure */
+  if (phase === 1) return 860;
+  return 480;
 }
 
 function cooldownMs(phase: 1 | 2): number {
-  if (phase === 1) return 2500;
-  return 1750;
+  if (phase === 1) return 2280;
+  return 1580;
 }
 
 export function getRaycastBossPhaseLabel(phase: 1 | 2): string {
@@ -81,7 +82,7 @@ export function syncRaycastBossPhase(state: RaycastBossState): void {
 export function damageRaycastBoss(state: RaycastBossState, amount: number, time: number): boolean {
   if (!state.alive || amount <= 0) return false;
   state.health = Math.max(0, state.health - amount);
-  state.hitFlashUntil = time + 180;
+  state.hitFlashUntil = time + 230;
   syncRaycastBossPhase(state);
   if (state.health <= 0) {
     state.alive = false;

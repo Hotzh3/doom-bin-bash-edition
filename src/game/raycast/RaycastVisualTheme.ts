@@ -7,7 +7,11 @@ export type RaycastZoneThemeId =
   | 'void-stone'
   | 'warning-amber'
   | 'toxic-green'
-  | 'exit-portal';
+  | 'exit-portal'
+  /** World 2 — authored cold biomes */
+  | 'basalt-rift'
+  | 'ion-shaft'
+  | 'nadir-glow';
 
 export type RaycastLandmarkId = 'none' | 'key' | 'gate' | 'ambush' | 'secret' | 'exit';
 
@@ -139,6 +143,30 @@ export const RAYCAST_ZONE_THEMES: Record<RaycastZoneThemeId, RaycastZoneTheme> =
     floorColor: 0x051018,
     ceilingColor: 0x020810,
     signalColor: RAYCAST_PALETTE.plasmaBright
+  },
+  'basalt-rift': {
+    id: 'basalt-rift',
+    accentColor: RAYCAST_PALETTE.riftBasalt,
+    patternColor: RAYCAST_PALETTE.riftBone,
+    floorColor: 0x040612,
+    ceilingColor: 0x02040a,
+    signalColor: RAYCAST_PALETTE.riftViolet
+  },
+  'ion-shaft': {
+    id: 'ion-shaft',
+    accentColor: 0x2a7088,
+    patternColor: RAYCAST_PALETTE.riftIon,
+    floorColor: 0x031018,
+    ceilingColor: 0x010810,
+    signalColor: RAYCAST_PALETTE.riftIon
+  },
+  'nadir-glow': {
+    id: 'nadir-glow',
+    accentColor: 0x503070,
+    patternColor: 0xe8e0ff,
+    floorColor: 0x060410,
+    ceilingColor: 0x030208,
+    signalColor: RAYCAST_PALETTE.riftViolet
   }
 };
 
@@ -268,6 +296,36 @@ export function getRaycastGroundVisualStyle(surface: Pick<RaycastSurfaceContext,
       floorGlowColor: blendThemeColor(surface.theme.patternColor, RAYCAST_PALETTE.corruptMist, 0.3),
       floorBandAlpha: 0.1,
       cellStride: 20
+    };
+  }
+
+  if (surface.theme.id === 'basalt-rift') {
+    return {
+      floorPattern: 'noise-cells',
+      ceilingPattern: 'void-noise',
+      floorGlowColor: blendThemeColor(surface.theme.signalColor, RAYCAST_PALETTE.riftBone, 0.35),
+      floorBandAlpha: 0.11,
+      cellStride: 17
+    };
+  }
+
+  if (surface.theme.id === 'ion-shaft') {
+    return {
+      floorPattern: 'hazard-lattice',
+      ceilingPattern: 'crossbars',
+      floorGlowColor: blendThemeColor(RAYCAST_PALETTE.riftIon, 0x082028, 0.42),
+      floorBandAlpha: 0.13,
+      cellStride: 14
+    };
+  }
+
+  if (surface.theme.id === 'nadir-glow') {
+    return {
+      floorPattern: 'glow-rings',
+      ceilingPattern: 'void-noise',
+      floorGlowColor: blendThemeColor(surface.theme.signalColor, RAYCAST_PALETTE.riftFog, 0.5),
+      floorBandAlpha: 0.15,
+      cellStride: 19
     };
   }
 
