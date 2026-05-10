@@ -9,6 +9,6 @@ export default [
     rules: {}
   },
   {
-    ignores: ['dist/**', 'coverage/**']
+    ignores: ['dist/**', 'coverage/**', 'scripts/**']
   }
 ];

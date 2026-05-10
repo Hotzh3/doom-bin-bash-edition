@@ -1,4 +1,14 @@
-# Roadmap de 4 semanas (equipo de 3)
+# Roadmap histórico (4 semanas, equipo de 3)
+
+> **Nota (2026):** Este archivo conserva el **plan académico original** del MVP arena 2D (oleadas, backend opcional). El producto actual está **centrado en `RaycastScene`** y módulos raycast; para trabajo activo de arquitectura y presupuesto técnico, ver **`docs/phases/phase-21-runtime-budget.md`** y **`docs/architecture.md`**.
+
+## Estado del producto (actual)
+
+El juego entregado es un **vertical slice** jugable de punta a punta: **Episode 1** (sectores + boss), **World 2** opcional en datos, HUD/minimap, score y resumen de run, tests y CI. No depende de este roadmap histórico para describir el alcance.
+
+Notas de ingeniería y pulido recientes: **`docs/README.md`** (índice), incluyendo fases **21–25** (runtime, identidad W2, encuentros/boss, scoring, release readiness).
+
+---
 
 ## Semana 1 — Fundaciones + vertical slice
 - Setup repo, lint/test/CI, Docker básico.

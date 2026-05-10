@@ -37,7 +37,20 @@ export const RAYCAST_PALETTE = {
   patternRust: 0xf09848,
   gateSignal: 0xe83048,
   telegraphRose: 0xf05870,
-  telegraphAmber: 0xffc850
+  telegraphAmber: 0xffc850,
+  /** World 2 — abyss stratum (blue-violet void + ion fracture; deliberately not infernal rust/teal). */
+  /** Phase 31: deeper ice-fog vs W1 fogVoid — reads as “underworld seam,” not brown haze. */
+  riftFog: 0x010814,
+  /** Stronger violet interference sheet vs infernal corruptVeil pink. */
+  riftVeil: 0x341060,
+  /** Sharper ion line for shaft / conductor reads in fog. */
+  riftIon: 0x48f8ff,
+  riftViolet: 0xa078f0,
+  /** Basalt crust — colder blue deck than W1 wallSteel silhouettes. */
+  riftBasalt: 0x0e1834,
+  riftBone: 0xc8cce8,
+  /** Cold corrosion accent — sulfur lattice / bio bloom pockets in W2 only (billboards / blends). */
+  riftBloom: 0x58f088
 } as const;
 
 /** CSS strings for Phaser text and DOM-adjacent HUD. */
@@ -51,3 +64,35 @@ export const RAYCAST_CSS = {
   mutedText: '#6f8f82',
   accentText: '#58f2e4'
 } as const;
+
+/** World 2 HUD — violet-shifted terminal glass over abyss canvas (distinct from W1 teal corruption). */
+export const RAYCAST_CSS_WORLD2 = {
+  hudPanel: '#030d22cc',
+  debugText: '#7a9ec8',
+  systemText: '#a8e8ff',
+  warningText: '#ff9ad0',
+  keyText: '#f0ecff',
+  bodyText: '#d4def5',
+  mutedText: '#5a7a9c',
+  accentText: '#7af0ff'
+} as const;
+
+/** World 3 — Ember Meridian: warm ash glass vs cold stratum (Phase 34). */
+export const RAYCAST_CSS_WORLD3 = {
+  hudPanel: '#140804cc',
+  debugText: '#c87858',
+  systemText: '#ffb090',
+  warningText: '#ff5566',
+  keyText: '#ffe8c8',
+  bodyText: '#ecd8cc',
+  mutedText: '#8a6050',
+  accentText: '#ff8844'
+} as const;
+
+export type RaycastHudCssBundle = { [K in keyof typeof RAYCAST_CSS]: string };
+
+export function getRaycastHudCss(segment: 'world1' | 'world2' | 'world3'): RaycastHudCssBundle {
+  if (segment === 'world2') return RAYCAST_CSS_WORLD2;
+  if (segment === 'world3') return RAYCAST_CSS_WORLD3;
+  return RAYCAST_CSS;
+}

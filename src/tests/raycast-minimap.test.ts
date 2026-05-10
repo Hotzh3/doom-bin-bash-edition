@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildRaycastMinimapModel } from '../game/raycast/RaycastMinimap';
+import { buildRaycastMinimapModel, buildStaticRaycastMinimapCells } from '../game/raycast/RaycastMinimap';
 import { RAYCAST_LEVEL, cloneRaycastMap, openRaycastDoor } from '../game/raycast/RaycastLevel';
 
 describe('raycast minimap model', () => {
@@ -41,6 +41,28 @@ describe('raycast minimap model', () => {
     expect(model.enemyBlips).toHaveLength(2);
     expect(model.enemyBlips.some((b) => b.kind === 'GRUNT')).toBe(true);
     expect(model.markers.some((m) => m.label === 'HIDDEN')).toBe(false);
+  });
+
+  it('matches full model cells when staticCells is precomputed', () => {
+    const staticCells = buildStaticRaycastMinimapCells({ map: RAYCAST_LEVEL.map, level: RAYCAST_LEVEL });
+    const withStatic = buildRaycastMinimapModel({
+      map: RAYCAST_LEVEL.map,
+      level: RAYCAST_LEVEL,
+      player: { x: 2.5, y: 12.5, angle: 0 },
+      collectedKeyIds: [],
+      openDoorIds: [],
+      collectedSecretIds: [],
+      staticCells
+    });
+    const full = buildRaycastMinimapModel({
+      map: RAYCAST_LEVEL.map,
+      level: RAYCAST_LEVEL,
+      player: { x: 2.5, y: 12.5, angle: 0 },
+      collectedKeyIds: [],
+      openDoorIds: [],
+      collectedSecretIds: []
+    });
+    expect(withStatic.cells).toEqual(full.cells);
   });
 
   it('updates key and door markers from progression state without revealing secrets', () => {

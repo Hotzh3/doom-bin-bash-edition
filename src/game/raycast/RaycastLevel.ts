@@ -1,4 +1,5 @@
 import { isPointInsideRect, type KeyPickup, type LevelTrigger, type LockedDoor, type RectArea, type SecretPickup } from '../level/arenaLayout';
+import type { RaycastSetpieceCue } from './RaycastSetpiece';
 import type { DirectorConfig } from '../systems/DirectorConfig';
 import type { SpawnPoint } from '../systems/GameDirector';
 import type { EnemyKind } from '../types/game';
@@ -23,6 +24,32 @@ import {
 import type { RaycastBossConfig } from './RaycastBoss';
 import type { RaycastHealthPickup } from './RaycastItems';
 import type { RaycastLandmarkId, RaycastZoneThemeId, RaycastZoneVisualDescriptor } from './RaycastVisualTheme';
+import type { RaycastHudObjectiveLabels } from './RaycastObjective';
+import {
+  RAYCAST_LEVEL_WORLD2_FRACTURE,
+  RAYCAST_LEVEL_WORLD2_SULFUR_LATTICE,
+  RAYCAST_LEVEL_WORLD2_THRESHOLD,
+  RAYCAST_LEVEL_WORLD2_WARDEN_PIT,
+  RAYCAST_WORLD_TWO_CATALOG
+} from './RaycastWorldTwoLevels';
+import {
+  RAYCAST_LEVEL_WORLD3_ASH_JUDGE,
+  RAYCAST_LEVEL_WORLD3_EMBER_RAMP,
+  RAYCAST_LEVEL_WORLD3_GATE_CUT,
+  RAYCAST_WORLD_THREE_CATALOG
+} from './RaycastWorldThreeLevels';
+
+export {
+  RAYCAST_LEVEL_WORLD2_FRACTURE,
+  RAYCAST_LEVEL_WORLD2_SULFUR_LATTICE,
+  RAYCAST_LEVEL_WORLD2_THRESHOLD,
+  RAYCAST_LEVEL_WORLD2_WARDEN_PIT,
+  RAYCAST_WORLD_TWO_CATALOG,
+  RAYCAST_LEVEL_WORLD3_EMBER_RAMP,
+  RAYCAST_LEVEL_WORLD3_GATE_CUT,
+  RAYCAST_LEVEL_WORLD3_ASH_JUDGE,
+  RAYCAST_WORLD_THREE_CATALOG
+};
 
 export interface RaycastEnemySpawn {
   id: string;
@@ -50,6 +77,8 @@ export interface RaycastDoor extends LockedDoor {
 
 export interface RaycastTrigger extends LevelTrigger {
   activationText: string;
+  /** Presentation-only tension staging when the trigger fires. */
+  setpieceCue?: RaycastSetpieceCue;
 }
 
 export interface RaycastSecret extends SecretPickup {
@@ -79,6 +108,8 @@ export interface RaycastEncounterBeat {
   triggerId?: string;
   directorState?: 'RECOVERY';
   requiresTriggerId?: string;
+  /** Optional authored presentation hook (stacked after beat audio/message). */
+  setpieceCue?: RaycastSetpieceCue;
 }
 
 export interface RaycastLevel {
@@ -97,6 +128,8 @@ export interface RaycastLevel {
   exits: RaycastExit[];
   initialSpawns: RaycastEnemySpawn[];
   encounterBeats: RaycastEncounterBeat[];
+  /** Sector-flavored OBJECTIVE line — canonical objective codes unchanged for logic/tests. */
+  hudObjectiveLabels?: RaycastHudObjectiveLabels;
   progression: {
     requiredExitKeyIds: string[];
     requiredExitDoorIds: string[];
@@ -113,11 +146,13 @@ export interface RaycastLevel {
     config: Partial<DirectorConfig>;
     spawnPoints: RaycastDirectorSpawnPoint[];
   };
+  /** Post–Episode 1 arc — drives fog palette + HUD banner (default infernal World 1). */
+  worldSegment?: 'world1' | 'world2' | 'world3';
 }
 
 export const RAYCAST_LEVEL_1: RaycastLevel = {
   id: 'access-node',
-  name: 'Slag Foundry Ingress',
+  name: 'Slag Foundry — Cinder Annex',
   episodeTheme: 'foundry',
   map: RAYCAST_MAP_LEVEL_1,
   playerStart: RAYCAST_PLAYER_START_LEVEL_1,
@@ -133,6 +168,15 @@ export const RAYCAST_LEVEL_1: RaycastLevel = {
     { id: 'side-pressure', x: 11.8, y: 10.5, width: 5.2, height: 3.0, visualTheme: 'corrupted-metal' },
     { id: 'east-terrace', x: 18.2, y: 8.8, width: 9.2, height: 5.4, visualTheme: 'toxic-green' },
     { id: 'east-sleeve', x: 22.2, y: 3.8, width: 5.4, height: 10.2, visualTheme: 'warning-amber' },
+    {
+      id: 'east-exit-snare',
+      x: 24.0,
+      y: 2.6,
+      width: 3.4,
+      height: 3.0,
+      visualTheme: 'warning-amber',
+      landmark: 'gate'
+    },
     { id: 'east-overlook', x: 23.8, y: 2.2, width: 3.6, height: 4.2, visualTheme: 'void-stone' },
     { id: 'secret', x: 6.1, y: 12.3, width: 2.6, height: 1.4, visualTheme: 'void-stone', landmark: 'secret' },
     { id: 'south-catacombs', x: 3.2, y: 14.5, width: 13.2, height: 3.4, visualTheme: 'corrupted-metal' },
@@ -191,6 +235,7 @@ export const RAYCAST_LEVEL_1: RaycastLevel = {
       doorId: 'rust-gate',
       objectiveText: 'Ambush protocol: clear the node',
       activationText: 'Corruption spike: ambush active',
+      setpieceCue: 'ALARM_SURGE',
       spawns: [
         { x: 10.5, y: 7.5, kind: 'STALKER' },
         { x: 13.5, y: 9.5, kind: 'GRUNT' },
@@ -206,11 +251,11 @@ export const RAYCAST_LEVEL_1: RaycastLevel = {
       once: true,
       doorId: 'rust-gate',
       objectiveText: 'Side pressure: keep moving',
-      activationText: 'Side channel breach: lateral pressure',
+      activationText: 'Side channel breach: brute anchors the choke',
       spawns: [
         { x: 9.5, y: 11.5, kind: 'GRUNT' },
         { x: 14.5, y: 11.5, kind: 'STALKER' },
-        { x: 16.5, y: 11.5, kind: 'GRUNT' }
+        { x: 16.5, y: 11.5, kind: 'BRUTE' }
       ]
     },
     {
@@ -237,11 +282,13 @@ export const RAYCAST_LEVEL_1: RaycastLevel = {
       height: 2.2,
       once: true,
       objectiveText: 'Catacomb drain disturbed',
-      activationText: 'Drain surge: bottom-feeders inbound',
+      activationText: 'Drain surge: anchor brute claws up — trap room live',
+      setpieceCue: 'BLACKOUT_PULSE',
       spawns: [
         { x: 7.5, y: 14.5, kind: 'GRUNT' },
         { x: 11.5, y: 15.5, kind: 'STALKER' },
-        { x: 13.5, y: 15.5, kind: 'GRUNT' }
+        { x: 13.5, y: 15.5, kind: 'GRUNT' },
+        { x: 9.5, y: 14.5, kind: 'BRUTE' }
       ]
     },
     {
@@ -364,6 +411,14 @@ export const RAYCAST_LEVEL_1: RaycastLevel = {
       radius: 0.35,
       objectiveText: 'Access node purged',
       billboardLabel: 'EXIT'
+    },
+    {
+      id: 'foundry-east-exit',
+      x: 25.5,
+      y: 3.5,
+      radius: 0.34,
+      objectiveText: 'East annex purge logged — same clearance token as roof hatch',
+      billboardLabel: 'EXIT?'
     }
   ],
   initialSpawns: [
@@ -405,8 +460,26 @@ export const RAYCAST_LEVEL_1: RaycastLevel = {
       id: 'south-backtrack',
       zoneId: 'south-catacombs',
       message: 'Drain loop detected — map routes home through the catacombs'
+    },
+    {
+      id: 'east-decoy-read',
+      zoneId: 'east-exit-snare',
+      message: 'EXIT? gleams early — same clearance rules as roof hatch; shortcut once route armed',
+      setpieceCue: 'FAKE_CALM'
+    },
+    {
+      id: 'holdout-lateral',
+      triggerId: 'lateral-pressure',
+      message: 'Holdout choke: anchor brute pins the lane — peel before rifles respawn'
     }
   ],
+  hudObjectiveLabels: {
+    findKey: 'TRACE WEST TOKEN // SLAB FORGE',
+    openDoor: 'BREACH ANNEX SHUTTERS // TWO LOCKS',
+    surviveAmbush: 'CLEAR TRIANGLE TRAPS // ARENA + EAST',
+    reachExit: 'EXFIL THROUGH ROOF EXIT NODE',
+    sectorPurged: 'FOUNDRY ANNEX PURGED'
+  },
   progression: {
     requiredExitKeyIds: ['rust-key'],
     requiredExitDoorIds: ['rust-gate', 'service-shutter'],
@@ -416,22 +489,22 @@ export const RAYCAST_LEVEL_1: RaycastLevel = {
   director: {
     enabled: true,
     config: {
-      maxEnemiesAlive: 4,
-      maxTotalSpawns: 9,
+      maxEnemiesAlive: 5,
+      maxTotalSpawns: 10,
       openingSpawnCount: 0,
-      baseSpawnCooldownMs: 5600,
-      buildUpSpawnCooldownMs: 4600,
-      ambushSpawnCooldownMs: 2200,
-      highIntensitySpawnCooldownMs: 3800,
-      recoveryDurationMs: 5200,
-      ambushDurationMs: 6000,
-      highIntensityDurationMs: 9000,
-      buildUpAfterMs: 7200,
-      idlePressureMs: 2000,
-      dominanceNoDamageMs: 9500,
+      baseSpawnCooldownMs: 5400,
+      buildUpSpawnCooldownMs: 4400,
+      ambushSpawnCooldownMs: 2100,
+      highIntensitySpawnCooldownMs: 3600,
+      recoveryDurationMs: 5000,
+      ambushDurationMs: 6400,
+      highIntensityDurationMs: 9200,
+      buildUpAfterMs: 6800,
+      idlePressureMs: 1850,
+      dominanceNoDamageMs: 9200,
       lowHealthThreshold: 35,
       comfortableHealthThreshold: 65,
-      debugEnabled: true
+      debugEnabled: false
     },
     spawnPoints: [
       { id: 'first-contact-rear', zoneId: 'first-contact', x: 3.5, y: 7.5, minPlayerDistance: 1.6 },
@@ -452,7 +525,7 @@ export const RAYCAST_LEVEL_1: RaycastLevel = {
 
 export const RAYCAST_LEVEL_2: RaycastLevel = {
   id: 'glass-cistern',
-  name: 'Underflow Labyrinth',
+  name: 'Glass Cistern — Furnace Fork',
   episodeTheme: 'labyrinth',
   map: RAYCAST_MAP_LEVEL_2,
   playerStart: RAYCAST_PLAYER_START_LEVEL_2,
@@ -534,10 +607,11 @@ export const RAYCAST_LEVEL_2: RaycastLevel = {
       height: 1.0,
       once: true,
       objectiveText: 'Cache disturbed',
-      activationText: 'Void trench stirred: flankers inbound',
+      activationText: 'Void trench stirred: flankers + perch rifle',
       spawns: [
         { x: 3.5, y: 8.5, kind: 'STALKER' },
-        { x: 5.5, y: 10.5, kind: 'GRUNT' }
+        { x: 5.5, y: 10.5, kind: 'GRUNT' },
+        { x: 5.5, y: 9.5, kind: 'RANGED' }
       ]
     }
   ],
@@ -566,6 +640,18 @@ export const RAYCAST_LEVEL_2: RaycastLevel = {
       pickupMessage: 'Field health pack applied',
       fullHealthMessage: 'Vital bands full: save the patch for later',
       requiredOpenDoorIds: ['cistern-gate']
+    },
+    {
+      id: 'trench-stash-pack',
+      kind: 'health-pack',
+      label: 'Trench Cache Pack',
+      x: 1.5,
+      y: 9.5,
+      radius: 0.26,
+      restoreAmount: 22,
+      billboardLabel: 'STASH',
+      pickupMessage: 'Trench cache ripped open — side route pays',
+      fullHealthMessage: 'Reserve full: leave the trench stash'
     }
   ],
   secrets: [
@@ -599,7 +685,7 @@ export const RAYCAST_LEVEL_2: RaycastLevel = {
     {
       id: 'trench-warning',
       zoneId: 'trench',
-      message: 'Trench echo ahead: keep momentum'
+      message: 'Trench fork: skim the cache alcove or sprint straight for the sigil'
     },
     {
       id: 'furnace-prep',
@@ -621,8 +707,20 @@ export const RAYCAST_LEVEL_2: RaycastLevel = {
       directorState: 'RECOVERY',
       requiresTriggerId: 'furnace-ambush',
       message: 'Pressure dip: use the recovery window'
+    },
+    {
+      id: 'cistern-sigil-risk',
+      zoneId: 'cistern',
+      message: 'Sigil pocket is a kill box — grab + bail or kite guardians into the trench fork'
     }
   ],
+  hudObjectiveLabels: {
+    findKey: 'RECOVER GLASS SIGIL // DEEP CISTERN',
+    openDoor: 'VENT FURNACE GATE // LOCK ONE',
+    surviveAmbush: 'SURVIVE OVERLOOK LOCKDOWN',
+    reachExit: 'CUT TO STACK EXIT LEDGE',
+    sectorPurged: 'CISTERN FORK STABILIZED'
+  },
   progression: {
     requiredExitKeyIds: ['glass-sigil'],
     requiredExitDoorIds: ['cistern-gate'],
@@ -647,7 +745,7 @@ export const RAYCAST_LEVEL_2: RaycastLevel = {
       dominanceNoDamageMs: 8800,
       lowHealthThreshold: 35,
       comfortableHealthThreshold: 65,
-      debugEnabled: true
+      debugEnabled: false
     },
     spawnPoints: [
       { id: 'start-rear', zoneId: 'start', x: 5.5, y: 10.5, minPlayerDistance: 2.2 },
@@ -663,7 +761,7 @@ export const RAYCAST_LEVEL_2: RaycastLevel = {
 
 export const RAYCAST_LEVEL_3: RaycastLevel = {
   id: 'relay-catacomb',
-  name: 'Bile Relay Conduit',
+  name: 'Bile Relay — Catacomb Split',
   episodeTheme: 'toxic',
   map: RAYCAST_MAP_LEVEL_3,
   playerStart: RAYCAST_PLAYER_START_LEVEL_3,
@@ -777,6 +875,18 @@ export const RAYCAST_LEVEL_3: RaycastLevel = {
       pickupMessage: 'Field health pack applied',
       fullHealthMessage: 'Vital bands full: save the patch for later',
       requiredOpenDoorIds: ['relay-seal']
+    },
+    {
+      id: 'archive-niche-stash',
+      kind: 'repair-cell',
+      label: 'Cached Repair Gel',
+      x: 1.5,
+      y: 8.5,
+      radius: 0.26,
+      restoreAmount: 18,
+      billboardLabel: 'STASH',
+      pickupMessage: 'Cached gel drained from the archive niche',
+      fullHealthMessage: 'Stable: leave the niche gel'
     }
   ],
   secrets: [
@@ -814,6 +924,11 @@ export const RAYCAST_LEVEL_3: RaycastLevel = {
       message: 'Archive noise ahead: sweep for the amber core'
     },
     {
+      id: 'loop-breathe',
+      zoneId: 'lower-loop',
+      message: 'Lower loop breathes — route choice: seal rush or archive skim'
+    },
+    {
       id: 'seal-prep',
       doorId: 'relay-seal',
       message: 'Seal cracking: conduit signatures climbing'
@@ -835,6 +950,13 @@ export const RAYCAST_LEVEL_3: RaycastLevel = {
       message: 'Relay stuttering: take the recovery window'
     }
   ],
+  hudObjectiveLabels: {
+    findKey: 'HARVEST AMBER CORE // ARCHIVE PIT',
+    openDoor: 'RUPTURE RELAY SEAL',
+    surviveAmbush: 'CLEAR CONDUIT SPIKE + LOCKDOWN',
+    reachExit: 'ASCEND RELAY OVERLOOK EXIT',
+    sectorPurged: 'RELAY VEIN CUT'
+  },
   progression: {
     requiredExitKeyIds: ['amber-core'],
     requiredExitDoorIds: ['relay-seal'],
@@ -876,7 +998,7 @@ export const RAYCAST_LEVEL_3: RaycastLevel = {
 
 export const RAYCAST_LEVEL_4: RaycastLevel = {
   id: 'shard-vault',
-  name: 'Crimson Core Shaft',
+  name: 'Crimson Shaft — Ember Crown',
   episodeTheme: 'core',
   map: RAYCAST_MAP_LEVEL_4,
   playerStart: RAYCAST_PLAYER_START_LEVEL_4,
@@ -991,6 +1113,18 @@ export const RAYCAST_LEVEL_4: RaycastLevel = {
       pickupMessage: 'Field health pack applied',
       fullHealthMessage: 'Vital bands full: save the patch for later',
       requiredOpenDoorIds: ['vault-seal']
+    },
+    {
+      id: 'shaft-niche-stash',
+      kind: 'health-pack',
+      label: 'Shaft Niche Pack',
+      x: 2.5,
+      y: 11.5,
+      radius: 0.26,
+      restoreAmount: 24,
+      billboardLabel: 'STASH',
+      pickupMessage: 'Shaft niche supplies cracked open',
+      fullHealthMessage: 'Satchel full: skip the niche pack'
     }
   ],
   secrets: [
@@ -1023,6 +1157,11 @@ export const RAYCAST_LEVEL_4: RaycastLevel = {
   ],
   encounterBeats: [
     { id: 'vault-warning', zoneId: 'core-pit', message: 'Thermal prism ahead: grab it before the gate cooks you' },
+    {
+      id: 'ember-loop-read',
+      zoneId: 'ember-loop',
+      message: 'Ember loop branches — shaft hub or spiral flank'
+    },
     { id: 'seal-prep', doorId: 'vault-seal', message: 'Crimson seal ticking: defenders stacking at the neck' },
     { id: 'spiral-break-beat', triggerId: 'spiral-break', message: 'Neck breach: break the crossfire climb' },
     { id: 'crown-crossfire-beat', triggerId: 'crown-crossfire', message: 'Stack head flaring: clear the crown lane' },
@@ -1033,6 +1172,13 @@ export const RAYCAST_LEVEL_4: RaycastLevel = {
       message: 'Core wavering: short recovery before extraction'
     }
   ],
+  hudObjectiveLabels: {
+    findKey: 'CLAIM EMBER PRISM // CORE PIT',
+    openDoor: 'OPEN CRIMSON VAULT SEAL',
+    surviveAmbush: 'BREAK SPIRAL + CROWN CROSSFIRE',
+    reachExit: 'CLIMB STACK EXIT SPINE',
+    sectorPurged: 'SHAFT PRESSURE VENTED'
+  },
   progression: {
     requiredExitKeyIds: ['prism-shard'],
     requiredExitDoorIds: ['vault-seal'],
@@ -1074,7 +1220,7 @@ export const RAYCAST_LEVEL_4: RaycastLevel = {
 
 export const RAYCAST_LEVEL_5: RaycastLevel = {
   id: 'relay-heart',
-  name: 'Black Gate Antechamber',
+  name: 'Black Gate — Throne Ring',
   episodeTheme: 'gate',
   map: RAYCAST_MAP_LEVEL_5,
   playerStart: RAYCAST_PLAYER_START_LEVEL_5,
@@ -1190,6 +1336,18 @@ export const RAYCAST_LEVEL_5: RaycastLevel = {
       pickupMessage: 'Field health pack applied',
       fullHealthMessage: 'Vital bands full: save the patch for later',
       requiredOpenDoorIds: ['heart-seal-door']
+    },
+    {
+      id: 'ante-niche-stash',
+      kind: 'repair-cell',
+      label: 'Antechamber Cache Cell',
+      x: 3.5,
+      y: 11.5,
+      radius: 0.26,
+      restoreAmount: 20,
+      billboardLabel: 'STASH',
+      pickupMessage: 'Antechamber cache salvaged',
+      fullHealthMessage: 'Integrity OK: leave the cache cell'
     }
   ],
   secrets: [
@@ -1223,6 +1381,11 @@ export const RAYCAST_LEVEL_5: RaycastLevel = {
   ],
   encounterBeats: [
     { id: 'heart-warning', zoneId: 'heart-archive', message: 'Sigil chamber: grab the token before the gate locks down' },
+    {
+      id: 'sump-respite',
+      zoneId: 'sump-loop',
+      message: 'Sump ring opens — brief respite before the throne sprint'
+    },
     { id: 'heart-seal-prep', doorId: 'heart-seal-door', message: 'Black gate humming: the ring is about to wake' },
     { id: 'heart-breach-beat', triggerId: 'heart-breach', message: 'Inner ring live: punch through the heavies' },
     { id: 'boss-lockdown-beat', triggerId: 'boss-lockdown', message: 'Finale surge: clear every hostile before the exit' },
@@ -1233,6 +1396,13 @@ export const RAYCAST_LEVEL_5: RaycastLevel = {
       message: 'Pressure breaks: one breath before extraction'
     }
   ],
+  hudObjectiveLabels: {
+    findKey: 'CAPTURE GATE SIGIL // HEART ARCHIVE',
+    openDoor: 'OPEN BLACK GATE SEAL',
+    surviveAmbush: 'CLEAR THRONE RING + FINALE LOCKDOWN',
+    reachExit: 'REACH BOSS RELAY THRESHOLD',
+    sectorPurged: 'ANTECHAMBER PURGED'
+  },
   progression: {
     requiredExitKeyIds: ['heart-sigil'],
     requiredExitDoorIds: ['heart-seal-door'],
@@ -1329,6 +1499,11 @@ export const RAYCAST_LEVEL_BOSS: RaycastLevel = {
   encounterBeats: [
     { id: 'boss-open', zoneId: 'arena', message: 'Volt Archon locks the pit — watch the telegraph bands before each volley' }
   ],
+  hudObjectiveLabels: {
+    surviveAmbush: 'END THE ARCHON SIGNAL',
+    reachExit: 'EXTRACTION WHEN CORE COLLAPSES',
+    sectorPurged: 'ARCHON DELETED'
+  },
   progression: {
     requiredExitKeyIds: [],
     requiredExitDoorIds: [],
@@ -1362,6 +1537,11 @@ export const RAYCAST_LEVEL_CATALOG: RaycastLevel[] = [
 export const RAYCAST_LEVEL = RAYCAST_LEVEL_1;
 
 export function getRaycastLevelById(levelId: string | null | undefined): RaycastLevel {
+  if (!levelId) return RAYCAST_LEVEL;
+  const worldTwo = RAYCAST_WORLD_TWO_CATALOG.find((level) => level.id === levelId);
+  if (worldTwo) return worldTwo;
+  const worldThree = RAYCAST_WORLD_THREE_CATALOG.find((level) => level.id === levelId);
+  if (worldThree) return worldThree;
   return RAYCAST_LEVEL_CATALOG.find((level) => level.id === levelId) ?? RAYCAST_LEVEL;
 }
 

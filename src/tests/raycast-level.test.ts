@@ -10,6 +10,8 @@ import {
   RAYCAST_LEVEL_5,
   RAYCAST_LEVEL_BOSS,
   RAYCAST_LEVEL_CATALOG,
+  RAYCAST_WORLD_TWO_CATALOG,
+  RAYCAST_WORLD_THREE_CATALOG,
   cloneRaycastMap,
   findRaycastZoneId,
   getRaycastExitAccess,
@@ -39,6 +41,26 @@ describe('raycast level catalog', () => {
     expect(getRaycastLevelIndex(RAYCAST_LEVEL_BOSS.id)).toBe(5);
   });
 
+  it('keeps World 2 continuation sectors ordered and boss-gated where authored', () => {
+    expect(RAYCAST_WORLD_TWO_CATALOG).toHaveLength(4);
+    expect(new Set(RAYCAST_WORLD_TWO_CATALOG.map((level) => level.id)).size).toBe(4);
+    RAYCAST_WORLD_TWO_CATALOG.forEach((level) => {
+      expect(level.worldSegment).toBe('world2');
+    });
+    const pit = RAYCAST_WORLD_TWO_CATALOG.find((level) => level.id === 'bloom-warden-pit');
+    expect(pit?.bossConfig?.behavior).toBe('bloom-warden');
+    expect(pit?.progression.requireBossDefeated).toBe(true);
+    expect(pit?.director.enabled).toBe(false);
+  });
+
+  it('keeps World 3 Ember Meridian sectors ordered with Ash Judge finale', () => {
+    expect(RAYCAST_WORLD_THREE_CATALOG).toHaveLength(3);
+    expect(RAYCAST_WORLD_THREE_CATALOG.every((l) => l.worldSegment === 'world3')).toBe(true);
+    const judge = RAYCAST_WORLD_THREE_CATALOG.find((l) => l.id === 'ash-judge-seal');
+    expect(judge?.bossConfig?.behavior).toBe('ash-judge');
+    expect(judge?.progression.requireBossDefeated).toBe(true);
+  });
+
   it('defines required route objects and valid map references for each level', () => {
     RAYCAST_LEVEL_CATALOG.forEach((level) => {
       if (level.bossConfig) {
@@ -47,11 +69,11 @@ describe('raycast level catalog', () => {
         expect(level.triggers).toHaveLength(0);
         expect(level.secrets).toHaveLength(0);
         expect(level.healthPickups.length).toBeGreaterThanOrEqual(1);
-        expect(level.exits).toHaveLength(1);
+        expect(level.exits.length).toBeGreaterThanOrEqual(1);
         expect(level.initialSpawns).toHaveLength(0);
         expect(level.director.enabled).toBe(false);
         expect(level.progression.requireBossDefeated).toBe(true);
-        expect(level.bossConfig.displayName).toBe('Volt Archon');
+        expect(['Volt Archon', 'Bloom Warden']).toContain(level.bossConfig.displayName);
         return;
       }
       expect(level.keys).toHaveLength(1);
@@ -59,7 +81,7 @@ describe('raycast level catalog', () => {
       expect(level.triggers.length).toBeGreaterThanOrEqual(3);
       expect(level.healthPickups.length).toBeGreaterThanOrEqual(2);
       expect(level.secrets.length).toBeGreaterThanOrEqual(1);
-      expect(level.exits).toHaveLength(1);
+      expect(level.exits.length).toBeGreaterThanOrEqual(1);
       expect(level.initialSpawns.length).toBeGreaterThanOrEqual(4);
       expect(level.director.enabled).toBe(true);
       expect(level.director.spawnPoints.length).toBeGreaterThan(0);
@@ -111,6 +133,11 @@ describe('raycast level catalog', () => {
         expect(Math.hypot(spawn.x - level.playerStart.x, spawn.y - level.playerStart.y)).toBeGreaterThanOrEqual(2);
       });
     });
+  });
+
+  it('authors dual exits on the Episode 1 hub when a shortcut / decoy grammar is used', () => {
+    expect(RAYCAST_LEVEL.id).toBe('access-node');
+    expect(RAYCAST_LEVEL.exits.map((e) => e.billboardLabel)).toEqual(expect.arrayContaining(['EXIT', 'EXIT?']));
   });
 
   it('authors distinct late-episode encounter mixes for the spiral climb and finale lockdown', () => {
@@ -644,9 +671,9 @@ describe('raycast level route safety', () => {
   });
 
   it('keeps escalating director pressure across the episode', () => {
-    expect(RAYCAST_LEVEL.director.config.maxEnemiesAlive).toBe(4);
-    expect(RAYCAST_LEVEL.director.config.maxTotalSpawns).toBe(9);
-    expect(RAYCAST_LEVEL.director.config.highIntensityDurationMs).toBe(9000);
+    expect(RAYCAST_LEVEL.director.config.maxEnemiesAlive).toBe(5);
+    expect(RAYCAST_LEVEL.director.config.maxTotalSpawns).toBe(10);
+    expect(RAYCAST_LEVEL.director.config.highIntensityDurationMs).toBe(9200);
 
     expect(RAYCAST_LEVEL_2.director.config.maxEnemiesAlive).toBe(5);
     expect(RAYCAST_LEVEL_2.director.config.maxTotalSpawns).toBe(10);

@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   getRaycastCrosshairTargetInfo,
+  RAYCAST_DEATH_BURST_MS,
+  RAYCAST_HIT_FLASH_MS,
   RaycastCombatSystem,
   findEnemyInCrosshair,
   normalizeAngle
@@ -63,6 +65,11 @@ const wallTestMap: RaycastMap = {
 };
 
 describe('raycast combat', () => {
+  it('exports impact timing aligned with renderer feedback', () => {
+    expect(RAYCAST_HIT_FLASH_MS).toBeGreaterThanOrEqual(180);
+    expect(RAYCAST_DEATH_BURST_MS).toBeGreaterThanOrEqual(300);
+  });
+
   it('normalizes angles around the -PI to PI range', () => {
     expect(normalizeAngle(Math.PI * 2)).toBeCloseTo(0);
     expect(normalizeAngle(-Math.PI * 2)).toBeCloseTo(0);
@@ -80,7 +87,7 @@ describe('raycast combat', () => {
 
     expect(getRaycastCrosshairTargetInfo(player, [enemy], 10, 1000)).toEqual({
       id: 'close',
-      kindLabel: 'TURRET',
+      kindLabel: 'TURRET·ZONE',
       health: 24,
       maxHealth: 48,
       healthRatio: 0.5,
@@ -96,6 +103,7 @@ describe('raycast combat', () => {
     const shot = combat.fire(player, [enemy], RAYCAST_MAP, 1000);
 
     expect(shot.fired).toBe(true);
+    expect(shot.pelletCount).toBe(1);
     expect(shot.hitEnemy?.id).toBe(enemy.id);
     expect(enemy.alive).toBe(false);
   });
@@ -115,6 +123,7 @@ describe('raycast combat', () => {
     const shot = combat.fire(blockedPlayer, [enemy], wallTestMap, 1000);
 
     expect(shot.fired).toBe(true);
+    expect(shot.pelletCount).toBe(1);
     expect(shot.hitEnemy).toBeNull();
     expect(shot.wallHit).toBe(true);
     expect(enemy.alive).toBe(true);
@@ -141,6 +150,7 @@ describe('raycast combat', () => {
     const shot = combat.fire(player, [enemy], RAYCAST_MAP, 1000);
 
     expect(shot.fired).toBe(true);
+    expect(shot.pelletCount).toBe(9);
     expect(shot.hitCount).toBeGreaterThan(1);
     expect(shot.totalDamage).toBeGreaterThan(16);
     expect(shot.killed).toBe(true);

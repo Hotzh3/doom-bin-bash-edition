@@ -29,6 +29,11 @@ export interface RaycastMinimapState {
   collectedSecretIds: Iterable<string>;
   /** Live enemies only; omit or pass empty to omit blips. */
   enemies?: Iterable<RaycastMinimapEnemyBlip>;
+  /**
+   * Precomputed static grid from {@link buildStaticRaycastMinimapCells} — avoids reallocating
+   * wall/floor/door cells every minimap draw when the caller caches per layout revision.
+   */
+  staticCells?: RaycastMinimapCell[];
 }
 
 export interface RaycastMinimapCell {
@@ -54,9 +59,8 @@ export interface RaycastMinimapModel {
   enemyBlips: RaycastMinimapEnemyBlip[];
 }
 
-export function buildRaycastMinimapModel(state: RaycastMinimapState): RaycastMinimapModel {
-  const collectedKeyIds = new Set(state.collectedKeyIds);
-  const openDoorIds = new Set(state.openDoorIds);
+/** Wall / floor / door cells derived only from map topology — safe to cache until the grid mutates. */
+export function buildStaticRaycastMinimapCells(state: Pick<RaycastMinimapState, 'map' | 'level'>): RaycastMinimapCell[] {
   const cells: RaycastMinimapCell[] = [];
 
   state.map.grid.forEach((row, y) => {
@@ -74,6 +78,14 @@ export function buildRaycastMinimapModel(state: RaycastMinimapState): RaycastMin
       cells.push({ x, y, kind: 'wall' });
     });
   });
+
+  return cells;
+}
+
+export function buildRaycastMinimapModel(state: RaycastMinimapState): RaycastMinimapModel {
+  const collectedKeyIds = new Set(state.collectedKeyIds);
+  const openDoorIds = new Set(state.openDoorIds);
+  const cells = state.staticCells ?? buildStaticRaycastMinimapCells(state);
 
   const markers: RaycastMinimapMarker[] = [
     {
@@ -111,7 +123,11 @@ export function buildRaycastMinimapModel(state: RaycastMinimapState): RaycastMin
     }))
   ];
 
-  const enemyBlips = state.enemies ? Array.from(state.enemies) : [];
+  const enemyBlips = state.enemies
+    ? Array.isArray(state.enemies)
+      ? state.enemies
+      : Array.from(state.enemies)
+    : [];
 
   return {
     width: state.map.grid[0]?.length ?? 0,
@@ -127,5 +143,6 @@ export function getRaycastMinimapEnemyDotStyle(kind: EnemyKind): { fill: number;
   if (kind === 'BRUTE') return { fill: 0xffa64d, radiusMul: 1.35, ring: 0xffd090 };
   if (kind === 'STALKER') return { fill: 0x54e898, radiusMul: 0.82, ring: 0xa8f0c8 };
   if (kind === 'RANGED') return { fill: 0x5cefef, radiusMul: 1.0, ring: 0x9ffbff };
+  if (kind === 'SCRAMBLER') return { fill: 0xff8844, radiusMul: 0.88, ring: 0xffc090 };
   return { fill: 0xff5c42, radiusMul: 0.92, ring: 0xff9a80 };
 }

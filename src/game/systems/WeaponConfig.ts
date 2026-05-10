@@ -67,8 +67,24 @@ function freezeWeaponConfig(config: WeaponConfig): WeaponConfig {
 export const ARENA_WEAPON_CONFIG = cloneWeaponConfigRecord(BASE_WEAPON_CONFIG);
 export const RAYCAST_WEAPON_CONFIG = cloneWeaponConfigRecord({
   ...BASE_WEAPON_CONFIG,
+  PISTOL: {
+    ...BASE_WEAPON_CONFIG.PISTOL,
+    cooldownMs: 108,
+    damage: 15,
+    aimToleranceRadians: 0.095
+  },
+  SHOTGUN: {
+    ...BASE_WEAPON_CONFIG.SHOTGUN,
+    cooldownMs: 560,
+    damage: 14,
+    spreadRadians: 0.82,
+    aimToleranceRadians: 0.22
+  },
   LAUNCHER: {
     ...BASE_WEAPON_CONFIG.LAUNCHER,
+    cooldownMs: 1120,
+    projectileSpeed: 365,
+    explosionRadius: 122,
     projectileTint: RAYCAST_PALETTE.plasmaBright
   }
 });

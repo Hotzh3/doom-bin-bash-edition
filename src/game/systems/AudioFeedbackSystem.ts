@@ -29,7 +29,11 @@ export type AudioFeedbackCue =
   | 'directorAmbush'
   | 'directorRecovery'
   | 'damage'
-  | 'ambient';
+  | 'ambient'
+  | 'ambientIndustrial'
+  | 'ambientCorrupt'
+  | 'bossPhaseShift'
+  | 'stingerDread';
 
 export interface AudioFeedbackLayerConfig {
   frequency: number;
@@ -57,33 +61,36 @@ export const AUDIO_FEEDBACK_CONFIG: Record<AudioFeedbackCue, AudioFeedbackConfig
   },
   shootPistol: {
     layers: [
-      { frequency: 820, endFrequency: 430, duration: 0.045, volume: 0.038, type: 'square' },
-      { frequency: 1660, endFrequency: 980, duration: 0.028, volume: 0.012, type: 'triangle', delay: 0.003 }
+      { frequency: 880, endFrequency: 510, duration: 0.038, volume: 0.042, type: 'square' },
+      { frequency: 1820, endFrequency: 1120, duration: 0.022, volume: 0.016, type: 'triangle', delay: 0.002 }
     ]
   },
   shootShotgun: {
     layers: [
-      { frequency: 170, endFrequency: 64, duration: 0.14, volume: 0.052, type: 'sawtooth' },
-      { frequency: 420, endFrequency: 180, duration: 0.08, volume: 0.018, type: 'square', delay: 0.005 }
+      { frequency: 148, endFrequency: 52, duration: 0.165, volume: 0.062, type: 'sawtooth' },
+      { frequency: 380, endFrequency: 140, duration: 0.095, volume: 0.024, type: 'square', delay: 0.004 },
+      { frequency: 96, endFrequency: 48, duration: 0.06, volume: 0.018, type: 'triangle', delay: 0.012 }
     ]
   },
   shootLauncher: {
     layers: [
-      { frequency: 88, endFrequency: 38, duration: 0.19, volume: 0.052, type: 'triangle' },
-      { frequency: 210, endFrequency: 78, duration: 0.14, volume: 0.018, type: 'sine', delay: 0.01 }
+      { frequency: 72, endFrequency: 28, duration: 0.22, volume: 0.058, type: 'triangle' },
+      { frequency: 185, endFrequency: 62, duration: 0.16, volume: 0.024, type: 'sine', delay: 0.012 },
+      { frequency: 420, endFrequency: 120, duration: 0.05, volume: 0.01, type: 'square', delay: 0.045 }
     ]
   },
   hit: {
     layers: [
-      { frequency: 290, endFrequency: 118, duration: 0.07, volume: 0.03, type: 'sawtooth' },
-      { frequency: 620, endFrequency: 280, duration: 0.04, volume: 0.012, type: 'triangle', delay: 0.002 }
+      { frequency: 310, endFrequency: 108, duration: 0.072, volume: 0.036, type: 'sawtooth' },
+      { frequency: 680, endFrequency: 260, duration: 0.045, volume: 0.016, type: 'triangle', delay: 0.002 }
     ],
     throttleMs: 35
   },
   kill: {
     layers: [
-      { frequency: 320, endFrequency: 74, duration: 0.18, volume: 0.046, type: 'triangle' },
-      { frequency: 540, endFrequency: 160, duration: 0.12, volume: 0.014, type: 'sawtooth', delay: 0.015 }
+      { frequency: 300, endFrequency: 62, duration: 0.2, volume: 0.054, type: 'triangle' },
+      { frequency: 520, endFrequency: 140, duration: 0.13, volume: 0.018, type: 'sawtooth', delay: 0.016 },
+      { frequency: 880, endFrequency: 220, duration: 0.06, volume: 0.008, type: 'sine', delay: 0.05 }
     ],
     throttleMs: 70
   },
@@ -101,8 +108,9 @@ export const AUDIO_FEEDBACK_CONFIG: Record<AudioFeedbackCue, AudioFeedbackConfig
   },
   splash: {
     layers: [
-      { frequency: 118, endFrequency: 46, duration: 0.18, volume: 0.048, type: 'triangle' },
-      { frequency: 280, endFrequency: 104, duration: 0.11, volume: 0.015, type: 'sawtooth', delay: 0.008 }
+      { frequency: 108, endFrequency: 38, duration: 0.2, volume: 0.055, type: 'triangle' },
+      { frequency: 260, endFrequency: 92, duration: 0.125, volume: 0.02, type: 'sawtooth', delay: 0.008 },
+      { frequency: 58, endFrequency: 32, duration: 0.14, volume: 0.022, type: 'sine', delay: 0.02 }
     ],
     throttleMs: 80
   },
@@ -169,7 +177,8 @@ export const AUDIO_FEEDBACK_CONFIG: Record<AudioFeedbackCue, AudioFeedbackConfig
   lowHealthWarning: {
     layers: [
       { frequency: 156, endFrequency: 132, duration: 0.08, volume: 0.017, type: 'sine' },
-      { frequency: 156, endFrequency: 132, duration: 0.08, volume: 0.014, type: 'sine', delay: 0.15 }
+      { frequency: 156, endFrequency: 132, duration: 0.08, volume: 0.014, type: 'sine', delay: 0.15 },
+      { frequency: 820, endFrequency: 540, duration: 0.055, volume: 0.008, type: 'triangle', delay: 0.088 }
     ],
     throttleMs: 1800
   },
@@ -223,16 +232,53 @@ export const AUDIO_FEEDBACK_CONFIG: Record<AudioFeedbackCue, AudioFeedbackConfig
   },
   damage: {
     layers: [
-      { frequency: 74, endFrequency: 45, duration: 0.14, volume: 0.032, type: 'square' },
-      { frequency: 160, endFrequency: 70, duration: 0.08, volume: 0.014, type: 'sawtooth', delay: 0.006 }
+      { frequency: 62, endFrequency: 38, duration: 0.155, volume: 0.038, type: 'square' },
+      { frequency: 148, endFrequency: 62, duration: 0.095, volume: 0.018, type: 'sawtooth', delay: 0.005 },
+      { frequency: 240, endFrequency: 110, duration: 0.06, volume: 0.009, type: 'triangle', delay: 0.022 }
     ],
-    throttleMs: 90
+    throttleMs: 88
   },
   ambient: {
     layers: [
-      { frequency: 52, endFrequency: 58, duration: 0.22, volume: 0.012, type: 'sine' }
+      { frequency: 52, endFrequency: 58, duration: 0.22, volume: 0.012, type: 'sine' },
+      { frequency: 112, endFrequency: 76, duration: 0.14, volume: 0.0065, type: 'triangle', delay: 0.045 }
     ],
-    throttleMs: 600
+    throttleMs: 520
+  },
+  /** Director pressure / boss pit — grinding machinery undertones (still short procedural blips). */
+  ambientIndustrial: {
+    layers: [
+      { frequency: 72, endFrequency: 96, duration: 0.18, volume: 0.014, type: 'sawtooth' },
+      { frequency: 156, endFrequency: 118, duration: 0.14, volume: 0.009, type: 'square', delay: 0.028 },
+      { frequency: 240, endFrequency: 180, duration: 0.11, volume: 0.0055, type: 'triangle', delay: 0.055 }
+    ],
+    throttleMs: 480
+  },
+  /** Ion stratum / corrupted signal bed — whisper HF decay + low crawl. */
+  ambientCorrupt: {
+    layers: [
+      { frequency: 58, endFrequency: 74, duration: 0.2, volume: 0.011, type: 'sine' },
+      { frequency: 620, endFrequency: 420, duration: 0.09, volume: 0.0045, type: 'triangle', delay: 0.04 },
+      { frequency: 118, endFrequency: 92, duration: 0.12, volume: 0.007, type: 'sawtooth', delay: 0.018 }
+    ],
+    throttleMs: 540
+  },
+  /** Boss phase transition — sub-heavy sweep distinct from director ambush spawn sting. */
+  bossPhaseShift: {
+    layers: [
+      { frequency: 48, endFrequency: 28, duration: 0.18, volume: 0.042, type: 'triangle' },
+      { frequency: 180, endFrequency: 72, duration: 0.14, volume: 0.022, type: 'sawtooth', delay: 0.02 },
+      { frequency: 520, endFrequency: 160, duration: 0.08, volume: 0.012, type: 'sine', delay: 0.045 }
+    ],
+    throttleMs: 2400
+  },
+  /** Telegraph edge — thin harmonic stab; paired with directorWarning, heavily throttled. */
+  stingerDread: {
+    layers: [
+      { frequency: 280, endFrequency: 120, duration: 0.065, volume: 0.022, type: 'triangle' },
+      { frequency: 920, endFrequency: 380, duration: 0.045, volume: 0.011, type: 'sine', delay: 0.018 }
+    ],
+    throttleMs: 950
   }
 };
 

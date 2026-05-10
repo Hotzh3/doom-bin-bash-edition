@@ -37,7 +37,11 @@ describe('AudioFeedbackSystem config', () => {
       'directorAmbush',
       'directorRecovery',
       'damage',
-      'ambient'
+      'ambient',
+      'ambientIndustrial',
+      'ambientCorrupt',
+      'bossPhaseShift',
+      'stingerDread'
     ];
 
     cues.forEach((cue) => {

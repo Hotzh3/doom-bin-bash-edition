@@ -97,7 +97,25 @@ describe('WeaponSystem', () => {
     expect(getWeaponConfig('SHOTGUN', 'arena')).toBe(ARENA_WEAPON_CONFIG.SHOTGUN);
     expect(getWeaponConfig('SHOTGUN', 'raycast')).toBe(RAYCAST_WEAPON_CONFIG.SHOTGUN);
     expect(RAYCAST_WEAPON_CONFIG.SHOTGUN).not.toBe(ARENA_WEAPON_CONFIG.SHOTGUN);
-    expect(RAYCAST_WEAPON_CONFIG.SHOTGUN).toEqual(ARENA_WEAPON_CONFIG.SHOTGUN);
+    expect(RAYCAST_WEAPON_CONFIG.PISTOL).toMatchObject({
+      ...ARENA_WEAPON_CONFIG.PISTOL,
+      cooldownMs: 108,
+      damage: 15,
+      aimToleranceRadians: 0.095
+    });
+    expect(RAYCAST_WEAPON_CONFIG.SHOTGUN).toMatchObject({
+      ...ARENA_WEAPON_CONFIG.SHOTGUN,
+      cooldownMs: 560,
+      damage: 14,
+      spreadRadians: 0.82,
+      aimToleranceRadians: 0.22
+    });
+    expect(RAYCAST_WEAPON_CONFIG.LAUNCHER).toMatchObject({
+      cooldownMs: 1120,
+      projectileSpeed: 365,
+      explosionRadius: 122,
+      damage: ARENA_WEAPON_CONFIG.LAUNCHER.damage
+    });
     expect(RAYCAST_WEAPON_CONFIG.SHOTGUN.projectileSize).not.toBe(ARENA_WEAPON_CONFIG.SHOTGUN.projectileSize);
   });
 });

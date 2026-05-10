@@ -6,11 +6,13 @@ import { castRay } from './RaycastMap';
 import { isRaycastEnemyTelegraphing, isRaycastEnemyWindingUp, type RaycastEnemy } from './RaycastEnemy';
 import type { RaycastPlayerState } from './RaycastPlayerController';
 import type { ProjectileSpawn, WeaponKind } from '../systems/WeaponTypes';
-import { formatRaycastEnemyKindLabel } from './RaycastHud';
+import { formatRaycastEnemyTargetLabel } from './RaycastHud';
 import type { EnemyKind } from '../types/game';
 
 export interface RaycastCombatResult {
   fired: boolean;
+  /** Pellets spawned this trigger pull — used for accuracy / scoring (Phase 24). */
+  pelletCount: number;
   hitEnemy: RaycastEnemy | null;
   killed: boolean;
   killCount: number;
@@ -24,8 +26,11 @@ export interface RaycastCombatResult {
 }
 
 const DEFAULT_AIM_TOLERANCE_RADIANS = 0.1;
-const HIT_FLASH_MS = 140;
-const DEATH_BURST_MS = 260;
+/** Exported for renderer/UI sync — slightly longer reads clearly at raycast resolution. */
+export const RAYCAST_HIT_FLASH_MS = 200;
+export const RAYCAST_DEATH_BURST_MS = 330;
+const HIT_FLASH_MS = RAYCAST_HIT_FLASH_MS;
+const DEATH_BURST_MS = RAYCAST_DEATH_BURST_MS;
 const GRID_SCALE = 100;
 
 export class RaycastCombatSystem {
@@ -55,6 +60,7 @@ export class RaycastCombatSystem {
     if (!result) {
       return {
         fired: false,
+        pelletCount: 0,
         hitEnemy: null,
         killed: false,
         killCount: 0,
@@ -68,6 +74,8 @@ export class RaycastCombatSystem {
       };
     }
 
+    const pelletCount = result.projectiles.length;
+
     const impacts = result.projectiles
       .map((projectile) => this.resolveProjectileHit(player, projectile, enemies, map, time))
       .filter((impact): impact is RaycastProjectileImpact => impact !== null);
@@ -75,6 +83,7 @@ export class RaycastCombatSystem {
     if (impacts.length === 0) {
       return {
         fired: true,
+        pelletCount,
         hitEnemy: null,
         killed: false,
         killCount: 0,
@@ -92,6 +101,7 @@ export class RaycastCombatSystem {
 
     return {
       fired: true,
+      pelletCount,
       hitEnemy: impacts[0].enemy,
       killed: impacts.some((impact) => impact.killed),
       killCount: impacts.reduce((total, impact) => total + impact.killCount, 0),
@@ -208,7 +218,7 @@ export function getRaycastCrosshairTargetInfo(
   if (!enemy) return null;
   return {
     id: enemy.id,
-    kindLabel: formatRaycastEnemyKindLabel(enemy.kind),
+    kindLabel: formatRaycastEnemyTargetLabel(enemy.kind),
     health: enemy.health,
     maxHealth: enemy.maxHealth,
     healthRatio: enemy.maxHealth <= 0 ? 0 : enemy.health / enemy.maxHealth,

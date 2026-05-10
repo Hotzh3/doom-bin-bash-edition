@@ -3,7 +3,7 @@ import { ARENA_ENEMY_CONFIG, ENEMY_CONFIG, ENEMY_KINDS, getEnemyConfig, RAYCAST_
 
 describe('enemy config', () => {
   it('defines stats for every enemy kind', () => {
-    expect(ENEMY_KINDS).toEqual(['GRUNT', 'BRUTE', 'STALKER', 'RANGED']);
+    expect(ENEMY_KINDS).toEqual(['GRUNT', 'BRUTE', 'STALKER', 'RANGED', 'SCRAMBLER']);
     expect(Object.keys(ENEMY_CONFIG)).toEqual(ENEMY_KINDS);
 
     ENEMY_KINDS.forEach((kind) => {
@@ -17,6 +17,7 @@ describe('enemy config', () => {
       expect(config.detectionRange).toBeGreaterThan(0);
       expect(config.attackCooldownMs).toBeGreaterThan(0);
       expect(config.attackWindupMs).toBeGreaterThanOrEqual(0);
+      expect(config.tacticalRole).toMatch(/PRESSURE|DENIAL|FLANK|ZONE_DENIAL|HARASS/);
     });
   });
 
@@ -58,7 +59,11 @@ describe('enemy config', () => {
     expect(RAYCAST_ENEMY_CONFIG.STALKER).not.toBe(ARENA_ENEMY_CONFIG.STALKER);
     expect(RAYCAST_ENEMY_CONFIG.STALKER).toMatchObject({
       ...ARENA_ENEMY_CONFIG.STALKER,
-      color: 0x54e898
+      color: 0x54e898,
+      speed: 268,
+      attackCooldownMs: 410,
+      size: 26,
+      attackWindupMs: 100
     });
   });
 });

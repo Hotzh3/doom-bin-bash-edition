@@ -1,4 +1,5 @@
 import type { EnemyKind } from '../types/game';
+import { pickPressureEnsembleKind } from './enemyPressureSynergy';
 import { DEFAULT_DIRECTOR_CONFIG, type DirectorConfig } from './DirectorConfig';
 import type { DirectorEvent } from './DirectorEvents';
 import { shouldMatureWarning, updateAntiCampState, type AntiCampState, type DirectorPressureCause } from './DirectorPacing';
@@ -21,6 +22,8 @@ export interface GameDirectorInput {
   activatedTriggerCount?: number;
   distanceToImportantPickup?: number | null;
   spawnPoints?: SpawnPoint[];
+  /** Living counts by kind — optional ensemble synergy during PRESSURE. */
+  aliveEnemyKindCounts?: Partial<Record<EnemyKind, number>>;
 }
 
 export interface SpawnPoint {
@@ -191,6 +194,10 @@ export class GameDirector {
     if (this.state === 'AMBUSH') return input.totalKills % 2 === 0 ? 'STALKER' : 'RANGED';
     if (this.state === 'PRESSURE' && input.equippedWeapons?.includes('LAUNCHER')) return 'BRUTE';
     if (this.state === 'PRESSURE' && input.equippedWeapons?.includes('SHOTGUN')) return 'RANGED';
+    if (this.state === 'PRESSURE') {
+      const ensemble = pickPressureEnsembleKind(input.aliveEnemyKindCounts ?? {});
+      if (ensemble !== null) return ensemble;
+    }
     if (this.state === 'WARNING' || this.state === 'WATCHING') return input.totalKills % 2 === 0 ? 'GRUNT' : 'RANGED';
     if (intensity <= 1 || progressScore < 4) return 'GRUNT';
     if (intensity >= 3 && progressScore >= 7 && input.totalKills % 3 === 1) return 'RANGED';
