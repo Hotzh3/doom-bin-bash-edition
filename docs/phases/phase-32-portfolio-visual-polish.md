@@ -35,5 +35,5 @@ Make the repository **presentation-ready** for interviews and portfolios: **real
 
 ## Related
 
-- Release readiness notes: [`../phase25-release-readiness.md`](../phase25-release-readiness.md)
+- Release readiness notes: [`./phase-25-release-readiness.md`](./phase-25-release-readiness.md)
 - Documentation index: [`../README.md`](../README.md)

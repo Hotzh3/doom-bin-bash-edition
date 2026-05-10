@@ -50,7 +50,7 @@ Cobertura principal: `raycast-*.test.ts`, director, combate, enemigos, episodio.
 ## Historial de docs
 
 - Plan de equipo de 4 semanas y “MVP arena”: ver `docs/roadmap.md` (marcado como histórico).
-- Presupuesto técnico / Phase 21: `docs/phase21-runtime-budget.md`.
+- Presupuesto técnico / Phase 21: `docs/phases/phase-21-runtime-budget.md`.
 
 ## Índice de documentación
 

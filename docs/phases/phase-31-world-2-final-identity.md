@@ -29,5 +29,5 @@ Close **World 2** as a **distinct hell / stratum** — not a warm recolor of Epi
 ## Related docs
 
 - Design bible: [`../design/world2-identity-bible.md`](../design/world2-identity-bible.md)
-- Phase 22 direction: [`../phase22-world2-identity.md`](../phase22-world2-identity.md)
+- Phase 22 direction: [`./phase-22-world2-identity.md`](./phase-22-world2-identity.md)
 - Sulfur content block: [`../biome-phase30-sulfur-stratum.md`](../biome-phase30-sulfur-stratum.md)

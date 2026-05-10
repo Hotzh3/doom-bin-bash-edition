@@ -45,5 +45,5 @@ npm run build
 
 - Demo script: [docs/demo/raycast-demo-script.md](./raycast-demo-script.md)
 - Manual feel checklist: [docs/playtest/raycast-feel-checklist.md](../playtest/raycast-feel-checklist.md)
-- Portfolio / release readiness: [docs/phase25-release-readiness.md](../phase25-release-readiness.md)
+- Portfolio / release readiness: [docs/phases/phase-25-release-readiness.md](../phases/phase-25-release-readiness.md)
 - Documentation index: [docs/README.md](../README.md)

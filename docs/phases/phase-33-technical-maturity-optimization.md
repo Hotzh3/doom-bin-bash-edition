@@ -52,5 +52,5 @@ Production build (`npm run build`) **before** Phase 33 scene split:
 
 ## Related docs
 
-- Baseline & history: [`../phase29-performance-baseline.md`](../phase29-performance-baseline.md)
+- Baseline & history: [`./phase-29-performance-baseline.md`](./phase-29-performance-baseline.md)
 - Roadmap: [`../roadmap-next-block.md`](../roadmap-next-block.md)

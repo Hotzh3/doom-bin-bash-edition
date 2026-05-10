@@ -1,6 +1,6 @@
 # Roadmap histórico (4 semanas, equipo de 3)
 
-> **Nota (2026):** Este archivo conserva el **plan académico original** del MVP arena 2D (oleadas, backend opcional). El producto actual está **centrado en `RaycastScene`** y módulos raycast; para trabajo activo de arquitectura y presupuesto técnico, ver **`docs/phase21-runtime-budget.md`** y **`docs/architecture.md`**.
+> **Nota (2026):** Este archivo conserva el **plan académico original** del MVP arena 2D (oleadas, backend opcional). El producto actual está **centrado en `RaycastScene`** y módulos raycast; para trabajo activo de arquitectura y presupuesto técnico, ver **`docs/phases/phase-21-runtime-budget.md`** y **`docs/architecture.md`**.
 
 ## Estado del producto (actual)
 

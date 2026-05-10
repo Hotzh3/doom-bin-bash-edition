@@ -24,12 +24,14 @@ Quick map for reviewers, demos, and handoff.
 
 | Doc | Topic |
 |-----|-------|
-| [phase21-runtime-budget.md](./phase21-runtime-budget.md) | Structural/runtime budgeting. |
-| [phase22-world2-identity.md](./phase22-world2-identity.md) | World 2 identity direction. |
-| [phase23-encounter-grammar-boss.md](./phase23-encounter-grammar-boss.md) | Encounters & boss design notes. |
-| [phase24-replayability-scoring.md](./phase24-replayability-scoring.md) | Score & replay direction. |
-| [phase25-release-readiness.md](./phase25-release-readiness.md) | Portfolio / release polish. |
-| [phase29-runtime-bundle.md](./phase29-runtime-bundle.md) | Bundle split + hot-path notes (Phase 29). |
+| [phases/phase-21-runtime-budget.md](./phases/phase-21-runtime-budget.md) | Structural/runtime budgeting. |
+| [phases/phase-22-world2-identity.md](./phases/phase-22-world2-identity.md) | World 2 identity direction. |
+| [phases/phase-23-encounter-grammar-boss.md](./phases/phase-23-encounter-grammar-boss.md) | Encounters & boss design notes. |
+| [phases/phase-24-replayability-scoring.md](./phases/phase-24-replayability-scoring.md) | Score & replay direction. |
+| [phases/phase-25-release-readiness.md](./phases/phase-25-release-readiness.md) | Portfolio / release polish. |
+| [phases/phase-26-scoring-replayability.md](./phases/phase-26-scoring-replayability.md) | Historical scoring/replay expansion. |
+| [phases/phase-29-performance-baseline.md](./phases/phase-29-performance-baseline.md) | Runtime baseline + perf notes (Phase 29). |
+| [phases/phase-29-runtime-bundle.md](./phases/phase-29-runtime-bundle.md) | Bundle split + hot-path notes (Phase 29). |
 | [biome-phase30-sulfur-stratum.md](./biome-phase30-sulfur-stratum.md) | Phase 30 — Sulfur Stratum bible + Bloom Warden block. |
 | [phases/phase-26-scoring-replayability-2.0.md](./phases/phase-26-scoring-replayability-2.0.md) | Phase 26 — scoring, rank, medals, run summary UX. |
 | [phases/phase-27-encounter-grammar-level-design.md](./phases/phase-27-encounter-grammar-level-design.md) | Phase 27 — encounter grammar, routes, dual exits. |

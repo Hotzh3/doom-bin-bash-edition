@@ -39,4 +39,4 @@
 ## Related
 
 - Design companion: [`../design/encounter-grammar-notes.md`](../design/encounter-grammar-notes.md)
-- Historical context: [`../phase23-encounter-grammar-boss.md`](../phase23-encounter-grammar-boss.md)
+- Historical context: [`./phase-23-encounter-grammar-boss.md`](./phase-23-encounter-grammar-boss.md)

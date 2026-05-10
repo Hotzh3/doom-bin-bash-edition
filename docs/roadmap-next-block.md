@@ -4,7 +4,7 @@ Short horizon after **Phases 26–34**. Pick one thread; avoid parallel incompat
 
 **Done — Phase 34:** **Next authored expansion** — World 3 **Ember Meridian** (`RaycastWorldThreeLevels.ts`), enemy kind **`SCRAMBLER`** / role **HARASS**, Ash Judge boss preset **`ash-judge`**, atmosphere/CSS/HUD segment `world3`, score bonus `RAYCAST_WORLD3_ENTRY_POINTS` — see [`phases/phase-34-next-authored-expansion.md`](./phases/phase-34-next-authored-expansion.md), [`design/biome-bible.md`](./design/biome-bible.md), updated [`design/enemy-role-bible.md`](./design/enemy-role-bible.md) + [`design/setpiece-bible.md`](./design/setpiece-bible.md).
 
-**Done — Phase 33:** **Technical maturity & optimization** — `game-raycast-scenes` chunk, minimap static-cell cache + door invalidation, scratch labels — see [`phases/phase-33-technical-maturity-optimization.md`](./phases/phase-33-technical-maturity-optimization.md) and [`phase29-performance-baseline.md`](./phase29-performance-baseline.md).
+**Done — Phase 33:** **Technical maturity & optimization** — `game-raycast-scenes` chunk, minimap static-cell cache + door invalidation, scratch labels — see [`phases/phase-33-technical-maturity-optimization.md`](./phases/phase-33-technical-maturity-optimization.md) and [`phases/phase-29-performance-baseline.md`](./phases/phase-29-performance-baseline.md).
 
 **Done — Phase 32:** **Portfolio visual polish** — README showcase strip, verified capture sizes, demo/release docs, [`SHOT_LIST.md`](./assets/screenshots/SHOT_LIST.md), palette GIF pipeline + post-run size logging in [`scripts/capture-portfolio.mjs`](../scripts/capture-portfolio.mjs) — see [`phases/phase-32-portfolio-visual-polish.md`](./phases/phase-32-portfolio-visual-polish.md).
 
