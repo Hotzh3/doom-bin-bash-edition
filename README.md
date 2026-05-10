@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/assets/doombanner.png" width="100%" alt="DOOM BIN BASH EDITION cover"/>
+  <img src="docs/assets/doombanner-cover.png" width="100%" alt="DOOM BIN BASH EDITION cover"/>
 </p>
 
 # doom-bin-bash-edition
