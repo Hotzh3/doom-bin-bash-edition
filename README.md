@@ -62,6 +62,8 @@ npm run lint
 npm run build
 ```
 
+Playtest telemetry is stored locally in `localStorage` (`raycast_playtest_telemetry_v1`) for offline balance tuning (no backend).
+
 ---
 
 ## Documentation
@@ -121,4 +123,4 @@ Phaser 3 · TypeScript · Vite · Vitest · ESLint · Prettier · GitHub Actions
 
 ## License
 
-No `LICENSE` file is shipped in this snapshot; treat as **all rights reserved** / private portfolio unless the maintainer adds an explicit license.
+This repository is **proprietary / all rights reserved**. See [LICENSE](LICENSE).

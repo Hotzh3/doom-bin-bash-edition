@@ -34,6 +34,7 @@ describe('raycast run summary', () => {
       ' ◆ COMBAT ◆',
       ' HOSTILES        8',
       ' DMG (YOU)       47',
+      ' PLAYSTYLE       ROUTE SCOUT',
       ' ◆ INTEL ◆',
       ' SECRETS         1/2',
       ' TOKENS          1/1'
@@ -68,6 +69,7 @@ describe('raycast run summary', () => {
     expect(summary.some((line) => line.includes('ACC (SECTOR)') && line.includes('45%') && line.includes('9/20'))).toBe(
       true
     );
+    expect(summary.some((line) => line.includes('PLAYSTYLE') && line.includes('STRIKE RUN'))).toBe(true);
   });
 
   it('prepends run composite when finale campaign metrics are provided', () => {

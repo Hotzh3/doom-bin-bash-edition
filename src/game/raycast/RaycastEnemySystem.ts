@@ -82,6 +82,11 @@ export function updateRaycastEnemies(
   enemies.forEach((enemy) => {
     if (!enemy.alive || !player.alive) return;
     if (isRaycastEnemyTelegraphing(enemy, time)) return;
+    if ((enemy.staggerUntil ?? 0) > time) {
+      enemy.attackWindupStartedAt = 0;
+      enemy.attackWindupUntil = 0;
+      return;
+    }
     if (enemy.spawnTelegraphUntil > 0) {
       enemy.spawnTelegraphStartedAt = 0;
       enemy.spawnTelegraphUntil = 0;

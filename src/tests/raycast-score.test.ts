@@ -4,6 +4,7 @@ import {
   addRaycastSecretScore,
   addRaycastSectorPerformanceBonus,
   computeBossPelletEfficiency,
+  computeRaycastCampaignMedals,
   computePelletAccuracyRatio,
   computeRaycastCampaignCompletionBonus,
   computeRaycastSectorMedals,
@@ -134,6 +135,22 @@ describe('raycast score', () => {
         secretTotal: 2
       })
     ).toContain('FULL_INTEL');
+    expect(
+      computeRaycastSectorMedals({
+        ...baseSector(),
+        secretsFound: 1,
+        secretTotal: 2,
+        elapsedMs: 5 * 60 * 1000
+      })
+    ).toContain('PATHFINDER');
+    expect(
+      computeRaycastSectorMedals({
+        ...baseSector(),
+        elapsedMs: 3 * 60 * 1000,
+        enemiesKilled: 7,
+        damageTaken: 30
+      })
+    ).toContain('SPEED_SURGE');
   });
 
   it('merges sector snapshots into campaign totals deterministically', () => {
@@ -205,5 +222,17 @@ describe('raycast score', () => {
     const bonus = computeRaycastCampaignCompletionBonus(c);
     expect(bonus).toBeGreaterThan(0);
     expect(bonus).toBeLessThanOrEqual(1200);
+  });
+
+  it('awards DEEP_SCOUT campaign medal for strong but not full secret routing', () => {
+    let c = createEmptyCampaignMetrics();
+    c = mergeCampaignMetrics(c, {
+      ...baseSector(),
+      secretTotal: 5,
+      secretsFound: 3,
+      elapsedMs: 8 * 60 * 1000,
+      enemiesKilled: 6
+    });
+    expect(computeRaycastCampaignMedals(c)).toContain('DEEP_SCOUT');
   });
 });

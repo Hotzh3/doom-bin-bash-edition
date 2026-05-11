@@ -160,6 +160,7 @@ export function buildRaycastRunSummary(input: RaycastRunSummaryInput): string[] 
     input.hadBoss && input.bossArenaDamageTaken !== undefined
       ? padStat('BOSS DMG', `${Math.round(input.bossArenaDamageTaken)} (arena)`)
       : null;
+  const playstyleLine = padStat('PLAYSTYLE', buildRaycastPlaystyleTag(input, accRatio));
 
   const campaignLines =
     input.episodeComplete && input.campaign ? buildCampaignCompositeLines(input.campaign) : [];
@@ -199,6 +200,7 @@ export function buildRaycastRunSummary(input: RaycastRunSummaryInput): string[] 
     padStat('DMG (YOU)', String(Math.round(input.damageTaken))),
     bossLine,
     bossSurvLine,
+    playstyleLine,
     ' ◆ INTEL ◆',
     padStat('SECRETS', `${input.secretsFound}/${input.secretTotal}`),
     padStat('TOKENS', `${input.tokensFound}/${input.tokenTotal}`),
@@ -206,4 +208,18 @@ export function buildRaycastRunSummary(input: RaycastRunSummaryInput): string[] 
   ].filter((line): line is string => line !== null);
 
   return coreBlock;
+}
+
+function buildRaycastPlaystyleTag(input: RaycastRunSummaryInput, accRatio: number | null): string {
+  const fast = input.elapsedMs <= 4 * 60 * 1000;
+  const explorer = input.secretTotal > 0 && input.secretsFound >= Math.min(1, input.secretTotal);
+  const precise = accRatio !== null && accRatio >= 0.42;
+  const clean = input.damageTaken <= 28;
+
+  if (fast && precise && clean) return 'STRIKE RUN';
+  if (explorer && precise) return 'HUNTER SCOUT';
+  if (explorer) return 'ROUTE SCOUT';
+  if (fast) return 'BREACH RUSH';
+  if (clean) return 'LOW PROFILE';
+  return 'STEADY PUSH';
 }
