@@ -22,6 +22,7 @@ describe('raycast minimap model', () => {
     expect(model.markers).toContainEqual(
       expect.objectContaining({ kind: 'player', angle: -Math.PI / 2, label: 'YOU', active: true })
     );
+    expect(model.markers.some((marker) => marker.kind === 'landmark' && marker.label === 'KEYNODE')).toBe(true);
   });
 
   it('lists live enemies as map blips without revealing secrets', () => {
@@ -96,14 +97,52 @@ describe('raycast minimap model', () => {
       player: { x: 8.5, y: 7.5, angle: 0 },
       collectedKeyIds: ['rust-key'],
       openDoorIds: ['rust-gate', 'service-shutter'],
-      collectedSecretIds: ['west-cache']
+      collectedSecretIds: []
     });
 
     expect(openModel.markers).toContainEqual(expect.objectContaining({ kind: 'key', label: 'TOKEN', active: false }));
     expect(openModel.markers).toContainEqual(expect.objectContaining({ kind: 'door', label: 'OPEN', active: true }));
     expect(openModel.markers).toContainEqual(expect.objectContaining({ kind: 'exit', label: 'EXIT', active: true }));
     expect(openModel.markers.some((marker) => marker.label === 'HIDDEN')).toBe(false);
+    expect(
+      openModel.markers.some(
+        (marker) => marker.kind === 'landmark' && marker.label.startsWith('CACHE-') && marker.active
+      )
+    ).toBe(false);
     expect(openModel.cells.some((cell) => cell.kind === 'door')).toBe(false);
     expect(openModel.enemyBlips).toEqual([]);
+  });
+
+  it('reveals secret landmarks only after that secret is collected', () => {
+    const secretId = RAYCAST_LEVEL.secrets[0]?.id ?? 'west-cache';
+    const hiddenSecret = buildRaycastMinimapModel({
+      map: RAYCAST_LEVEL.map,
+      level: RAYCAST_LEVEL,
+      player: { x: 6.5, y: 12.5, angle: 0 },
+      collectedKeyIds: [],
+      openDoorIds: [],
+      collectedSecretIds: []
+    });
+
+    expect(
+      hiddenSecret.markers.some(
+        (marker) => marker.kind === 'landmark' && marker.label.startsWith('CACHE-') && marker.active
+      )
+    ).toBe(false);
+
+    const revealedSecret = buildRaycastMinimapModel({
+      map: RAYCAST_LEVEL.map,
+      level: RAYCAST_LEVEL,
+      player: { x: 6.5, y: 12.5, angle: 0 },
+      collectedKeyIds: [],
+      openDoorIds: [],
+      collectedSecretIds: [secretId]
+    });
+
+    expect(
+      revealedSecret.markers.some(
+        (marker) => marker.kind === 'landmark' && marker.label.startsWith('CACHE-') && marker.active
+      )
+    ).toBe(true);
   });
 });

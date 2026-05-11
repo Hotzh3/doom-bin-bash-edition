@@ -488,11 +488,11 @@ export const RAYCAST_LEVEL_WORLD2_SULFUR_LATTICE: RaycastLevel = {
   zones: [
     { id: 'sulfur-start', x: 5.0, y: 13.1, width: 7.2, height: 1.6, visualTheme: 'basalt-rift' },
     { id: 'sulfur-loop', x: 1.2, y: 9.0, width: 5.2, height: 3.4, visualTheme: 'basalt-rift' },
-    { id: 'bloom-archive', x: 1.1, y: 1.4, width: 5.6, height: 5.0, visualTheme: 'toxic-green', landmark: 'key' },
-    { id: 'sulfur-secret', x: 1.1, y: 7.8, width: 2.2, height: 1.4, visualTheme: 'void-stone', landmark: 'secret' },
+    { id: 'bloom-archive', x: 1.1, y: 1.4, width: 5.6, height: 5.0, visualTheme: 'ion-shaft', landmark: 'key' },
+    { id: 'sulfur-secret', x: 1.1, y: 7.8, width: 2.2, height: 1.4, visualTheme: 'basalt-rift', landmark: 'secret' },
     { id: 'lattice-seal', x: 9.1, y: 6.2, width: 2.0, height: 2.0, visualTheme: 'ion-shaft', landmark: 'gate' },
     { id: 'sulfur-threshold', x: 11.0, y: 5.8, width: 2.2, height: 2.2, visualTheme: 'ion-shaft', landmark: 'ambush' },
-    { id: 'sulfur-conduit', x: 11.0, y: 1.2, width: 7.0, height: 10.2, visualTheme: 'toxic-green' },
+    { id: 'sulfur-conduit', x: 11.0, y: 1.2, width: 7.0, height: 10.2, visualTheme: 'ion-shaft' },
     { id: 'sulfur-overlook', x: 13.2, y: 1.0, width: 4.2, height: 2.4, visualTheme: 'nadir-glow', landmark: 'exit' }
   ],
   keys: [
@@ -538,7 +538,7 @@ export const RAYCAST_LEVEL_WORLD2_SULFUR_LATTICE: RaycastLevel = {
       spawns: [
         { x: 11.5, y: 3.5, kind: 'RANGED' },
         { x: 15.5, y: 5.5, kind: 'BRUTE' },
-        { x: 17.5, y: 7.5, kind: 'STALKER' }
+        { x: 17.5, y: 7.5, kind: 'SCRAMBLER' }
       ]
     },
     {
@@ -553,7 +553,7 @@ export const RAYCAST_LEVEL_WORLD2_SULFUR_LATTICE: RaycastLevel = {
       activationText: 'Bloom spike on the climb — stalkers peel the ridge',
       spawns: [
         { x: 17.5, y: 1.5, kind: 'RANGED' },
-        { x: 15.5, y: 9.5, kind: 'STALKER' }
+        { x: 15.5, y: 9.5, kind: 'SCRAMBLER' }
       ]
     },
     {
@@ -567,7 +567,7 @@ export const RAYCAST_LEVEL_WORLD2_SULFUR_LATTICE: RaycastLevel = {
       activationText: 'Spores wake stragglers in the crawl',
       setpieceCue: 'CORRIDOR_HUNT',
       spawns: [
-        { x: 3.5, y: 9.5, kind: 'STALKER' },
+        { x: 3.5, y: 9.5, kind: 'SCRAMBLER' },
         { x: 5.5, y: 11.5, kind: 'GRUNT' }
       ]
     }
@@ -634,10 +634,10 @@ export const RAYCAST_LEVEL_WORLD2_SULFUR_LATTICE: RaycastLevel = {
   ],
   initialSpawns: [
     { id: 'sulfur-scout', kind: 'GRUNT', x: 5.5, y: 12.5 },
-    { id: 'archive-skirmisher', kind: 'STALKER', x: 5.5, y: 4.5 },
+    { id: 'archive-skirmisher', kind: 'SCRAMBLER', x: 5.5, y: 4.5 },
     { id: 'conduit-rifle', kind: 'RANGED', x: 11.5, y: 3.5 },
     { id: 'lane-anchor', kind: 'BRUTE', x: 15.5, y: 6.5 },
-    { id: 'ridge-flank', kind: 'STALKER', x: 14.5, y: 9.5 }
+    { id: 'ridge-flank', kind: 'SCRAMBLER', x: 14.5, y: 9.5 }
   ],
   encounterBeats: [
     {
@@ -665,7 +665,7 @@ export const RAYCAST_LEVEL_WORLD2_SULFUR_LATTICE: RaycastLevel = {
     {
       id: 'lattice-lock-beat',
       triggerId: 'lattice-overlook-lock',
-      message: 'Overlook lock: clear ridge stalkers before the exit sprint'
+      message: 'Overlook lock: clear ridge scramblers before the exit sprint'
     },
     {
       id: 'lattice-recovery',
@@ -729,7 +729,7 @@ export const RAYCAST_LEVEL_WORLD2_WARDEN_PIT: RaycastLevel = {
   map: RAYCAST_MAP_BOSS,
   playerStart: RAYCAST_PLAYER_START_BOSS,
   zones: [
-    { id: 'warden-arena', x: 1.0, y: 1.0, width: 13.0, height: 13.0, visualTheme: 'ion-shaft', landmark: 'ambush' },
+    { id: 'warden-arena', x: 1.0, y: 1.0, width: 13.0, height: 13.0, visualTheme: 'nadir-glow', landmark: 'ambush' },
     { id: 'warden-exit', x: 11.0, y: 6.0, width: 3.0, height: 3.0, visualTheme: 'nadir-glow', landmark: 'exit' }
   ],
   keys: [],

@@ -43,7 +43,7 @@ export interface RaycastMinimapCell {
 }
 
 export interface RaycastMinimapMarker {
-  kind: 'player' | 'key' | 'door' | 'exit';
+  kind: 'player' | 'key' | 'door' | 'exit' | 'landmark';
   x: number;
   y: number;
   angle?: number;
@@ -85,7 +85,24 @@ export function buildStaticRaycastMinimapCells(state: Pick<RaycastMinimapState, 
 export function buildRaycastMinimapModel(state: RaycastMinimapState): RaycastMinimapModel {
   const collectedKeyIds = new Set(state.collectedKeyIds);
   const openDoorIds = new Set(state.openDoorIds);
+  const collectedSecretIds = new Set(state.collectedSecretIds);
   const cells = state.staticCells ?? buildStaticRaycastMinimapCells(state);
+
+  const landmarkMarkers: RaycastMinimapMarker[] = state.level.zones
+    .filter((zone) => zone.landmark && zone.landmark !== 'none')
+    .map((zone) => {
+      const landmark = zone.landmark!;
+      const centerX = zone.x + zone.width * 0.5;
+      const centerY = zone.y + zone.height * 0.5;
+      const isSecret = landmark === 'secret';
+      return {
+        kind: 'landmark' as const,
+        x: centerX,
+        y: centerY,
+        label: buildRaycastLandmarkMarkerLabel(zone.id, landmark),
+        active: !isSecret || collectedSecretIds.size > 0
+      };
+    });
 
   const markers: RaycastMinimapMarker[] = [
     {
@@ -120,7 +137,8 @@ export function buildRaycastMinimapModel(state: RaycastMinimapState): RaycastMin
       y: exit.y,
       label: exit.billboardLabel,
       active: true
-    }))
+    })),
+    ...landmarkMarkers
   ];
 
   const enemyBlips = state.enemies
@@ -136,6 +154,24 @@ export function buildRaycastMinimapModel(state: RaycastMinimapState): RaycastMin
     markers,
     enemyBlips
   };
+}
+
+function buildRaycastLandmarkMarkerLabel(zoneId: string, landmark: NonNullable<RaycastLevel['zones'][number]['landmark']>): string {
+  if (landmark === 'key') return 'KEYNODE';
+  if (landmark === 'gate') return 'GATE';
+  if (landmark === 'ambush') return `KILL-${buildZoneTag(zoneId)}`;
+  if (landmark === 'exit') return 'EXFIL';
+  if (landmark === 'secret') return `CACHE-${buildZoneTag(zoneId)}`;
+  return buildZoneTag(zoneId);
+}
+
+function buildZoneTag(zoneId: string): string {
+  return zoneId
+    .split('-')
+    .map((token) => token[0])
+    .join('')
+    .slice(0, 4)
+    .toUpperCase();
 }
 
 /** Red-family markers for minimap differentiation (enemy dots). */
