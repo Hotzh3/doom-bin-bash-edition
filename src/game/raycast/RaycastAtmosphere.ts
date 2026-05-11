@@ -67,6 +67,19 @@ export const RAYCAST_ATMOSPHERE = {
 
 type RaycastAtmosphereMessageKey = keyof typeof RAYCAST_ATMOSPHERE.messages;
 
+/** World 1 — forge stratum: tighter warm envelope vs W2 cold rift (fog mix only; base corruption tint unchanged). */
+export const RAYCAST_ATMOSPHERE_WORLD1: {
+  messageOverrides: Partial<Record<RaycastAtmosphereMessageKey, string>>;
+} = {
+  messageOverrides: {
+    intro:
+      'CINDER FORGE STRATUM — FIRST HELL — RUST SLABS AND AMBER ROUTING (NOT THE ABYSS ICE STRATUM)',
+    idle: 'FORGE BOILER GHOSTS THE PERIPHERY — HEAT HAZE HUGS THE DECK',
+    pressure: 'SHAFT PRESSURE — BREAK LINE OF SIGHT BEFORE THE BELT SHREDS YOUR ROUTE',
+    spawn: 'HOSTILE SURFACES IN WARM HAZE — READ SILHOUETTE AND FOOTPRINT, NOT CHIP COLOR'
+  }
+};
+
 /** World 2 — abyss stratum: deeper fog envelope, violet interference layer, “other hell” voice (HUD uses RAYCAST_CSS_WORLD2). */
 export const RAYCAST_ATMOSPHERE_WORLD2 = {
   fogColor: RAYCAST_PALETTE.riftFog,
@@ -94,6 +107,20 @@ export const RAYCAST_ATMOSPHERE_WORLD2 = {
   corruptionTint: number;
   messageOverrides: Partial<Record<RaycastAtmosphereMessageKey, string>>;
 };
+
+/** Tighter mid-range read + warm fog mix — instant contrast vs `RAYCAST_WORLD2_SEGMENT_LAYER` cold cap. */
+export const RAYCAST_WORLD1_SEGMENT_LAYER = {
+  fogStartDelta: -0.1,
+  fogEndDelta: -0.42,
+  fogEndFloor: 6.92,
+  fogColorMix: 0.15,
+  corruptionAlphaScale: 1.05,
+  pulseAlphaScale: 1.04,
+  ambientDarknessDelta: -0.014,
+  ambientDarknessFloor: 0.23,
+  enemyMinVisibilityDelta: 0.012,
+  enemyMinVisibilityCap: 0.72
+} as const;
 
 /**
  * Layered only in `applyWorldSegmentToAtmosphere` for `world2`.
@@ -159,6 +186,10 @@ export function getRaycastCombatMessageForSegment(
   key: RaycastAtmosphereMessageKey
 ): string {
   const base = RAYCAST_ATMOSPHERE.messages[key];
+  if (segment === 'world1') {
+    const hit = RAYCAST_ATMOSPHERE_WORLD1.messageOverrides[key];
+    return hit !== undefined ? hit : base;
+  }
   if (segment === 'world2') {
     const hit = RAYCAST_ATMOSPHERE_WORLD2.messageOverrides[key];
     return hit !== undefined ? hit : base;
@@ -216,12 +247,35 @@ export function getRaycastBossHudLines(displayName: string): RaycastBossHudLines
   };
 }
 
+function mixAtmosphereRgb(a: number, b: number, t: number): number {
+  const clamped = Math.max(0, Math.min(1, t));
+  const inv = 1 - clamped;
+  const r = Math.floor(((a >> 16) & 0xff) * inv + ((b >> 16) & 0xff) * clamped);
+  const g = Math.floor(((a >> 8) & 0xff) * inv + ((b >> 8) & 0xff) * clamped);
+  const bl = Math.floor((a & 0xff) * inv + (b & 0xff) * clamped);
+  return (r << 16) + (g << 8) + bl;
+}
+
 /** Biome tint layered on director-driven atmosphere (no second renderer). */
 export function applyWorldSegmentToAtmosphere(
   base: RaycastAtmosphereRenderOptions,
   segment: RaycastWorldSegmentId
 ): RaycastAtmosphereRenderOptions {
-  if (segment === 'world1') return base;
+  if (segment === 'world1') {
+    const L = RAYCAST_WORLD1_SEGMENT_LAYER;
+    const fogEnd = Math.max(L.fogEndFloor, base.fogEnd + L.fogEndDelta);
+    const fogStart = Math.min(base.fogStart + L.fogStartDelta, fogEnd - 0.35);
+    return {
+      ...base,
+      fogColor: mixAtmosphereRgb(base.fogColor, RAYCAST_PALETTE.forgeHaze, L.fogColorMix),
+      fogStart,
+      fogEnd,
+      corruptionAlpha: base.corruptionAlpha * L.corruptionAlphaScale,
+      pulseAlpha: base.pulseAlpha * L.pulseAlphaScale,
+      ambientDarkness: Math.max(L.ambientDarknessFloor, base.ambientDarkness + L.ambientDarknessDelta),
+      enemyMinVisibility: Math.min(L.enemyMinVisibilityCap, base.enemyMinVisibility + L.enemyMinVisibilityDelta)
+    };
+  }
   if (segment === 'world2') {
     const L = RAYCAST_WORLD2_SEGMENT_LAYER;
     const fogEnd = Math.min(L.fogEndCap, base.fogEnd + L.fogEndDelta);

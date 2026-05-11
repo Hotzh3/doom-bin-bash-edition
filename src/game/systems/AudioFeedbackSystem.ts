@@ -61,36 +61,41 @@ export const AUDIO_FEEDBACK_CONFIG: Record<AudioFeedbackCue, AudioFeedbackConfig
   },
   shootPistol: {
     layers: [
-      { frequency: 880, endFrequency: 510, duration: 0.038, volume: 0.042, type: 'square' },
-      { frequency: 1820, endFrequency: 1120, duration: 0.022, volume: 0.016, type: 'triangle', delay: 0.002 }
+      { frequency: 1020, endFrequency: 620, duration: 0.028, volume: 0.044, type: 'square' },
+      { frequency: 2140, endFrequency: 1380, duration: 0.018, volume: 0.015, type: 'triangle', delay: 0.0015 },
+      { frequency: 420, endFrequency: 180, duration: 0.034, volume: 0.011, type: 'sine', delay: 0.006 }
     ]
   },
   shootShotgun: {
     layers: [
-      { frequency: 148, endFrequency: 52, duration: 0.165, volume: 0.062, type: 'sawtooth' },
-      { frequency: 380, endFrequency: 140, duration: 0.095, volume: 0.024, type: 'square', delay: 0.004 },
-      { frequency: 96, endFrequency: 48, duration: 0.06, volume: 0.018, type: 'triangle', delay: 0.012 }
+      { frequency: 118, endFrequency: 38, duration: 0.188, volume: 0.068, type: 'sawtooth' },
+      { frequency: 288, endFrequency: 92, duration: 0.112, volume: 0.028, type: 'square', delay: 0.003 },
+      { frequency: 72, endFrequency: 36, duration: 0.085, volume: 0.022, type: 'triangle', delay: 0.014 },
+      { frequency: 520, endFrequency: 180, duration: 0.04, volume: 0.009, type: 'triangle', delay: 0.022 }
     ]
   },
   shootLauncher: {
     layers: [
-      { frequency: 72, endFrequency: 28, duration: 0.22, volume: 0.058, type: 'triangle' },
-      { frequency: 185, endFrequency: 62, duration: 0.16, volume: 0.024, type: 'sine', delay: 0.012 },
-      { frequency: 420, endFrequency: 120, duration: 0.05, volume: 0.01, type: 'square', delay: 0.045 }
+      { frequency: 58, endFrequency: 20, duration: 0.248, volume: 0.062, type: 'triangle' },
+      { frequency: 155, endFrequency: 48, duration: 0.198, volume: 0.028, type: 'sine', delay: 0.018 },
+      { frequency: 360, endFrequency: 95, duration: 0.075, volume: 0.012, type: 'square', delay: 0.055 },
+      { frequency: 92, endFrequency: 44, duration: 0.12, volume: 0.018, type: 'sawtooth', delay: 0.04 }
     ]
   },
   hit: {
     layers: [
-      { frequency: 310, endFrequency: 108, duration: 0.072, volume: 0.036, type: 'sawtooth' },
-      { frequency: 680, endFrequency: 260, duration: 0.045, volume: 0.016, type: 'triangle', delay: 0.002 }
+      { frequency: 340, endFrequency: 118, duration: 0.058, volume: 0.032, type: 'sawtooth' },
+      { frequency: 740, endFrequency: 280, duration: 0.038, volume: 0.014, type: 'triangle', delay: 0.0015 },
+      { frequency: 1800, endFrequency: 620, duration: 0.028, volume: 0.0065, type: 'sine', delay: 0.012 }
     ],
     throttleMs: 35
   },
   kill: {
     layers: [
-      { frequency: 300, endFrequency: 62, duration: 0.2, volume: 0.054, type: 'triangle' },
-      { frequency: 520, endFrequency: 140, duration: 0.13, volume: 0.018, type: 'sawtooth', delay: 0.016 },
-      { frequency: 880, endFrequency: 220, duration: 0.06, volume: 0.008, type: 'sine', delay: 0.05 }
+      { frequency: 280, endFrequency: 48, duration: 0.22, volume: 0.058, type: 'triangle' },
+      { frequency: 480, endFrequency: 118, duration: 0.15, volume: 0.022, type: 'sawtooth', delay: 0.018 },
+      { frequency: 980, endFrequency: 240, duration: 0.085, volume: 0.012, type: 'sine', delay: 0.048 },
+      { frequency: 2200, endFrequency: 880, duration: 0.04, volume: 0.0055, type: 'triangle', delay: 0.028 }
     ],
     throttleMs: 70
   },
@@ -130,8 +135,10 @@ export const AUDIO_FEEDBACK_CONFIG: Record<AudioFeedbackCue, AudioFeedbackConfig
   },
   pickup: {
     layers: [
-      { frequency: 420, endFrequency: 760, duration: 0.1, volume: 0.026, type: 'triangle' }
-    ]
+      { frequency: 380, endFrequency: 720, duration: 0.085, volume: 0.024, type: 'triangle' },
+      { frequency: 920, endFrequency: 1420, duration: 0.065, volume: 0.014, type: 'sine', delay: 0.02 }
+    ],
+    throttleMs: 55
   },
   pickupHealth: {
     layers: [
@@ -232,9 +239,10 @@ export const AUDIO_FEEDBACK_CONFIG: Record<AudioFeedbackCue, AudioFeedbackConfig
   },
   damage: {
     layers: [
-      { frequency: 62, endFrequency: 38, duration: 0.155, volume: 0.038, type: 'square' },
-      { frequency: 148, endFrequency: 62, duration: 0.095, volume: 0.018, type: 'sawtooth', delay: 0.005 },
-      { frequency: 240, endFrequency: 110, duration: 0.06, volume: 0.009, type: 'triangle', delay: 0.022 }
+      { frequency: 48, endFrequency: 28, duration: 0.175, volume: 0.042, type: 'square' },
+      { frequency: 128, endFrequency: 52, duration: 0.11, volume: 0.022, type: 'sawtooth', delay: 0.004 },
+      { frequency: 280, endFrequency: 95, duration: 0.072, volume: 0.011, type: 'triangle', delay: 0.02 },
+      { frequency: 620, endFrequency: 220, duration: 0.045, volume: 0.006, type: 'sine', delay: 0.038 }
     ],
     throttleMs: 88
   },
@@ -266,9 +274,10 @@ export const AUDIO_FEEDBACK_CONFIG: Record<AudioFeedbackCue, AudioFeedbackConfig
   /** Boss phase transition — sub-heavy sweep distinct from director ambush spawn sting. */
   bossPhaseShift: {
     layers: [
-      { frequency: 48, endFrequency: 28, duration: 0.18, volume: 0.042, type: 'triangle' },
-      { frequency: 180, endFrequency: 72, duration: 0.14, volume: 0.022, type: 'sawtooth', delay: 0.02 },
-      { frequency: 520, endFrequency: 160, duration: 0.08, volume: 0.012, type: 'sine', delay: 0.045 }
+      { frequency: 40, endFrequency: 22, duration: 0.22, volume: 0.048, type: 'triangle' },
+      { frequency: 165, endFrequency: 58, duration: 0.16, volume: 0.026, type: 'sawtooth', delay: 0.024 },
+      { frequency: 480, endFrequency: 140, duration: 0.095, volume: 0.014, type: 'sine', delay: 0.05 },
+      { frequency: 1180, endFrequency: 420, duration: 0.055, volume: 0.007, type: 'triangle', delay: 0.072 }
     ],
     throttleMs: 2400
   },
@@ -294,6 +303,9 @@ export function getWeaponAudioPlan(weapon: WeaponKind): AudioFeedbackPlan {
 }
 
 export function getDirectorEventAudioPlan(eventType: DirectorEventType): AudioFeedbackPlan {
+  if (eventType === 'ENCOUNTER_PATTERN') {
+    return { cue: 'directorWarning', intensity: 0.94 };
+  }
   if (eventType === 'PREPARE_AMBUSH' || eventType === 'SPAWN_PRESSURE') {
     return { cue: 'directorAmbush', intensity: 1 };
   }

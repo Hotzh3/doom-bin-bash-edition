@@ -99,6 +99,7 @@ describe('raycast combat', () => {
   it('auto-aim hits a visible enemy inside forgiving center tolerance', () => {
     const combat = new RaycastCombatSystem();
     const enemy = createEnemy({ health: 14, x: 3.2, y: 9.56 });
+    const beforeX = enemy.x;
 
     const shot = combat.fire(player, [enemy], RAYCAST_MAP, 1000);
 
@@ -106,6 +107,7 @@ describe('raycast combat', () => {
     expect(shot.pelletCount).toBe(1);
     expect(shot.hitEnemy?.id).toBe(enemy.id);
     expect(enemy.alive).toBe(false);
+    expect(Math.abs(enemy.x - beforeX)).toBeGreaterThan(0.004);
   });
 
   it('ignores enemies behind walls or outside aim tolerance', () => {

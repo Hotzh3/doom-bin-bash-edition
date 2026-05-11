@@ -7,6 +7,7 @@ import { isRaycastEnemyTelegraphing, isRaycastEnemyWindingUp, type RaycastEnemy 
 import type { RaycastPlayerState } from './RaycastPlayerController';
 import type { ProjectileSpawn, WeaponKind } from '../systems/WeaponTypes';
 import { formatRaycastEnemyTargetLabel } from './RaycastHud';
+import { applyRaycastEnemyKnockback } from './RaycastHitKnockback';
 import type { EnemyKind } from '../types/game';
 
 export interface RaycastCombatResult {
@@ -27,8 +28,8 @@ export interface RaycastCombatResult {
 
 const DEFAULT_AIM_TOLERANCE_RADIANS = 0.1;
 /** Exported for renderer/UI sync — slightly longer reads clearly at raycast resolution. */
-export const RAYCAST_HIT_FLASH_MS = 200;
-export const RAYCAST_DEATH_BURST_MS = 330;
+export const RAYCAST_HIT_FLASH_MS = 218;
+export const RAYCAST_DEATH_BURST_MS = 405;
 const HIT_FLASH_MS = RAYCAST_HIT_FLASH_MS;
 const DEATH_BURST_MS = RAYCAST_DEATH_BURST_MS;
 const GRID_SCALE = 100;
@@ -128,10 +129,11 @@ export class RaycastCombatSystem {
     const target = findEnemyAlongAim(player, projectileAngle, enemies, wallDistance, weapon.aimToleranceRadians);
     if (!target) return null;
 
+    applyRaycastEnemyKnockback(target, player.x, player.y, projectile.damage, map);
     const directKilled = applyDamage(target, projectile.damage);
     target.hitFlashUntil = time + HIT_FLASH_MS;
     if (directKilled) target.deathBurstUntil = time + DEATH_BURST_MS;
-    const splashImpacts = this.applyExplosionSplash(target, projectile, enemies, time);
+    const splashImpacts = this.applyExplosionSplash(target, projectile, enemies, map, time);
     const killedEnemyKinds: EnemyKind[] = [];
     if (directKilled) killedEnemyKinds.push(target.kind);
     killedEnemyKinds.push(...splashImpacts.killedKinds);
@@ -149,6 +151,7 @@ export class RaycastCombatSystem {
     originEnemy: RaycastEnemy,
     projectile: ProjectileSpawn,
     enemies: RaycastEnemy[],
+    map: RaycastMap,
     time: number
   ): { damage: number; killCount: number; hitCount: number; killedKinds: EnemyKind[] } {
     if (projectile.explosionRadius <= 0) return { damage: 0, killCount: 0, hitCount: 0, killedKinds: [] };
@@ -166,6 +169,7 @@ export class RaycastCombatSystem {
       const falloff = 1 - distance / radius;
       const splashDamage = Math.max(1, Math.round(projectile.damage * 0.62 * falloff));
       hitCount += 1;
+      applyRaycastEnemyKnockback(enemy, originEnemy.x, originEnemy.y, splashDamage, map);
       if (applyDamage(enemy, splashDamage)) {
         enemy.deathBurstUntil = time + DEATH_BURST_MS;
         killCount += 1;

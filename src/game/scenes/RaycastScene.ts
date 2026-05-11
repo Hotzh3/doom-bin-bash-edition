@@ -2,6 +2,11 @@ import Phaser from 'phaser';
 import { GAME_HEIGHT, GAME_WIDTH } from '../config';
 import { DoorSystem } from '../systems/DoorSystem';
 import { GameDirector, type SpawnRequest } from '../systems/GameDirector';
+import {
+  buildEncounterPatternSpawns,
+  getEncounterPatternKinds,
+  type EncounterPatternId
+} from '../systems/EncounterPattern';
 import { KeySystem } from '../systems/KeySystem';
 import { TriggerSystem } from '../systems/TriggerSystem';
 import { getRaycastEnemyRoleAbbrev } from '../entities/enemyConfig';
@@ -42,8 +47,13 @@ import {
   RAYCAST_LEVEL,
   type RaycastDoor,
   type RaycastEncounterBeat,
+  type RaycastEncounterPatternBinding,
   type RaycastLevel
 } from '../raycast/RaycastLevel';
+import {
+  buildSyntheticBossLateralBinding,
+  selectRaycastEncounterPatternBinding
+} from '../raycast/RaycastEncounterDirector';
 import { getRaycastEpisodeState, resolveRaycastNextLevelId } from '../raycast/RaycastEpisode';
 import {
   buildRaycastMinimapModel,
@@ -79,6 +89,7 @@ import {
   damageRaycastBoss,
   getRaycastBossPhaseLabel,
   getRaycastBossCrosshairTarget,
+  tickRaycastBossArenaTwist,
   tickRaycastBossMovement,
   tickRaycastBossVolleys,
   type RaycastBossState
@@ -226,6 +237,7 @@ export class RaycastScene extends Phaser.Scene {
   private lastDirectorState: DirectorState | null = null;
   private directorIntensity = 0;
   private directorSpawnCounter = 0;
+  private readonly encounterPatternCooldownUntil = new Map<string, number>();
   private debugHudVisible = false;
   private minimapVisible = true;
   private helpOverlayVisible = false;
@@ -977,6 +989,7 @@ export class RaycastScene extends Phaser.Scene {
     this.lastDirectorState = null;
     this.directorIntensity = 0;
     this.directorSpawnCounter = 0;
+    this.encounterPatternCooldownUntil.clear();
     this.debugHudVisible = false;
     this.minimapVisible = true;
     this.helpOverlayVisible = false;
@@ -1126,7 +1139,11 @@ export class RaycastScene extends Phaser.Scene {
         );
         this.runPelletsHitHostile += bossPellets;
         this.runBossPelletsHitHostile += bossPellets;
-        const killed = damageRaycastBoss(this.bossState, bossDamage, this.time.now);
+        const killed = damageRaycastBoss(this.bossState, bossDamage, this.time.now, {
+          fromX: this.player.x,
+          fromY: this.player.y,
+          map: this.map
+        });
         if (killed) {
           this.runScore = addRaycastBossClearScore(this.runScore);
           this.enemiesKilled += 1;
@@ -1164,10 +1181,14 @@ export class RaycastScene extends Phaser.Scene {
       this.pulseFeedback(0xff8a3d, 0.08, 110);
     }
     this.audioFeedback.play(result.killed ? 'kill' : 'hit', result.killed ? 1 : 0.9, this.time.now);
-    this.pulseCrosshair(result.killed ? '#ff5b6f' : '#ffffff', result.killed ? 118 : 92);
+    if (result.killed) {
+      this.cameras.main.flash(48, 255, 236, 210, false);
+      this.pulseFeedback(0xffe2c4, 0.095, 150);
+    }
+    this.pulseCrosshair(result.killed ? '#ff5b6f' : '#ffffff', result.killed ? 148 : 92);
     this.flashHitMarker(result.killed, splashImpact);
     const weapon = result.weaponKind;
-    const killShake = weapon === 'SHOTGUN' ? { d: 92, i: 0.00205 } : weapon === 'LAUNCHER' ? { d: 88, i: 0.00245 } : { d: 82, i: 0.00185 };
+    const killShake = weapon === 'SHOTGUN' ? { d: 102, i: 0.00218 } : weapon === 'LAUNCHER' ? { d: 98, i: 0.00258 } : { d: 88, i: 0.00195 };
     const hitShake = weapon === 'SHOTGUN' ? { d: 52, i: 0.00128 } : weapon === 'LAUNCHER' ? { d: 48, i: 0.00138 } : { d: 46, i: 0.00118 };
     const s = result.killed ? killShake : hitShake;
     this.cameras.main.shake(s.d, s.i);
@@ -1178,7 +1199,8 @@ export class RaycastScene extends Phaser.Scene {
           ? `SPLASH HIT x${Math.max(1, result.splashHitCount)}`
         : result.hitCount > 1
           ? `HOSTILE PROCESS HIT x${result.hitCount}`
-          : `HOSTILE PROCESS HIT -${result.totalDamage}`
+          : `HOSTILE PROCESS HIT -${result.totalDamage}`,
+      result.killed ? 1720 : splashImpact ? 1320 : 1200
     );
   }
 
@@ -1187,7 +1209,7 @@ export class RaycastScene extends Phaser.Scene {
     const width = weapon === 'SHOTGUN' ? 182 : weapon === 'LAUNCHER' ? 148 : 94;
     const height = weapon === 'SHOTGUN' ? 58 : weapon === 'LAUNCHER' ? 54 : 30;
     const alpha = weapon === 'SHOTGUN' ? 1 : weapon === 'LAUNCHER' ? 0.96 : 0.9;
-    const flashDuration = weapon === 'LAUNCHER' ? 158 : weapon === 'SHOTGUN' ? 118 : 78;
+    const flashDuration = weapon === 'LAUNCHER' ? 226 : weapon === 'SHOTGUN' ? 136 : 70;
     this.muzzleFlash.setSize(width, height);
     this.muzzleFlash.setFillStyle(weapon === 'LAUNCHER' ? RAYCAST_PALETTE.plasmaBright : weapon === 'SHOTGUN' ? 0xff8a3d : RAYCAST_ATMOSPHERE.muzzleFlash);
     this.muzzleFlash.setAlpha(alpha);
@@ -1215,16 +1237,16 @@ export class RaycastScene extends Phaser.Scene {
   }
 
   private flashHitMarker(killed: boolean, splash: boolean): void {
-    this.hitMarker.setText(splash ? 'xx' : 'x');
-    this.hitMarker.setColor(killed ? '#ff5b6f' : splash ? '#ffb36b' : '#ffffff');
-    this.hitMarker.setScale(killed ? 1.24 : 1.08);
-    this.hitMarker.setAlpha(0.94);
+    this.hitMarker.setText(killed ? '*' : splash ? 'xx' : 'x');
+    this.hitMarker.setColor(killed ? '#ff3358' : splash ? '#ffb36b' : '#ffffff');
+    this.hitMarker.setScale(killed ? 1.58 : 1.08);
+    this.hitMarker.setAlpha(0.97);
     this.tweens.killTweensOf(this.hitMarker);
     this.tweens.add({
       targets: this.hitMarker,
       alpha: 0,
-      scale: 1.5,
-      duration: killed ? 130 : 96,
+      scale: killed ? 2.05 : 1.5,
+      duration: killed ? 178 : 96,
       ease: 'Quad.easeOut'
     });
   }
@@ -1257,13 +1279,13 @@ export class RaycastScene extends Phaser.Scene {
   private getWeaponOverlayFlashAlpha(): number {
     if (this.time.now >= this.weaponOverlayFlashUntil) return 0;
     const weapon = this.combat.getCurrentWeapon();
-    const decayWindow = weapon === 'LAUNCHER' ? 158 : weapon === 'SHOTGUN' ? 118 : 78;
+    const decayWindow = weapon === 'LAUNCHER' ? 226 : weapon === 'SHOTGUN' ? 136 : 70;
     return Phaser.Math.Clamp((this.weaponOverlayFlashUntil - this.time.now) / decayWindow, 0, 1);
   }
 
-  private setCombatMessage(message: string): void {
+  private setCombatMessage(message: string, holdMs = 1100): void {
     this.lastCombatMessage = message.toUpperCase();
-    this.combatMessageUntil = this.time.now + 1100;
+    this.combatMessageUntil = this.time.now + holdMs;
     this.tweens.killTweensOf(this.systemText);
   }
 
@@ -1372,6 +1394,12 @@ export class RaycastScene extends Phaser.Scene {
         this.audioFeedback.play('stingerDread', 0.44, this.time.now + 42);
         this.pulseFeedback(0xffb347, 0.08, 170);
         this.setCombatMessage(bossHud.telegraphLocked);
+        if (
+          this.bossState.arenaTwist === 'retreat_cut' &&
+          this.time.now < this.bossState.arenaTwistUntil
+        ) {
+          this.cameras.main.shake(82, 0.00152);
+        }
       }
       this.bossTelegraphActive = telegraphActive;
       const bossShots = tickRaycastBossVolleys(
@@ -1388,6 +1416,7 @@ export class RaycastScene extends Phaser.Scene {
     } else {
       this.bossTelegraphActive = false;
     }
+    if (this.bossState) tickRaycastBossArenaTwist(this.bossState, this.time.now);
 
     const previousTime = this.time.now - delta;
     const activatedTelegraphs = this.enemies
@@ -1440,6 +1469,10 @@ export class RaycastScene extends Phaser.Scene {
     this.flashDamage(appliedDamage);
     let damageIntensity = Phaser.Math.Clamp(0.58 + appliedDamage * 0.019, 0.58, 1.05);
     if (this.bossState?.alive) damageIntensity = Math.min(1.08, damageIntensity + 0.065);
+    if (this.playerHealth > 0) {
+      if (this.playerHealth <= 18) damageIntensity = Math.min(1.16, damageIntensity + 0.12);
+      else if (this.playerHealth <= 35) damageIntensity = Math.min(1.1, damageIntensity + 0.06);
+    }
     this.audioFeedback.play('damage', damageIntensity, this.time.now);
     this.setCombatMessage(`${getRaycastCombatMessageForSegment(this.getWorldSegment(), 'damage')} -${appliedDamage}`);
     if (this.playerHealth === 0) {
@@ -1886,6 +1919,41 @@ export class RaycastScene extends Phaser.Scene {
   private updateGameDirector(): void {
     if (!this.currentLevel.director.enabled) return;
 
+    const safePoints = getSafeDirectorSpawnPoints(this.currentLevel, this.player, this.activeZoneId, {
+      map: this.map,
+      enemies: this.enemies,
+      allowVisibleFrontSpawns: false
+    });
+
+    const zoneRule = selectRaycastEncounterPatternBinding(
+      this.currentLevel,
+      this.activeZoneId,
+      this.lastDirectorState ?? 'CALM',
+      this.time.now,
+      this.playerHealth,
+      this.encounterPatternCooldownUntil
+    );
+    const patternRule = this.pickBossEncounterPatternRule() ?? zoneRule;
+
+    let encounterPattern: {
+      patternId: EncounterPatternId;
+      bindingId?: string;
+      cooldownMs?: number;
+      spawns: SpawnRequest[];
+    } | null = null;
+    if (patternRule && safePoints.length >= 1) {
+      const kinds = getEncounterPatternKinds(patternRule.patternId);
+      const spawns = buildEncounterPatternSpawns(patternRule.patternId, kinds, safePoints, this.player);
+      if (spawns.length >= 1) {
+        encounterPattern = {
+          patternId: patternRule.patternId,
+          bindingId: patternRule.id,
+          cooldownMs: patternRule.cooldownMs,
+          spawns
+        };
+      }
+    }
+
     const decision = this.gameDirector.update({
       elapsedTime: this.time.now,
       totalKills: this.enemiesKilled,
@@ -1901,12 +1969,9 @@ export class RaycastScene extends Phaser.Scene {
       activeZoneId: this.activeZoneId,
       activatedTriggerCount: this.getActivatedTriggerCount(),
       distanceToImportantPickup: this.getDistanceToImportantPickup(),
-      spawnPoints: getSafeDirectorSpawnPoints(this.currentLevel, this.player, this.activeZoneId, {
-        map: this.map,
-        enemies: this.enemies,
-        allowVisibleFrontSpawns: false
-      }),
-      aliveEnemyKindCounts: this.countLivingEnemyKinds()
+      spawnPoints: safePoints,
+      aliveEnemyKindCounts: this.countLivingEnemyKinds(),
+      encounterPattern
     });
 
     const previousState = this.lastDirectorState;
@@ -1914,10 +1979,21 @@ export class RaycastScene extends Phaser.Scene {
     this.directorDebug = decision.debug;
     this.lastDirectorState = decision.state;
     this.announceDirectorStateChange(previousState, decision.state);
-    this.handleDirectorEvents(decision.events, decision.spawn);
+    this.handleDirectorEvents(decision.events, decision.spawn, decision.extraSpawns);
   }
 
-  private handleDirectorEvents(events: DirectorEvent[], spawn: SpawnRequest | null): void {
+  private pickBossEncounterPatternRule(): RaycastEncounterPatternBinding | null {
+    if (!this.bossState?.alive) return null;
+    if (this.bossState.arenaTwist !== 'lateral_lane') return null;
+    if (this.time.now >= this.bossState.arenaTwistUntil) return null;
+    if (this.playerHealth <= 28) return null;
+    if (this.lastDirectorState !== 'PRESSURE' && this.lastDirectorState !== 'AMBUSH') return null;
+    const id = 'boss-lateral-lane';
+    if (this.time.now < (this.encounterPatternCooldownUntil.get(id) ?? 0)) return null;
+    return buildSyntheticBossLateralBinding(11_000);
+  }
+
+  private handleDirectorEvents(events: DirectorEvent[], spawn: SpawnRequest | null, extraSpawns: SpawnRequest[]): void {
     let spawnedFromEvent = false;
 
     events.forEach((event) => {
@@ -1958,6 +2034,16 @@ export class RaycastScene extends Phaser.Scene {
         return;
       }
 
+      if (event.type === 'ENCOUNTER_PATTERN') {
+        this.audioFeedback.play(audioPlan.cue, audioPlan.intensity, this.time.now);
+        this.pulseFeedback(0xff3358, 0.06, 155);
+        if (event.bindingId !== undefined && event.patternCooldownMs !== undefined) {
+          this.encounterPatternCooldownUntil.set(event.bindingId, this.time.now + event.patternCooldownMs);
+        }
+        this.setCombatMessage(event.message);
+        return;
+      }
+
       if (event.type === 'SPAWN_PRESSURE' && spawn) {
         spawnedFromEvent = true;
         this.spawnDirectorEnemy(spawn);
@@ -1965,6 +2051,7 @@ export class RaycastScene extends Phaser.Scene {
     });
 
     if (spawn && !spawnedFromEvent) this.spawnDirectorEnemy(spawn);
+    extraSpawns.forEach((req) => this.spawnDirectorEnemy(req));
   }
 
   private announceDirectorStateChange(previousState: DirectorState | null, nextState: DirectorState): void {
@@ -2132,8 +2219,25 @@ export class RaycastScene extends Phaser.Scene {
   }
 
   private getAtmosphereOptions() {
-    const base = getAtmosphereForDirector(this.directorDebug?.state ?? null, this.directorIntensity);
-    return applyWorldSegmentToAtmosphere(base, this.getWorldSegment());
+    let base = getAtmosphereForDirector(this.directorDebug?.state ?? null, this.directorIntensity);
+    base = applyWorldSegmentToAtmosphere(base, this.getWorldSegment());
+    const boss = this.bossState;
+    if (boss?.alive && this.time.now < boss.arenaTwistUntil && boss.arenaTwist === 'ion_veil') {
+      return {
+        ...base,
+        corruptionAlpha: Math.min(0.26, base.corruptionAlpha * 1.14),
+        pulseAlpha: Math.min(0.28, base.pulseAlpha * 1.1),
+        enemyMinVisibility: Math.max(0.58, base.enemyMinVisibility - 0.035)
+      };
+    }
+    if (boss?.alive && this.time.now < boss.arenaTwistUntil && boss.arenaTwist === 'retreat_cut') {
+      return {
+        ...base,
+        fogStart: base.fogStart * 0.94,
+        pulseAlpha: Math.min(0.26, base.pulseAlpha * 1.08)
+      };
+    }
+    return base;
   }
 
   private getKeyCount(): number {
@@ -2316,6 +2420,18 @@ export class RaycastScene extends Phaser.Scene {
     this.healthText.setColor(visual.color);
     this.healthBarFill.setFillStyle(visual.accentColor, 1);
     this.healthBarFill.setSize(168 * visual.ratio, 6);
+    const pulse =
+      visual.tone === 'critical'
+        ? 0.76 + Math.sin(this.time.now * 0.0082) * 0.16
+        : visual.tone === 'low'
+          ? 0.88 + Math.sin(this.time.now * 0.005) * 0.08
+          : 1;
+    this.healthBarTrack.setAlpha(visual.tone === 'stable' ? 0.9 : pulse);
+    if (visual.tone === 'critical') {
+      this.healthBarFill.setAlpha(0.86 + Math.sin(this.time.now * 0.0095) * 0.12);
+    } else {
+      this.healthBarFill.setAlpha(1);
+    }
   }
 
   private updateBossHud(): void {
@@ -2377,8 +2493,13 @@ export class RaycastScene extends Phaser.Scene {
   }
 
   private flashDamage(amount: number): void {
-    const frameAlpha = Phaser.Math.Clamp(0.52 + amount / 18, 0.52, 0.96);
-    const flashAlpha = Phaser.Math.Clamp(0.24 + amount / 48, 0.24, 0.44);
+    const maxHp = 100;
+    const ratio = Phaser.Math.Clamp(this.playerHealth / maxHp, 0, 1);
+    let stress = 1;
+    if (ratio <= 0.25) stress = 1.18 + (0.25 - ratio) * 0.95;
+    else if (ratio <= 0.5) stress = 1.04 + (0.5 - ratio) * 0.26;
+    const frameAlpha = Phaser.Math.Clamp((0.48 + amount / 17) * stress, 0.48, 0.96);
+    const flashAlpha = Phaser.Math.Clamp((0.2 + amount / 46) * stress, 0.2, 0.48);
     this.damageFlash.setAlpha(flashAlpha);
     this.damageFrameTop.setAlpha(frameAlpha);
     this.damageFrameBottom.setAlpha(frameAlpha);
@@ -2400,7 +2521,7 @@ export class RaycastScene extends Phaser.Scene {
         this.damageFrameRight
       ],
       alpha: 0,
-      duration: 268,
+      duration: ratio <= 0.25 ? 312 : ratio <= 0.5 ? 288 : 268,
       ease: 'Quad.easeOut'
     });
   }
@@ -2518,6 +2639,22 @@ export class RaycastScene extends Phaser.Scene {
       this.audioFeedback.play('directorWarning', 0.74, now);
       this.audioFeedback.play('uiSoftDeny', 0.44, now + 55);
       this.pulseFeedback(0xffaa44, 0.068, 140);
+      return;
+    }
+
+    if (cue === 'ARENA_LOCKDOWN') {
+      this.audioFeedback.play('directorAmbush', 0.72, now);
+      this.audioFeedback.play('stingerDread', 0.38, now + 60);
+      this.pulseFeedback(0xff2244, 0.075, 125);
+      this.damageFrameTop.setAlpha(0.28);
+      this.damageFrameBottom.setAlpha(0.28);
+      this.tweens.killTweensOf([this.damageFrameTop, this.damageFrameBottom]);
+      this.tweens.add({
+        targets: [this.damageFrameTop, this.damageFrameBottom],
+        alpha: 0,
+        duration: 220,
+        ease: 'Quad.easeOut'
+      });
     }
   }
 

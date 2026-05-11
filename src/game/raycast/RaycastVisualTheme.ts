@@ -16,7 +16,20 @@ export type RaycastZoneThemeId =
   | 'ash-conduit'
   | 'ember-vault';
 
-export type RaycastLandmarkId = 'none' | 'key' | 'gate' | 'ambush' | 'secret' | 'exit';
+export type RaycastLandmarkId =
+  | 'none'
+  | 'key'
+  | 'gate'
+  | 'ambush'
+  | 'secret'
+  | 'exit'
+  /** Authored setpieces — orientation + silhouette read (see `getRaycastWallVisualStyle`). */
+  | 'reactor'
+  | 'monolith'
+  | 'core'
+  | 'ritual'
+  | 'bridge'
+  | 'machinery';
 
 export interface RaycastZoneVisualDescriptor extends RectArea {
   visualTheme: RaycastZoneThemeId;
@@ -92,7 +105,7 @@ export interface RaycastEnemyVisualStyle {
   accentColor: number;
   eyeColor: number;
   coreColor: number;
-  hornStyle: 'none' | 'ram' | 'antenna' | 'glitch-spikes';
+  hornStyle: 'none' | 'ram' | 'antenna' | 'glitch-spikes' | 'tusk';
   role: 'pressure' | 'heavy' | 'flanker' | 'artillery';
   windupColor: number;
 }
@@ -234,6 +247,73 @@ export function getRaycastWallVisualStyle(wallType: number, surface: RaycastSurf
     };
   }
 
+  if (surface.landmark === 'reactor') {
+    return {
+      pattern: 'hazard-strips',
+      detailColor: blendThemeColor(surface.theme.patternColor, RAYCAST_PALETTE.rustBright, 0.32),
+      secondaryColor: blendThemeColor(surface.theme.accentColor, 0x281008, 0.48),
+      signalColor: blendThemeColor(surface.theme.signalColor, RAYCAST_PALETTE.amberWarn, 0.38),
+      trimMix: 0.54,
+      panelStride: 10,
+      pulseSignal: true
+    };
+  }
+  if (surface.landmark === 'monolith') {
+    return {
+      pattern: 'corrupted-ribs',
+      detailColor: blendThemeColor(surface.theme.patternColor, 0x2a2438, 0.52),
+      secondaryColor: blendThemeColor(surface.theme.accentColor, 0x06040a, 0.52),
+      signalColor: blendThemeColor(surface.theme.signalColor, RAYCAST_PALETTE.corruptMist, 0.32),
+      trimMix: 0.7,
+      panelStride: 20,
+      pulseSignal: false
+    };
+  }
+  if (surface.landmark === 'core') {
+    return {
+      pattern: 'data-noise-cells',
+      detailColor: blendThemeColor(surface.theme.patternColor, RAYCAST_PALETTE.plasmaMid, 0.34),
+      secondaryColor: blendThemeColor(surface.theme.accentColor, 0x081018, 0.42),
+      signalColor: blendThemeColor(surface.theme.signalColor, RAYCAST_PALETTE.plasmaBright, 0.42),
+      trimMix: 0.52,
+      panelStride: 10,
+      pulseSignal: true
+    };
+  }
+  if (surface.landmark === 'ritual') {
+    return {
+      pattern: 'data-noise-cells',
+      detailColor: blendThemeColor(surface.theme.patternColor, RAYCAST_PALETTE.corruptViolet, 0.38),
+      secondaryColor: blendThemeColor(surface.theme.accentColor, 0x100814, 0.48),
+      signalColor: blendThemeColor(surface.theme.signalColor, RAYCAST_PALETTE.toxicGlow, 0.22),
+      trimMix: 0.6,
+      panelStride: 8,
+      pulseSignal: true
+    };
+  }
+  if (surface.landmark === 'bridge') {
+    return {
+      pattern: 'terminal-panels',
+      detailColor: surface.theme.patternColor,
+      secondaryColor: blendThemeColor(surface.theme.accentColor, 0x0a1412, 0.22),
+      signalColor: surface.theme.signalColor,
+      trimMix: 0.34,
+      panelStride: 24,
+      pulseSignal: false
+    };
+  }
+  if (surface.landmark === 'machinery') {
+    return {
+      pattern: 'terminal-panels',
+      detailColor: blendThemeColor(surface.theme.patternColor, 0x5a5e68, 0.45),
+      secondaryColor: blendThemeColor(surface.theme.accentColor, 0x060608, 0.55),
+      signalColor: blendThemeColor(surface.theme.signalColor, 0x3a3e48, 0.55),
+      trimMix: 0.3,
+      panelStride: 16,
+      pulseSignal: false
+    };
+  }
+
   if (wallType === 2) {
     return {
       pattern: surface.landmark === 'ambush' ? 'hazard-strips' : 'corrupted-ribs',
@@ -293,6 +373,86 @@ export function getRaycastWallVisualStyle(wallType: number, surface: RaycastSurf
     };
   }
 
+  if (wallType === 1 && surface.theme.id === 'ash-conduit') {
+    return {
+      pattern: 'corrupted-ribs',
+      detailColor: blendThemeColor(surface.theme.patternColor, RAYCAST_PALETTE.amberWarn, 0.2),
+      secondaryColor: blendThemeColor(surface.theme.accentColor, 0x180804, 0.36),
+      signalColor: surface.theme.signalColor,
+      trimMix: 0.52,
+      panelStride: 12,
+      pulseSignal: true
+    };
+  }
+  if (wallType === 1 && surface.theme.id === 'ember-vault') {
+    return {
+      pattern: 'hazard-strips',
+      detailColor: blendThemeColor(surface.theme.patternColor, 0xff6633, 0.18),
+      secondaryColor: blendThemeColor(surface.theme.accentColor, 0x200804, 0.4),
+      signalColor: surface.theme.signalColor,
+      trimMix: 0.54,
+      panelStride: 11,
+      pulseSignal: true
+    };
+  }
+
+  if (wallType === 1 && surface.theme.id === 'toxic-green') {
+    return {
+      pattern: 'data-noise-cells',
+      detailColor: blendThemeColor(surface.theme.patternColor, RAYCAST_PALETTE.toxicGlow, 0.14),
+      secondaryColor: blendThemeColor(surface.theme.accentColor, 0x061210, 0.26),
+      signalColor: surface.theme.signalColor,
+      trimMix: 0.48,
+      panelStride: 10,
+      pulseSignal: surface.landmark === 'secret'
+    };
+  }
+  if (wallType === 1 && surface.theme.id === 'warning-amber') {
+    const hazard = surface.landmark === 'ambush';
+    return {
+      pattern: hazard ? 'hazard-strips' : 'terminal-panels',
+      detailColor: blendThemeColor(surface.theme.patternColor, RAYCAST_PALETTE.telegraphAmber, 0.22),
+      secondaryColor: blendThemeColor(surface.theme.accentColor, 0x201008, 0.28),
+      signalColor: surface.theme.signalColor,
+      trimMix: 0.5,
+      panelStride: hazard ? 11 : 13,
+      pulseSignal: hazard
+    };
+  }
+  if (wallType === 1 && surface.theme.id === 'void-stone') {
+    return {
+      pattern: 'corrupted-ribs',
+      detailColor: blendThemeColor(surface.theme.patternColor, RAYCAST_PALETTE.corruptMist, 0.16),
+      secondaryColor: blendThemeColor(surface.theme.accentColor, 0x080510, 0.24),
+      signalColor: surface.theme.signalColor,
+      trimMix: 0.48,
+      panelStride: 13,
+      pulseSignal: surface.landmark === 'secret'
+    };
+  }
+  if (wallType === 1 && surface.theme.id === 'corrupted-metal') {
+    return {
+      pattern: 'terminal-panels',
+      detailColor: blendThemeColor(surface.theme.patternColor, RAYCAST_PALETTE.patternSteel, 0.14),
+      secondaryColor: blendThemeColor(surface.theme.accentColor, 0x0a0e14, 0.2),
+      signalColor: surface.theme.signalColor,
+      trimMix: 0.38,
+      panelStride: 16,
+      pulseSignal: surface.landmark === 'key'
+    };
+  }
+  if (wallType === 1 && surface.theme.id === 'exit-portal') {
+    return {
+      pattern: 'terminal-panels',
+      detailColor: blendThemeColor(surface.theme.patternColor, RAYCAST_PALETTE.plasmaMid, 0.28),
+      secondaryColor: blendThemeColor(surface.theme.accentColor, 0x050c12, 0.28),
+      signalColor: surface.theme.signalColor,
+      trimMix: 0.46,
+      panelStride: 12,
+      pulseSignal: true
+    };
+  }
+
   return {
     pattern: 'terminal-panels',
     detailColor: surface.theme.patternColor,
@@ -311,6 +471,61 @@ export function getRaycastGroundVisualStyle(surface: Pick<RaycastSurfaceContext,
       ceilingPattern: 'crossbars',
       floorGlowColor: surface.theme.signalColor,
       floorBandAlpha: 0.16,
+      cellStride: 20
+    };
+  }
+
+  if (surface.landmark === 'reactor') {
+    return {
+      floorPattern: 'hazard-lattice',
+      ceilingPattern: 'crossbars',
+      floorGlowColor: blendThemeColor(surface.theme.signalColor, RAYCAST_PALETTE.rustBright, 0.35),
+      floorBandAlpha: 0.165,
+      cellStride: 15
+    };
+  }
+  if (surface.landmark === 'monolith') {
+    return {
+      floorPattern: 'grid-cells',
+      ceilingPattern: 'void-noise',
+      floorGlowColor: blendThemeColor(surface.theme.patternColor, RAYCAST_PALETTE.corruptMist, 0.38),
+      floorBandAlpha: 0.12,
+      cellStride: 22
+    };
+  }
+  if (surface.landmark === 'core') {
+    return {
+      floorPattern: 'glow-rings',
+      ceilingPattern: 'crossbars',
+      floorGlowColor: blendThemeColor(surface.theme.signalColor, RAYCAST_PALETTE.plasmaMid, 0.45),
+      floorBandAlpha: 0.17,
+      cellStride: 18
+    };
+  }
+  if (surface.landmark === 'ritual') {
+    return {
+      floorPattern: 'noise-cells',
+      ceilingPattern: 'void-noise',
+      floorGlowColor: blendThemeColor(surface.theme.signalColor, RAYCAST_PALETTE.corruptViolet, 0.28),
+      floorBandAlpha: 0.14,
+      cellStride: 14
+    };
+  }
+  if (surface.landmark === 'bridge') {
+    return {
+      floorPattern: 'scanlines',
+      ceilingPattern: 'crossbars',
+      floorGlowColor: blendThemeColor(surface.theme.patternColor, surface.theme.signalColor, 0.35),
+      floorBandAlpha: 0.11,
+      cellStride: 26
+    };
+  }
+  if (surface.landmark === 'machinery') {
+    return {
+      floorPattern: 'grid-cells',
+      ceilingPattern: 'scanlines',
+      floorGlowColor: blendThemeColor(surface.theme.patternColor, 0x2a2a30, 0.5),
+      floorBandAlpha: 0.085,
       cellStride: 20
     };
   }
@@ -428,7 +643,7 @@ export function getRaycastEnemyVisualStyle(kind: EnemyKind, color: number): Rayc
   if (kind === 'SCRAMBLER') {
     return {
       silhouette: 'raider',
-      outlineColor: 0x180602,
+      outlineColor: 0x050208,
       accentColor: blendThemeColor(color, RAYCAST_PALETTE.amberWarn, 0.42),
       eyeColor: RAYCAST_PALETTE.boneBright,
       coreColor: RAYCAST_PALETTE.rustBright,
@@ -453,11 +668,11 @@ export function getRaycastEnemyVisualStyle(kind: EnemyKind, color: number): Rayc
 
   return {
     silhouette: 'raider',
-    outlineColor: 0x140304,
+    outlineColor: 0x100204,
     accentColor: blendThemeColor(color, RAYCAST_PALETTE.telegraphRose, 0.22),
     eyeColor: RAYCAST_PALETTE.boneBright,
     coreColor: RAYCAST_PALETTE.bloodGate,
-    hornStyle: 'none',
+    hornStyle: 'tusk',
     role: 'pressure',
     windupColor: RAYCAST_PALETTE.patternRust
   };
@@ -550,4 +765,28 @@ function blendThemeColor(baseColor: number, blendColor: number, amount: number):
   const g = ((baseColor >> 8) & 0xff) * inverse + ((blendColor >> 8) & 0xff) * clampedAmount;
   const b = (baseColor & 0xff) * inverse + (blendColor & 0xff) * clampedAmount;
   return (Math.floor(r) << 16) + (Math.floor(g) << 8) + Math.floor(b);
+}
+
+/** Fake local fill lights — column shade bump only (no new lighting pass). */
+export function getRaycastLandmarkColumnShadeBoost(landmark: RaycastLandmarkId): number {
+  switch (landmark) {
+    case 'core':
+      return 0.085;
+    case 'reactor':
+      return 0.072;
+    case 'ritual':
+      return 0.058;
+    case 'exit':
+      return 0.048;
+    case 'key':
+      return 0.038;
+    case 'bridge':
+      return 0.034;
+    case 'monolith':
+      return 0.03;
+    case 'machinery':
+      return 0.022;
+    default:
+      return 0;
+  }
 }

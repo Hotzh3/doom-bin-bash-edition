@@ -92,7 +92,7 @@ export function buildRaycastEpisodeBanner(input: RaycastEpisodeBannerInput): str
   if (input.worldTwoSector) {
     return `WORLD 2 // ABYSS STRATUM — NOT THE FORGE  |  SECTOR ${input.worldTwoSector.index}/${input.worldTwoSector.total}  ${input.levelName.toUpperCase()}`;
   }
-  return `EP 1 MINI EPISODE  |  LVL ${input.currentLevelNumber}/${input.totalLevels} ${input.levelName.toUpperCase()}`;
+  return `EP 1 // CINDER FORGE STRATUM  |  LVL ${input.currentLevelNumber}/${input.totalLevels} ${input.levelName.toUpperCase()}`;
 }
 
 export function buildRaycastOverlayHint(input: RaycastOverlayHintInput): string {
