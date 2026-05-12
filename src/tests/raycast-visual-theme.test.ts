@@ -7,6 +7,7 @@ import {
   getRaycastEnemyVisualStyle,
   getRaycastGroundVisualStyle,
   getRaycastWallVisualStyle,
+  getRaycastLandmarkColumnShadeBoost,
   getRaycastZoneTheme,
   getRaycastZoneVisual,
   sampleRaycastGroundBand,
@@ -25,7 +26,7 @@ describe('raycast visual theme', () => {
 
   it('World 2 fracture primary walls use basalt noise vs ion shaft slabs (distinct from Episode 1)', () => {
     const basaltSurface = sampleRaycastSurfaceContext(RAYCAST_LEVEL_WORLD2_FRACTURE.zones, 3.0, 8.5, 0);
-    const ionSurface = sampleRaycastSurfaceContext(RAYCAST_LEVEL_WORLD2_FRACTURE.zones, 12.5, 5.0, 0);
+    const ionSurface = sampleRaycastSurfaceContext(RAYCAST_LEVEL_WORLD2_FRACTURE.zones, 3.5, 3.5, 0);
     expect(getRaycastWallVisualStyle(1, basaltSurface)).toMatchObject({
       pattern: 'data-noise-cells',
       pulseSignal: false
@@ -109,6 +110,35 @@ describe('raycast visual theme', () => {
     });
   });
 
+  it('maps authored setpiece landmarks to hazard and bridge wall grammars', () => {
+    const reactorSurface = {
+      zoneId: 'x',
+      theme: getRaycastZoneTheme('toxic-green'),
+      landmark: 'reactor' as const,
+      cellX: 4,
+      cellY: 9,
+      variant: 0.33
+    };
+    const bridgeSurface = {
+      zoneId: 'y',
+      theme: getRaycastZoneTheme('ion-shaft'),
+      landmark: 'bridge' as const,
+      cellX: 2,
+      cellY: 3,
+      variant: 0.5
+    };
+    expect(getRaycastWallVisualStyle(1, reactorSurface)).toMatchObject({
+      pattern: 'hazard-strips',
+      pulseSignal: true
+    });
+    expect(getRaycastWallVisualStyle(1, bridgeSurface)).toMatchObject({
+      pattern: 'terminal-panels',
+      pulseSignal: false,
+      panelStride: 24
+    });
+    expect(getRaycastLandmarkColumnShadeBoost('core')).toBeGreaterThan(getRaycastLandmarkColumnShadeBoost('bridge'));
+  });
+
   it('selects ground pattern families from landmark and zone theme context', () => {
     const startGround = getRaycastGroundVisualStyle({
       theme: getRaycastZoneTheme('corrupted-metal'),
@@ -142,7 +172,7 @@ describe('raycast visual theme', () => {
     expect(gruntStyle).toMatchObject({
       silhouette: 'raider',
       role: 'pressure',
-      hornStyle: 'none'
+      hornStyle: 'tusk'
     });
     expect(bruteStyle).toMatchObject({
       silhouette: 'juggernaut',

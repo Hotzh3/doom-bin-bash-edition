@@ -1,6 +1,8 @@
 import { isPointInsideRect, type KeyPickup, type LevelTrigger, type LockedDoor, type RectArea, type SecretPickup } from '../level/arenaLayout';
 import type { RaycastSetpieceCue } from './RaycastSetpiece';
 import type { DirectorConfig } from '../systems/DirectorConfig';
+import type { DirectorState } from '../systems/DirectorState';
+import type { EncounterPatternId } from '../systems/EncounterPattern';
 import type { SpawnPoint } from '../systems/GameDirector';
 import type { EnemyKind } from '../types/game';
 import {
@@ -112,6 +114,16 @@ export interface RaycastEncounterBeat {
   setpieceCue?: RaycastSetpieceCue;
 }
 
+/** Authored encounter pattern hooks — resolved through GameDirector + safe spawn geometry. */
+export interface RaycastEncounterPatternBinding {
+  id: string;
+  zoneId: string;
+  patternId: EncounterPatternId;
+  cooldownMs: number;
+  directorStates?: DirectorState[];
+  maxPlayerHealthToSkip?: number;
+}
+
 export interface RaycastLevel {
   id: string;
   name: string;
@@ -128,6 +140,8 @@ export interface RaycastLevel {
   exits: RaycastExit[];
   initialSpawns: RaycastEnemySpawn[];
   encounterBeats: RaycastEncounterBeat[];
+  /** Optional zone-bound tactical patterns for the director (Raycast mode). */
+  encounterPatternBindings?: RaycastEncounterPatternBinding[];
   /** Sector-flavored OBJECTIVE line — canonical objective codes unchanged for logic/tests. */
   hudObjectiveLabels?: RaycastHudObjectiveLabels;
   progression: {
@@ -164,9 +178,9 @@ export const RAYCAST_LEVEL_1: RaycastLevel = {
     { id: 'locked-door', x: 8.0, y: 7.5, width: 2.0, height: 1.8, visualTheme: 'warning-amber', landmark: 'gate' },
     { id: 'service-mezzanine', x: 17.8, y: 9.4, width: 6.2, height: 3.2, visualTheme: 'void-stone' },
     { id: 'ambush', x: 10.4, y: 7.8, width: 3.2, height: 2.0, visualTheme: 'warning-amber', landmark: 'ambush' },
-    { id: 'combat-arena', x: 14.8, y: 9.6, width: 4.2, height: 5.2, visualTheme: 'toxic-green', landmark: 'ambush' },
+    { id: 'combat-arena', x: 14.8, y: 9.6, width: 4.2, height: 5.2, visualTheme: 'toxic-green', landmark: 'reactor' },
     { id: 'side-pressure', x: 11.8, y: 10.5, width: 5.2, height: 3.0, visualTheme: 'corrupted-metal' },
-    { id: 'east-terrace', x: 18.2, y: 8.8, width: 9.2, height: 5.4, visualTheme: 'toxic-green' },
+    { id: 'east-terrace', x: 18.2, y: 8.8, width: 9.2, height: 5.4, visualTheme: 'toxic-green', landmark: 'bridge' },
     { id: 'east-sleeve', x: 22.2, y: 3.8, width: 5.4, height: 10.2, visualTheme: 'warning-amber' },
     {
       id: 'east-exit-snare',
@@ -175,7 +189,7 @@ export const RAYCAST_LEVEL_1: RaycastLevel = {
       width: 3.4,
       height: 3.0,
       visualTheme: 'warning-amber',
-      landmark: 'gate'
+      landmark: 'monolith'
     },
     { id: 'east-overlook', x: 23.8, y: 2.2, width: 3.6, height: 4.2, visualTheme: 'void-stone' },
     { id: 'secret', x: 6.1, y: 12.3, width: 2.6, height: 1.4, visualTheme: 'void-stone', landmark: 'secret' },
@@ -471,6 +485,18 @@ export const RAYCAST_LEVEL_1: RaycastLevel = {
       id: 'holdout-lateral',
       triggerId: 'lateral-pressure',
       message: 'Holdout choke: anchor brute pins the lane — peel before rifles respawn'
+    },
+    {
+      id: 'arena-lockdown-pulse',
+      zoneId: 'combat-arena',
+      message: 'Arena lockdown pulse — perimeter hosts are waking in pairs',
+      setpieceCue: 'ARENA_LOCKDOWN'
+    },
+    {
+      id: 'narrow-corridor-hunt',
+      zoneId: 'narrow-hall',
+      message: 'Corridor narrow — something is pacing the parallel sleeve',
+      setpieceCue: 'CORRIDOR_HUNT'
     }
   ],
   hudObjectiveLabels: {
@@ -520,7 +546,58 @@ export const RAYCAST_LEVEL_1: RaycastLevel = {
       { id: 'south-catacombs-mid', zoneId: 'south-catacombs', x: 9.5, y: 15.5, minPlayerDistance: 2.0 },
       { id: 'exit-pressure', zoneId: 'exit', x: 16.5, y: 3.5, minPlayerDistance: 2.0 }
     ]
-  }
+  },
+  encounterPatternBindings: [
+    {
+      id: 'combat-arena-lockdown',
+      zoneId: 'combat-arena',
+      patternId: 'arena_lockdown',
+      cooldownMs: 14_000,
+      maxPlayerHealthToSkip: 18
+    },
+    {
+      id: 'east-snare-fake-safety',
+      zoneId: 'east-exit-snare',
+      patternId: 'fake_safety_ambush',
+      cooldownMs: 16_000,
+      maxPlayerHealthToSkip: 18
+    },
+    {
+      id: 'narrow-hall-hunt',
+      zoneId: 'narrow-hall',
+      patternId: 'corridor_hunt',
+      cooldownMs: 12_000,
+      maxPlayerHealthToSkip: 18
+    },
+    {
+      id: 'side-pincer',
+      zoneId: 'side-pressure',
+      patternId: 'pincer',
+      cooldownMs: 13_000,
+      maxPlayerHealthToSkip: 18
+    },
+    {
+      id: 'terrace-flank',
+      zoneId: 'east-terrace',
+      patternId: 'flank_pressure',
+      cooldownMs: 15_000,
+      maxPlayerHealthToSkip: 18
+    },
+    {
+      id: 'catacomb-wave',
+      zoneId: 'south-catacombs',
+      patternId: 'pressure_wave',
+      cooldownMs: 14_000,
+      maxPlayerHealthToSkip: 18
+    },
+    {
+      id: 'ambush-brute-support',
+      zoneId: 'ambush',
+      patternId: 'support_brute_push',
+      cooldownMs: 15_000,
+      maxPlayerHealthToSkip: 18
+    }
+  ]
 };
 
 export const RAYCAST_LEVEL_2: RaycastLevel = {
@@ -535,7 +612,7 @@ export const RAYCAST_LEVEL_2: RaycastLevel = {
     { id: 'cistern', x: 1.2, y: 1.6, width: 5.4, height: 4.6, visualTheme: 'toxic-green', landmark: 'key' },
     { id: 'secret', x: 1.1, y: 7.1, width: 2.2, height: 1.2, visualTheme: 'void-stone', landmark: 'secret' },
     { id: 'gate', x: 7.4, y: 4.8, width: 2.0, height: 1.8, visualTheme: 'warning-amber', landmark: 'gate' },
-    { id: 'furnace-threshold', x: 9.2, y: 4.6, width: 3.8, height: 2.0, visualTheme: 'warning-amber', landmark: 'ambush' },
+    { id: 'furnace-threshold', x: 9.2, y: 4.6, width: 3.8, height: 2.0, visualTheme: 'warning-amber', landmark: 'reactor' },
     { id: 'glass-run', x: 11.0, y: 1.2, width: 3.8, height: 7.0, visualTheme: 'toxic-green' },
     { id: 'overlook', x: 13.0, y: 1.0, width: 1.8, height: 2.4, visualTheme: 'exit-portal', landmark: 'exit' }
   ],
@@ -771,7 +848,7 @@ export const RAYCAST_LEVEL_3: RaycastLevel = {
     { id: 'archive', x: 1.1, y: 1.4, width: 5.6, height: 5.0, visualTheme: 'toxic-green', landmark: 'key' },
     { id: 'secret', x: 1.1, y: 7.8, width: 2.2, height: 1.4, visualTheme: 'void-stone', landmark: 'secret' },
     { id: 'seal', x: 9.1, y: 6.2, width: 2.0, height: 2.0, visualTheme: 'warning-amber', landmark: 'gate' },
-    { id: 'conduit-threshold', x: 11.0, y: 5.8, width: 2.2, height: 2.2, visualTheme: 'warning-amber', landmark: 'ambush' },
+    { id: 'conduit-threshold', x: 11.0, y: 5.8, width: 2.2, height: 2.2, visualTheme: 'warning-amber', landmark: 'ritual' },
     { id: 'conduit-loop', x: 11.0, y: 1.2, width: 7.0, height: 10.2, visualTheme: 'toxic-green' },
     { id: 'relay-overlook', x: 13.2, y: 1.0, width: 4.2, height: 2.4, visualTheme: 'exit-portal', landmark: 'exit' }
   ],
@@ -1008,7 +1085,7 @@ export const RAYCAST_LEVEL_4: RaycastLevel = {
     { id: 'core-pit', x: 1.0, y: 10.5, width: 6.8, height: 2.6, visualTheme: 'toxic-green', landmark: 'key' },
     { id: 'secret', x: 2.2, y: 11.2, width: 2.4, height: 1.6, visualTheme: 'void-stone', landmark: 'secret' },
     { id: 'crimson-gate', x: 8.2, y: 5.8, width: 2.2, height: 2.0, visualTheme: 'warning-amber', landmark: 'gate' },
-    { id: 'pressure-neck', x: 10.5, y: 5.5, width: 3.0, height: 2.4, visualTheme: 'warning-amber', landmark: 'ambush' },
+    { id: 'pressure-neck', x: 10.5, y: 5.5, width: 3.0, height: 2.4, visualTheme: 'warning-amber', landmark: 'core' },
     { id: 'infernal-climb', x: 10.2, y: 1.2, width: 6.2, height: 9.0, visualTheme: 'corrupted-metal' },
     { id: 'stack-exit', x: 12.0, y: 0.8, width: 4.6, height: 2.6, visualTheme: 'exit-portal', landmark: 'exit' }
   ],
@@ -1231,7 +1308,7 @@ export const RAYCAST_LEVEL_5: RaycastLevel = {
     { id: 'secret', x: 3.5, y: 11.2, width: 2.4, height: 1.6, visualTheme: 'void-stone', landmark: 'secret' },
     { id: 'heart-seal', x: 6.2, y: 6.5, width: 2.4, height: 2.2, visualTheme: 'warning-amber', landmark: 'gate' },
     { id: 'throne-threshold', x: 8.5, y: 6.0, width: 3.0, height: 2.4, visualTheme: 'warning-amber', landmark: 'ambush' },
-    { id: 'throne-ring', x: 8.5, y: 1.2, width: 8.0, height: 10.5, visualTheme: 'corrupted-metal', landmark: 'ambush' },
+    { id: 'throne-ring', x: 8.5, y: 1.2, width: 8.0, height: 10.5, visualTheme: 'corrupted-metal', landmark: 'machinery' },
     { id: 'final-exit', x: 12.0, y: 0.8, width: 4.6, height: 2.6, visualTheme: 'exit-portal', landmark: 'exit' }
   ],
   keys: [
@@ -1451,7 +1528,7 @@ export const RAYCAST_LEVEL_BOSS: RaycastLevel = {
   map: RAYCAST_MAP_BOSS,
   playerStart: RAYCAST_PLAYER_START_BOSS,
   zones: [
-    { id: 'arena', x: 1.0, y: 1.0, width: 13.0, height: 13.0, visualTheme: 'warning-amber', landmark: 'ambush' },
+    { id: 'arena', x: 1.0, y: 1.0, width: 13.0, height: 13.0, visualTheme: 'warning-amber', landmark: 'core' },
     { id: 'exit', x: 11.0, y: 6.0, width: 3.0, height: 3.0, visualTheme: 'exit-portal', landmark: 'exit' }
   ],
   keys: [],

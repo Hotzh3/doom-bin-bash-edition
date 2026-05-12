@@ -6,8 +6,10 @@ import {
   getRaycastIntroMessageForSegment,
   getRaycastBossHudLines,
   RAYCAST_ATMOSPHERE,
+  RAYCAST_ATMOSPHERE_WORLD1,
   RAYCAST_ATMOSPHERE_WORLD2,
   RAYCAST_ATMOSPHERE_WORLD3,
+  RAYCAST_WORLD1_SEGMENT_LAYER,
   RAYCAST_WORLD2_SEGMENT_LAYER,
   RAYCAST_WORLD3_SEGMENT_LAYER,
   calculateEnemyVisibility,
@@ -98,16 +100,25 @@ describe('raycast atmosphere', () => {
     expect(w3.corruptionAlpha).toBeCloseTo(base.corruptionAlpha * RAYCAST_WORLD3_SEGMENT_LAYER.corruptionAlphaScale, 6);
   });
 
-  it('leaves World 1 atmosphere unchanged when segment is world1', () => {
-    const base = getAtmosphereForDirector('AMBUSH', 4);
-    const w1 = applyWorldSegmentToAtmosphere(base, 'world1');
-    expect(w1).toBe(base);
+  it('layers forge-stratum atmosphere for World 1 (tighter envelope vs abyss cold)', () => {
+    const states = [null, 'CALM', 'WATCHING', 'WARNING', 'AMBUSH', 'PRESSURE', 'RECOVERY'] as const;
+    states.forEach((state) => {
+      const base = getAtmosphereForDirector(state, 4);
+      const w1 = applyWorldSegmentToAtmosphere(base, 'world1');
+      expect(w1).not.toBe(base);
+      expect(w1.fogEnd).toBeGreaterThanOrEqual(RAYCAST_WORLD1_SEGMENT_LAYER.fogEndFloor);
+      expect(w1.fogStart).toBeLessThan(w1.fogEnd);
+      expect(w1.corruptionAlpha).toBeCloseTo(base.corruptionAlpha * RAYCAST_WORLD1_SEGMENT_LAYER.corruptionAlphaScale, 6);
+      expect(w1.pulseAlpha).toBeCloseTo(base.pulseAlpha * RAYCAST_WORLD1_SEGMENT_LAYER.pulseAlphaScale, 6);
+      expect(w1.enemyMinVisibility).toBeGreaterThanOrEqual(base.enemyMinVisibility);
+      expect(w1.enemyMinVisibility).toBeLessThanOrEqual(RAYCAST_WORLD1_SEGMENT_LAYER.enemyMinVisibilityCap);
+    });
   });
 
   it('surfaces distinct World 2 intro copy for segment helpers', () => {
     expect(getRaycastIntroMessageForSegment('world2')).toContain('ABYSS STRATUM');
     expect(getRaycastIntroMessageForSegment('world2')).toContain('NOT THE FORGE');
-    expect(getRaycastIntroMessageForSegment('world1')).toBe(RAYCAST_ATMOSPHERE.messages.intro);
+    expect(getRaycastIntroMessageForSegment('world1')).toBe(RAYCAST_ATMOSPHERE_WORLD1.messageOverrides.intro);
   });
 
   it('surfaces distinct World 3 intro copy for segment helpers', () => {
@@ -117,7 +128,8 @@ describe('raycast atmosphere', () => {
 
   it('layers stratified combat copy for World 2 while preserving World 1 strings', () => {
     expect(getRaycastCombatMessageForSegment('world2', 'pressure')).toContain('ION SHEAR');
-    expect(getRaycastCombatMessageForSegment('world1', 'pressure')).toBe(RAYCAST_ATMOSPHERE.messages.pressure);
+    expect(getRaycastCombatMessageForSegment('world1', 'pressure')).toContain('SHAFT PRESSURE');
+    expect(getRaycastCombatMessageForSegment('world1', 'kill')).toBe(RAYCAST_ATMOSPHERE.messages.kill);
   });
 
   it('tailors boss strip copy to Archon vs Bloom Warden display names', () => {

@@ -7,6 +7,8 @@ export const RAYCAST_PALETTE = {
   floorVoid: 0x04060a,
   /** Distance fog tint — near-black with a faint sick cast. */
   fogVoid: 0x030508,
+  /** World 1 forge envelope — faint cinder cast mixed into base fog (distinct from W2 blue rift). */
+  forgeHaze: 0x070503,
   corruptVeil: 0x3e1432,
   criticalVeil: 0x520818,
   muzzleWarm: 0xffde9c,

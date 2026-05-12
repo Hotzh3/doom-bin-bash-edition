@@ -33,6 +33,8 @@ export interface RaycastBossConfig {
   behavior?: RaycastBossBehaviorId;
 }
 
+export type RaycastBossArenaTwist = 'none' | 'ion_veil' | 'lateral_lane' | 'retreat_cut';
+
 export interface RaycastBossState {
   id: string;
   displayName: string;
@@ -48,6 +50,9 @@ export interface RaycastBossState {
   pendingVolleyAt: number;
   hitFlashUntil: number;
   alive: boolean;
+  /** Telegraphed arena read — atmosphere / director hints only (no silent grid edits). */
+  arenaTwist: RaycastBossArenaTwist;
+  arenaTwistUntil: number;
 }
 
 function telegraphMs(state: Pick<RaycastBossState, 'phase' | 'behavior'>): number {
@@ -99,8 +104,28 @@ export function createRaycastBossState(config: RaycastBossConfig, time: number):
     nextVolleyReadyAt: time + 1400,
     pendingVolleyAt: 0,
     hitFlashUntil: 0,
-    alive: true
+    alive: true,
+    arenaTwist: 'none',
+    arenaTwistUntil: 0
   };
+}
+
+function applyBossPhaseArenaTwist(state: RaycastBossState, time: number): void {
+  if (state.behavior === 'bloom-warden') {
+    state.arenaTwist = 'lateral_lane';
+  } else if (state.behavior === 'ash-judge') {
+    state.arenaTwist = 'retreat_cut';
+  } else {
+    state.arenaTwist = 'ion_veil';
+  }
+  state.arenaTwistUntil = time + 5400;
+}
+
+export function tickRaycastBossArenaTwist(state: RaycastBossState, time: number): void {
+  if (state.arenaTwist !== 'none' && state.arenaTwistUntil > 0 && time >= state.arenaTwistUntil) {
+    state.arenaTwist = 'none';
+    state.arenaTwistUntil = 0;
+  }
 }
 
 export function syncRaycastBossPhase(state: RaycastBossState): void {
@@ -108,16 +133,50 @@ export function syncRaycastBossPhase(state: RaycastBossState): void {
   state.phase = r >= 0.5 ? 1 : 2;
 }
 
-export function damageRaycastBoss(state: RaycastBossState, amount: number, time: number): boolean {
+export interface RaycastBossDamageKnockback {
+  fromX: number;
+  fromY: number;
+  map: RaycastMap;
+}
+
+export function damageRaycastBoss(
+  state: RaycastBossState,
+  amount: number,
+  time: number,
+  knockback?: RaycastBossDamageKnockback
+): boolean {
   if (!state.alive || amount <= 0) return false;
+  const phaseBefore = state.phase;
   state.health = Math.max(0, state.health - amount);
   state.hitFlashUntil = time + 230;
   syncRaycastBossPhase(state);
+  if (knockback && state.health > 0) {
+    const resist = 0.27;
+    const push = Math.min(0.048, 0.008 + amount * 0.00032) * resist;
+    const dx = state.x - knockback.fromX;
+    const dy = state.y - knockback.fromY;
+    const len = Math.hypot(dx, dy) || 1;
+    const nx = state.x + (dx / len) * push;
+    const ny = state.y + (dy / len) * push;
+    if (canOccupyBossSpace(knockback.map, nx, state.y, state.hitRadius + 0.1)) state.x = nx;
+    else if (canOccupyBossSpace(knockback.map, state.x + Math.sign(dx) * push * 0.62, state.y, state.hitRadius + 0.1)) {
+      state.x += Math.sign(dx) * push * 0.62;
+    }
+    if (canOccupyBossSpace(knockback.map, state.x, ny, state.hitRadius + 0.1)) state.y = ny;
+    else if (canOccupyBossSpace(knockback.map, state.x, state.y + Math.sign(dy) * push * 0.62, state.hitRadius + 0.1)) {
+      state.y += Math.sign(dy) * push * 0.62;
+    }
+  }
   if (state.health <= 0) {
     state.alive = false;
     state.telegraphUntil = 0;
     state.pendingVolleyAt = 0;
+    state.arenaTwist = 'none';
+    state.arenaTwistUntil = 0;
     return true;
+  }
+  if (phaseBefore === 1 && state.phase === 2) {
+    applyBossPhaseArenaTwist(state, time);
   }
   return false;
 }
