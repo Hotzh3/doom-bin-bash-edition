@@ -90,7 +90,7 @@ export function buildRaycastEpisodeBanner(input: RaycastEpisodeBannerInput): str
     return `WORLD 3 // EMBER MERIDIAN — THIRD HELL  |  SECTOR ${input.worldThreeSector.index}/${input.worldThreeSector.total}  ${input.levelName.toUpperCase()}`;
   }
   if (input.worldTwoSector) {
-    return `WORLD 2 // ABYSS STRATUM — NOT THE FORGE  |  SECTOR ${input.worldTwoSector.index}/${input.worldTwoSector.total}  ${input.levelName.toUpperCase()}`;
+    return `WORLD 2 // ABYSS STRATUM — GLASS ABYSS, NOT THE FORGE  |  SECTOR ${input.worldTwoSector.index}/${input.worldTwoSector.total}  ${input.levelName.toUpperCase()}`;
   }
   return `EP 1 // CINDER FORGE STRATUM  |  LVL ${input.currentLevelNumber}/${input.totalLevels} ${input.levelName.toUpperCase()}`;
 }

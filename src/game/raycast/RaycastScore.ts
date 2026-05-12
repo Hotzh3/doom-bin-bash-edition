@@ -2,15 +2,59 @@ import type { EnemyKind } from '../types/game';
 
 export const RAYCAST_HIGH_SCORE_STORAGE_KEY = 'raycast_high_score_v1';
 
+/** Centralized scoring knobs so balance passes do not require editing score logic branches. */
+export const RAYCAST_SCORE_TUNING = {
+  killPoints: {
+    GRUNT: 100,
+    STALKER: 150,
+    RANGED: 175,
+    BRUTE: 250,
+    SCRAMBLER: 130
+  } as const satisfies Record<EnemyKind, number>,
+  bonuses: {
+    bossClear: 2500,
+    world2Entry: 520,
+    world3Entry: 480,
+    fullArcClear: 1100,
+    secretDiscover: 380
+  },
+  performance: {
+    accuracyCap: 280,
+    survivalCap: 220,
+    bossCap: 180,
+    accuracyRatioScale: 320,
+    survivalDamageSoftCap: 90,
+    survivalPerDamage: 2.5,
+    bossEffScale: 200,
+    bossCleanCap: 95,
+    bossCleanSlope: 2.15,
+    bossCleanSoftCeiling: 52,
+    minPelletsForAccuracy: 8,
+    minBossPellets: 5,
+    pathfinderBonus: 140,
+    speedSurgeBonus: 120,
+    speedSurgeMaxMs: 4 * 60 * 1000,
+    pathfinderMaxMs: 6 * 60 * 1000,
+    sectorPerformanceBonusCap: 600
+  },
+  campaign: {
+    completionBonusCap: 1200,
+    paceParMs: 48 * 60 * 1000,
+    paceBonusCap: 420,
+    vaultIntelBonus: 480,
+    lowProfileBonus: 220,
+    lowProfileAvgDamageMax: 28,
+    steadyAimBonus: 200,
+    steadyAimMinPellets: 64,
+    steadyAimRatio: 0.4
+  }
+} as const;
+
 /** One-time score bump when crossing from World 2 finale into World 3 (Phase 34). */
-export const RAYCAST_WORLD3_ENTRY_POINTS = 480;
+export const RAYCAST_WORLD3_ENTRY_POINTS = RAYCAST_SCORE_TUNING.bonuses.world3Entry;
 
 export const RAYCAST_KILL_POINTS: Record<EnemyKind, number> = {
-  GRUNT: 100,
-  STALKER: 150,
-  RANGED: 175,
-  BRUTE: 250,
-  SCRAMBLER: 130
+  ...RAYCAST_SCORE_TUNING.killPoints
 };
 
 export function raycastPointsForKill(kind: EnemyKind): number {
@@ -26,16 +70,18 @@ export function addRaycastKillScore(currentScore: number, killedKinds: EnemyKind
 }
 
 /** Episode boss clear bonus (flat points). */
-export const RAYCAST_BOSS_CLEAR_POINTS = 2500;
+export const RAYCAST_BOSS_CLEAR_POINTS = RAYCAST_SCORE_TUNING.bonuses.bossClear;
 
 /** Entering World 2 after Episode 1 boss — one-time carry bonus per run transition. */
-export const RAYCAST_WORLD2_ENTRY_POINTS = 520;
+export const RAYCAST_WORLD2_ENTRY_POINTS = RAYCAST_SCORE_TUNING.bonuses.world2Entry;
 
 /** Clearing the final World 2 sector (full mini-arc). */
-export const RAYCAST_FULL_ARC_CLEAR_BONUS = 1100;
+export const RAYCAST_FULL_ARC_CLEAR_BONUS = RAYCAST_SCORE_TUNING.bonuses.fullArcClear;
 
 /** Discovering a hidden sector node — meaningful but bounded vs kill farming. */
-export const RAYCAST_SECRET_DISCOVER_POINTS = 380;
+export const RAYCAST_SECRET_DISCOVER_POINTS = RAYCAST_SCORE_TUNING.bonuses.secretDiscover;
+export const RAYCAST_SECTOR_PERFORMANCE_BONUS_CAP = RAYCAST_SCORE_TUNING.performance.sectorPerformanceBonusCap;
+export const RAYCAST_CAMPAIGN_COMPLETION_BONUS_CAP = RAYCAST_SCORE_TUNING.campaign.completionBonusCap;
 
 export function addRaycastBossClearScore(currentScore: number): number {
   return currentScore + RAYCAST_BOSS_CLEAR_POINTS;
@@ -126,35 +172,33 @@ export function computeBossPelletEfficiency(
 }
 
 /** Weights — skill-adjacent; kills/secrets remain primary elsewhere. */
-const PERFORMANCE_ACCURACY_CAP = 280;
-const PERFORMANCE_SURVIVAL_CAP = 220;
-const PERFORMANCE_BOSS_CAP = 180;
-const PERFORMANCE_ACCURACY_RATIO_SCALE = 320;
-const PERFORMANCE_SURVIVAL_DAMAGE_SOFT_CAP = 90;
-const PERFORMANCE_SURVIVAL_PER_DAMAGE = 2.5;
-const PERFORMANCE_BOSS_EFF_SCALE = 200;
+const PERFORMANCE_ACCURACY_CAP = RAYCAST_SCORE_TUNING.performance.accuracyCap;
+const PERFORMANCE_SURVIVAL_CAP = RAYCAST_SCORE_TUNING.performance.survivalCap;
+const PERFORMANCE_BOSS_CAP = RAYCAST_SCORE_TUNING.performance.bossCap;
+const PERFORMANCE_ACCURACY_RATIO_SCALE = RAYCAST_SCORE_TUNING.performance.accuracyRatioScale;
+const PERFORMANCE_SURVIVAL_DAMAGE_SOFT_CAP = RAYCAST_SCORE_TUNING.performance.survivalDamageSoftCap;
+const PERFORMANCE_SURVIVAL_PER_DAMAGE = RAYCAST_SCORE_TUNING.performance.survivalPerDamage;
+const PERFORMANCE_BOSS_EFF_SCALE = RAYCAST_SCORE_TUNING.performance.bossEffScale;
 /** Bonus for taking little damage during boss fights (instrumented in scene while `bossState.alive`). */
-const PERFORMANCE_BOSS_CLEAN_CAP = 95;
-const PERFORMANCE_BOSS_CLEAN_SLOPE = 2.15;
-const PERFORMANCE_BOSS_CLEAN_SOFT_CEILING = 52;
-const PERFORMANCE_MIN_PELLETS_FOR_ACCURACY = 8;
-const PERFORMANCE_MIN_BOSS_PELLETS = 5;
-
-/** Hard cap so skill bonus stays secondary to kills/secrets/boss flat bonuses. */
-export const RAYCAST_SECTOR_PERFORMANCE_BONUS_CAP = 600;
-
-/** One-shot bonus when the final sector resolves (`episodeComplete`). */
-export const RAYCAST_CAMPAIGN_COMPLETION_BONUS_CAP = 1200;
+const PERFORMANCE_BOSS_CLEAN_CAP = RAYCAST_SCORE_TUNING.performance.bossCleanCap;
+const PERFORMANCE_BOSS_CLEAN_SLOPE = RAYCAST_SCORE_TUNING.performance.bossCleanSlope;
+const PERFORMANCE_BOSS_CLEAN_SOFT_CEILING = RAYCAST_SCORE_TUNING.performance.bossCleanSoftCeiling;
+const PERFORMANCE_MIN_PELLETS_FOR_ACCURACY = RAYCAST_SCORE_TUNING.performance.minPelletsForAccuracy;
+const PERFORMANCE_MIN_BOSS_PELLETS = RAYCAST_SCORE_TUNING.performance.minBossPellets;
+const PERFORMANCE_PATHFINDER_BONUS = RAYCAST_SCORE_TUNING.performance.pathfinderBonus;
+const PERFORMANCE_SPEED_SURGE_BONUS = RAYCAST_SCORE_TUNING.performance.speedSurgeBonus;
+const PERFORMANCE_SPEED_SURGE_MAX_MS = RAYCAST_SCORE_TUNING.performance.speedSurgeMaxMs;
+const PERFORMANCE_PATHFINDER_MAX_MS = RAYCAST_SCORE_TUNING.performance.pathfinderMaxMs;
 
 /** Generous full-run par — rewards routing without mandating speedrun tech. */
-const CAMPAIGN_PACE_PAR_MS = 48 * 60 * 1000;
-const CAMPAIGN_PACE_BONUS_CAP = 420;
-const CAMPAIGN_VAULT_INTEL_BONUS = 480;
-const CAMPAIGN_LOW_PROFILE_BONUS = 220;
-const CAMPAIGN_LOW_PROFILE_AVG_DAMAGE_MAX = 28;
-const CAMPAIGN_STEADY_AIM_BONUS = 200;
-const CAMPAIGN_STEADY_AIM_MIN_PELLETS = 64;
-const CAMPAIGN_STEADY_AIM_RATIO = 0.4;
+const CAMPAIGN_PACE_PAR_MS = RAYCAST_SCORE_TUNING.campaign.paceParMs;
+const CAMPAIGN_PACE_BONUS_CAP = RAYCAST_SCORE_TUNING.campaign.paceBonusCap;
+const CAMPAIGN_VAULT_INTEL_BONUS = RAYCAST_SCORE_TUNING.campaign.vaultIntelBonus;
+const CAMPAIGN_LOW_PROFILE_BONUS = RAYCAST_SCORE_TUNING.campaign.lowProfileBonus;
+const CAMPAIGN_LOW_PROFILE_AVG_DAMAGE_MAX = RAYCAST_SCORE_TUNING.campaign.lowProfileAvgDamageMax;
+const CAMPAIGN_STEADY_AIM_BONUS = RAYCAST_SCORE_TUNING.campaign.steadyAimBonus;
+const CAMPAIGN_STEADY_AIM_MIN_PELLETS = RAYCAST_SCORE_TUNING.campaign.steadyAimMinPellets;
+const CAMPAIGN_STEADY_AIM_RATIO = RAYCAST_SCORE_TUNING.campaign.steadyAimRatio;
 
 /**
  * Sector-clear performance bonus (accuracy + low damage + boss pellet efficiency).
@@ -188,7 +232,14 @@ export function computeSectorPerformanceBonus(m: RaycastSectorMetrics): number {
     );
   }
 
-  const raw = accuracyPart + survivalPart + bossPart + bossCleanPart;
+  const pathfinderPart =
+    m.secretsFound > 0 && m.elapsedMs <= PERFORMANCE_PATHFINDER_MAX_MS ? PERFORMANCE_PATHFINDER_BONUS : 0;
+  const speedSurgePart =
+    m.elapsedMs <= PERFORMANCE_SPEED_SURGE_MAX_MS && m.enemiesKilled >= 6 && m.damageTaken <= 45
+      ? PERFORMANCE_SPEED_SURGE_BONUS
+      : 0;
+
+  const raw = accuracyPart + survivalPart + bossPart + bossCleanPart + pathfinderPart + speedSurgePart;
   return Math.min(RAYCAST_SECTOR_PERFORMANCE_BONUS_CAP, Math.floor(raw));
 }
 
@@ -249,6 +300,12 @@ export function computeRaycastSectorMedals(m: RaycastSectorMetrics): string[] {
   if (m.secretTotal > 0 && m.secretsFound === m.secretTotal) {
     medals.push('FULL_INTEL');
   }
+  if (m.secretsFound > 0 && m.elapsedMs <= PERFORMANCE_PATHFINDER_MAX_MS) {
+    medals.push('PATHFINDER');
+  }
+  if (m.elapsedMs <= PERFORMANCE_SPEED_SURGE_MAX_MS && m.enemiesKilled >= 6 && m.damageTaken <= 45) {
+    medals.push('SPEED_SURGE');
+  }
   return medals;
 }
 
@@ -260,6 +317,8 @@ export function computeRaycastCampaignMedals(c: RaycastCampaignMetrics): string[
   }
   if (c.cumulativeSecretSlots > 0 && c.cumulativeSecretsFound === c.cumulativeSecretSlots) {
     medals.push('VAULT_SYNC');
+  } else if (c.cumulativeSecretSlots >= 5 && c.cumulativeSecretsFound >= Math.ceil(c.cumulativeSecretSlots * 0.6)) {
+    medals.push('DEEP_SCOUT');
   }
   if (c.sectorsCleared > 0 && c.cumulativeDamageTaken <= c.sectorsCleared * 22) {
     medals.push('IRON_ROUTE');
@@ -300,6 +359,12 @@ export function formatRaycastSectorMedalLabel(id: string): string {
       return 'BOSS LAYER CLEAR';
     case 'BOSS_GRACE':
       return 'BOSS GRACE';
+    case 'PATHFINDER':
+      return 'PATHFINDER';
+    case 'SPEED_SURGE':
+      return 'SPEED SURGE';
+    case 'DEEP_SCOUT':
+      return 'DEEP SCOUT';
     default:
       return id;
   }

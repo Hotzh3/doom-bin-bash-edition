@@ -144,5 +144,5 @@
    144|
    145|## License
    146|
-   147|No `LICENSE` file is shipped in this snapshot; treat as **all rights reserved** / private portfolio unless the maintainer adds an explicit license.
+   147|This repository is proprietary / all rights reserved. See [LICENSE](LICENSE).
    148|

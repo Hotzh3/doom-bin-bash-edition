@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { RAYCAST_LEVEL } from '../game/raycast/RaycastLevel';
-import { RAYCAST_LEVEL_WORLD2_FRACTURE } from '../game/raycast/RaycastWorldTwoLevels';
+import { RAYCAST_LEVEL_WORLD2_FRACTURE, RAYCAST_LEVEL_WORLD2_SULFUR_LATTICE } from '../game/raycast/RaycastWorldTwoLevels';
 import {
   getBillboardColor,
   getRaycastCellVariant,
@@ -44,6 +44,12 @@ describe('raycast visual theme', () => {
     expect(ionWell?.landmark).toBe('key');
     const gully = getRaycastZoneVisual(RAYCAST_LEVEL_WORLD2_FRACTURE.zones, 3.0, 8.5);
     expect(gully?.visualTheme).toBe('basalt-rift');
+  });
+
+  it('World 2 authored sectors avoid World 1-only zone themes in primary route identity', () => {
+    const world2Themes = new Set([...RAYCAST_LEVEL_WORLD2_FRACTURE.zones, ...RAYCAST_LEVEL_WORLD2_SULFUR_LATTICE.zones].map((zone) => zone.visualTheme));
+    expect(world2Themes.has('toxic-green')).toBe(false);
+    expect(world2Themes.has('void-stone')).toBe(false);
   });
 
   it('returns stable cell variants for procedural patterning', () => {

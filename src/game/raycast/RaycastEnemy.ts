@@ -18,6 +18,8 @@ export interface RaycastEnemy {
   spawnTelegraphUntil: number;
   attackWindupStartedAt: number;
   attackWindupUntil: number;
+  /** Brief combat disruption after impact — keeps encounters readable without new AI states. */
+  staggerUntil: number;
   hitFlashUntil: number;
   deathBurstUntil: number;
   patrolWaypoints: PatrolWaypoint[];
@@ -58,6 +60,7 @@ export function createRaycastEnemy(spawn: RaycastEnemySpawn): RaycastEnemy {
     spawnTelegraphUntil: 0,
     attackWindupStartedAt: 0,
     attackWindupUntil: 0,
+    staggerUntil: 0,
     hitFlashUntil: 0,
     deathBurstUntil: 0,
     patrolWaypoints: buildRaycastPatrolWaypoints(homeX, homeY, spawn.id),

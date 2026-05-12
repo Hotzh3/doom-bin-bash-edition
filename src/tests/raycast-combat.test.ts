@@ -31,6 +31,7 @@ const createEnemy = (overrides: Partial<RaycastEnemy> = {}): RaycastEnemy => {
     spawnTelegraphUntil: 0,
     attackWindupStartedAt: 0,
     attackWindupUntil: 0,
+    staggerUntil: 0,
     hitFlashUntil: 0,
     deathBurstUntil: 0,
     patrolWaypoints: buildRaycastPatrolWaypoints(x, y, id),
@@ -191,5 +192,21 @@ describe('raycast combat', () => {
     expect(shot.killCount).toBe(2);
     expect(shot.splashHitCount).toBe(1);
     expect([...shot.killedEnemyKinds].sort()).toEqual(['GRUNT', 'GRUNT']);
+  });
+
+  it('applies hit stagger that is longer for shotgun than pistol', () => {
+    const pistolCombat = new RaycastCombatSystem();
+    const pistolTarget = createEnemy({ id: 'pistol-target', health: 200, x: 2.8, y: 9.4, kind: 'GRUNT' });
+    pistolCombat.fire(player, [pistolTarget], RAYCAST_MAP, 1000);
+    const pistolStagger = (pistolTarget.staggerUntil ?? 0) - 1000;
+
+    const shotgunCombat = new RaycastCombatSystem();
+    shotgunCombat.switchWeaponSlot(2);
+    const shotgunTarget = createEnemy({ id: 'shotgun-target', health: 200, x: 2.8, y: 9.4, kind: 'GRUNT' });
+    shotgunCombat.fire(player, [shotgunTarget], RAYCAST_MAP, 1000);
+    const shotgunStagger = (shotgunTarget.staggerUntil ?? 0) - 1000;
+
+    expect(pistolStagger).toBeGreaterThan(0);
+    expect(shotgunStagger).toBeGreaterThan(pistolStagger);
   });
 });

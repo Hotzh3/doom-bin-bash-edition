@@ -51,6 +51,13 @@ describe('raycast level catalog', () => {
     expect(pit?.bossConfig?.behavior).toBe('bloom-warden');
     expect(pit?.progression.requireBossDefeated).toBe(true);
     expect(pit?.director.enabled).toBe(false);
+    expect(
+      RAYCAST_WORLD_TWO_CATALOG.some((level) =>
+        [...level.initialSpawns, ...level.triggers.flatMap((trigger) => trigger.spawns)].some(
+          (spawn) => spawn.kind === 'SCRAMBLER'
+        )
+      )
+    ).toBe(true);
   });
 
   it('keeps World 3 Ember Meridian sectors ordered with Ash Judge finale', () => {

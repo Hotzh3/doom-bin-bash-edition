@@ -145,6 +145,7 @@ import {
 import { RaycastPlayerController, type RaycastPlayerState } from '../raycast/RaycastPlayerController';
 import { RaycastRenderer, type RaycastBillboard } from '../raycast/RaycastRenderer';
 import { buildRaycastRunSummary } from '../raycast/RaycastRunSummary';
+import { appendRaycastPlaytestTelemetry } from '../raycast/RaycastTelemetry';
 import {
   buildRaycastLowHealthWarningMessage,
   getRaycastFeedbackActions,
@@ -1678,6 +1679,28 @@ export class RaycastScene extends Phaser.Scene {
     episodeComplete = false,
     isDeath = false
   ): void {
+    appendRaycastPlaytestTelemetry({
+      timestampIso: new Date().toISOString(),
+      levelId: this.currentLevel.id,
+      levelName: this.currentLevel.name,
+      worldSegment: this.getWorldSegment(),
+      difficulty: getRaycastDifficultyPreset(this.difficultyId).label,
+      outcome: isDeath ? 'death' : 'clear',
+      elapsedMs: this.time.now - this.runStartedAt,
+      score: this.runScore,
+      enemiesKilled: this.enemiesKilled,
+      damageTaken: this.damageTaken,
+      secretsFound: this.collectedSecrets.size,
+      secretTotal: this.currentLevel.secrets.length,
+      tokensFound: this.getKeyCount(),
+      tokenTotal: this.currentLevel.keys.length,
+      pelletsFired: this.runPelletsFired,
+      pelletsHitHostile: this.runPelletsHitHostile,
+      bossPelletsFired: this.runBossPelletsFired,
+      bossPelletsHitHostile: this.runBossPelletsHitHostile,
+      bossDamageTaken: this.runBossDamageTaken,
+      campaign: episodeComplete ? this.campaignMetrics : undefined
+    });
     writeRaycastHighScoreIfBetter(this.runScore);
     const highScore = readRaycastHighScore();
     const episodeState = getRaycastEpisodeState(this.currentLevel.id);
@@ -2336,6 +2359,8 @@ export class RaycastScene extends Phaser.Scene {
           ? RAYCAST_PALETTE.plasmaBright
           : marker.kind === 'exit'
             ? 0x6fd8ff
+            : marker.kind === 'landmark'
+              ? 0xffde8a
             : 0xffb347;
       this.minimapGraphics.fillStyle(color, 0.95);
       this.minimapGraphics.fillRect(px - 2, py - 2, Math.max(4, tileSize - 2), Math.max(4, tileSize - 2));
@@ -2412,6 +2437,7 @@ export class RaycastScene extends Phaser.Scene {
     if (marker.kind === 'door') return marker.label === 'LOCK' || marker.label === 'OPEN';
     if (marker.kind === 'exit') return marker.label === 'EXIT' || marker.label === 'PORTAL';
     if (marker.kind === 'key') return marker.label === 'KEY';
+    if (marker.kind === 'landmark') return true;
     return false;
   }
 
