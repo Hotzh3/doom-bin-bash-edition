@@ -56,6 +56,7 @@ Quick map for reviewers, demos, and handoff.
 
 | Path | Purpose |
 |------|---------|
+| [adrs/README.md](./adrs/README.md) | Portfolio ADR series (raycast, director, worlds, scoring, multiplayer strategy, runtime). |
 | [adr/0001-stack-mvp.md](./adr/0001-stack-mvp.md) | Stack ADR. |
 | [design/](./design/) | Design proposals (non-canonical until adopted). |
 | [references/](./references/) | Reference studies (clean-room positioning). |

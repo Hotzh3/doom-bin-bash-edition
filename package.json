@@ -5,10 +5,21 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "node scripts/build-runtime.mjs",
+    "build:preview": "RAYCAST_RUNTIME_CHANNEL=preview BASE_PATH=/${npm_package_name}/ node scripts/build-runtime.mjs",
+    "build:release": "RAYCAST_RUNTIME_CHANNEL=release node scripts/build-runtime.mjs",
+    "preview:dist": "vite preview --host 0.0.0.0 --port 4173 --strictPort",
+    "docker:build": "docker compose build",
+    "docker:up": "docker compose up --build",
+    "docker:up:d": "docker compose up --build -d",
+    "docker:down": "docker compose down",
+    "docker:logs": "docker compose logs -f game",
+    "docker:dev": "vite --host 0.0.0.0 --port 5173",
+    "docker:preview": "vite preview --host 0.0.0.0 --port 5173",
     "test": "vitest run",
     "lint": "eslint .",
     "format": "prettier --write .",
+    "runtime:info": "node scripts/runtime-info.mjs",
     "capture:media": "node scripts/capture-portfolio.mjs"
   },
   "dependencies": {

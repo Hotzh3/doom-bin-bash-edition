@@ -2,18 +2,20 @@
 
 Real **in-game** captures for README, talks, and résumé links. Not moodboard art (`docs/assets/im*.png`).
 
+For the current capture workflow, see [`../../media/capture-guide.md`](../../media/capture-guide.md).
+
 ## Naming convention
 
 Pattern: **`raycast-{moment}-{subject}.webp`** (lowercase, hyphenated).
 
-| File | Role |
-|------|------|
-| `raycast-menu.webp` | Main menu — mode split + difficulty. |
-| `raycast-prologue.webp` | Terminal prologue copy. |
-| `raycast-sector-hud.webp` | First-person HUD + objective (sector start). |
-| `raycast-exploration.webp` | Movement / corridor readability (README grid). |
-| `raycast-combat-director.webp` | Combat beat — pacing / feedback visible. |
-| `raycast-level-clear.webp` | Level-clear overlay with sector report *(manual capture — see [`SHOT_LIST.md`](./SHOT_LIST.md)).* |
+| File                           | Role                                                                                              |
+| ------------------------------ | ------------------------------------------------------------------------------------------------- |
+| `raycast-menu.webp`            | Main menu — mode split + difficulty.                                                              |
+| `raycast-prologue.webp`        | Terminal prologue copy.                                                                           |
+| `raycast-sector-hud.webp`      | First-person HUD + objective (sector start).                                                      |
+| `raycast-exploration.webp`     | Movement / corridor readability (README grid).                                                    |
+| `raycast-combat-director.webp` | Combat beat — pacing / feedback visible.                                                          |
+| `raycast-level-clear.webp`     | Level-clear overlay with sector report _(manual capture — see [`SHOT_LIST.md`](./SHOT_LIST.md))._ |
 
 Stills are **WebP** (~960×540 logical game frame). Regenerated PNG intermediates should not be committed.
 
