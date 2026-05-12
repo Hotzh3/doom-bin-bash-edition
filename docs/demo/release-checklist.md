@@ -36,6 +36,7 @@ npm run build
 ## Portfolio media (recommended before external demos)
 
 - Stills / GIFs live under `docs/assets/screenshots/` and `docs/assets/gifs/` ([shot list](../assets/screenshots/SHOT_LIST.md)).
+- Canonical capture guide: [docs/media/capture-guide.md](../media/capture-guide.md).
 - After UI or raycast visual changes, refresh: `npx playwright install chromium` (once per machine) then `npm run capture:media` (needs `ffmpeg` on `PATH`). Use **`CAPTURE_URL=...`** if Vite is already running — see [`scripts/capture-portfolio.mjs`](../../scripts/capture-portfolio.mjs).
 - The capture script prints **per-file sizes** when it finishes; align root [`README.md`](../../README.md) subline with combined WebP + GIF totals.
 - Quick sanity check: five WebPs typically **~95–110 KB** combined; two GIFs **under ~1 MB** each (recent passes ≈ **~230 KB + ~265 KB** — rerun `capture:media` and update [`README.md`](../../README.md) if totals shift).

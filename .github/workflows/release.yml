@@ -1,0 +1,98 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm run test
+
+      - name: Run lint
+        run: npm run lint
+
+      - name: Build
+        run: npm run build
+
+      - name: Resolve release metadata
+        id: meta
+        run: |
+          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            VERSION="${GITHUB_REF_NAME}"
+            CHANNEL="release"
+          else
+            VERSION="main-${GITHUB_SHA::7}"
+            CHANNEL="preview"
+          fi
+
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "channel=${CHANNEL}" >> "$GITHUB_OUTPUT"
+          echo "zip_name=doom-bin-bash-edition-${VERSION}.zip" >> "$GITHUB_OUTPUT"
+
+      - name: Package dist
+        run: zip -r "${{ steps.meta.outputs.zip_name }}" dist
+
+      - name: Upload dist artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.meta.outputs.channel }}-dist-${{ steps.meta.outputs.version }}
+          path: dist
+          if-no-files-found: error
+
+      - name: Upload zip artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.meta.outputs.channel }}-zip-${{ steps.meta.outputs.version }}
+          path: ${{ steps.meta.outputs.zip_name }}
+          if-no-files-found: error
+
+      - name: Create GitHub Release
+        if: github.ref_type == 'tag'
+        uses: softprops/action-gh-release@v2
+        with:
+          name: ${{ github.ref_name }}
+          generate_release_notes: true
+          files: ${{ steps.meta.outputs.zip_name }}
+
+      - name: Publish workflow summary
+        run: |
+          {
+            echo "## Release workflow"
+            echo ""
+            echo "- Channel: ${{ steps.meta.outputs.channel }}"
+            echo "- Version: ${{ steps.meta.outputs.version }}"
+            echo "- Dist artifact: ${{ steps.meta.outputs.channel }}-dist-${{ steps.meta.outputs.version }}"
+            echo "- Zip artifact: ${{ steps.meta.outputs.channel }}-zip-${{ steps.meta.outputs.version }}"
+            if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+              echo "- GitHub Release: created for ${GITHUB_REF_NAME}"
+            else
+              echo "- Preview deploy: GitHub Pages continues from \`cd-pages.yml\` on \`main\`"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"

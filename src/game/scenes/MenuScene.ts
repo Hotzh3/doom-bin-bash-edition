@@ -1,13 +1,24 @@
-import Phaser from 'phaser';
-import { AudioFeedbackSystem } from '../systems/AudioFeedbackSystem';
-import { getRaycastFeedbackActions } from '../raycast/RaycastFeedback';
+import Phaser from "phaser";
+import { AudioFeedbackSystem } from "../systems/AudioFeedbackSystem";
+import { getRaycastFeedbackActions } from "../raycast/RaycastFeedback";
 import {
   cycleRaycastDifficulty,
   getRaycastDifficultyPreset,
-  RAYCAST_DIFFICULTY_REGISTRY_KEY
-} from '../raycast/RaycastDifficulty';
-import { buildMainMenuLayout, getMainMenuCopy } from '../raycast/RaycastPresentation';
-import { RAYCAST_CSS, RAYCAST_PALETTE } from '../raycast/RaycastPalette';
+  RAYCAST_DIFFICULTY_REGISTRY_KEY,
+} from "../raycast/RaycastDifficulty";
+import {
+  cycleRaycastChallengeModifier,
+  getRaycastChallengeModifier,
+  readRaycastChallengeModifier,
+  RAYCAST_CHALLENGE_STORAGE_KEY,
+  writeRaycastChallengeModifier,
+} from "../raycast/RaycastScore";
+import {
+  buildMainMenuLayout,
+  getMainMenuCopy,
+} from "../raycast/RaycastPresentation";
+import { formatRaycastRuntimeFooter } from "../runtime/RaycastRuntimeInfo";
+import { RAYCAST_CSS, RAYCAST_PALETTE } from "../raycast/RaycastPalette";
 
 const MENU_BACKGROUND = RAYCAST_PALETTE.voidBlack;
 const MENU_CYAN = RAYCAST_PALETTE.plasmaBright;
@@ -20,31 +31,64 @@ export class MenuScene extends Phaser.Scene {
   private inputListenersRegistered = false;
   private audioFeedback!: AudioFeedbackSystem;
   private difficultyHintText!: Phaser.GameObjects.Text;
+  private challengeHintText!: Phaser.GameObjects.Text;
+  private runtimeHintText!: Phaser.GameObjects.Text;
 
   private readonly handleStartArena = (): void => {
-    this.scene.start('PrologueScene', { mode: 'arena' });
+    this.scene.start("PrologueScene", { mode: "arena" });
   };
 
   private readonly handleStartRaycast = (): void => {
-    this.playFeedbackEvent('difficultyStart');
-    const difficultyId = getRaycastDifficultyPreset(this.registry.get(RAYCAST_DIFFICULTY_REGISTRY_KEY)).id;
-    this.scene.start('PrologueScene', { mode: 'raycast', difficultyId });
+    this.playFeedbackEvent("difficultyStart");
+    const difficultyId = getRaycastDifficultyPreset(
+      this.registry.get(RAYCAST_DIFFICULTY_REGISTRY_KEY),
+    ).id;
+    const challengeId = getRaycastChallengeModifier(
+      this.registry.get(RAYCAST_CHALLENGE_STORAGE_KEY),
+    ).id;
+    this.scene.start("PrologueScene", {
+      mode: "raycast",
+      difficultyId,
+      challengeId,
+    });
   };
 
   private readonly handleCycleDifficulty = (): void => {
-    const next = cycleRaycastDifficulty(this.registry.get(RAYCAST_DIFFICULTY_REGISTRY_KEY));
+    const next = cycleRaycastDifficulty(
+      this.registry.get(RAYCAST_DIFFICULTY_REGISTRY_KEY),
+    );
     this.registry.set(RAYCAST_DIFFICULTY_REGISTRY_KEY, next.id);
     this.difficultyHintText.setText(this.buildDifficultyMenuLine());
-    this.playFeedbackEvent('difficultySelect');
+    this.playFeedbackEvent("difficultySelect");
+  };
+
+  private readonly handleCycleChallenge = (): void => {
+    const next = cycleRaycastChallengeModifier(
+      this.registry.get(RAYCAST_CHALLENGE_STORAGE_KEY),
+    );
+    this.registry.set(RAYCAST_CHALLENGE_STORAGE_KEY, next.id);
+    writeRaycastChallengeModifier(next.id);
+    this.challengeHintText.setText(this.buildChallengeMenuLine());
+    this.playFeedbackEvent("difficultySelect");
   };
 
   private buildDifficultyMenuLine(): string {
-    const preset = getRaycastDifficultyPreset(this.registry.get(RAYCAST_DIFFICULTY_REGISTRY_KEY));
+    const preset = getRaycastDifficultyPreset(
+      this.registry.get(RAYCAST_DIFFICULTY_REGISTRY_KEY),
+    );
     return `DIFFICULTY · ${preset.label.toUpperCase()}  ·  [D] CYCLE`;
   }
 
+  private buildChallengeMenuLine(): string {
+    const current = getRaycastChallengeModifier(
+      this.registry.get(RAYCAST_CHALLENGE_STORAGE_KEY) ??
+        readRaycastChallengeModifier().id,
+    );
+    return `CHALLENGE · ${current.label.toUpperCase()}  ·  [M] MODIFIER`;
+  }
+
   constructor() {
-    super('MenuScene');
+    super("MenuScene");
   }
 
   create(): void {
@@ -61,25 +105,25 @@ export class MenuScene extends Phaser.Scene {
 
     this.add
       .text(layout.centerX, layout.titleY, copy.title, {
-        fontFamily: 'monospace',
-        fontSize: width <= 720 ? '22px' : '34px',
-        fontStyle: '700',
+        fontFamily: "monospace",
+        fontSize: width <= 720 ? "22px" : "34px",
+        fontStyle: "700",
         color: MENU_CYAN_SOFT,
-        stroke: '#05070b',
+        stroke: "#05070b",
         strokeThickness: 6,
-        align: 'center',
-        wordWrap: { width: width - 48 }
+        align: "center",
+        wordWrap: { width: width - 48 },
       })
       .setOrigin(0.5)
       .setDepth(8);
 
     const line3d = this.add
       .text(layout.centerX, layout.option3dY, copy.press3d, {
-        fontFamily: 'monospace',
-        fontSize: '17px',
-        fontStyle: '700',
+        fontFamily: "monospace",
+        fontSize: "17px",
+        fontStyle: "700",
         color: MENU_CYAN_SOFT,
-        align: 'center'
+        align: "center",
       })
       .setOrigin(0.5)
       .setDepth(8)
@@ -88,39 +132,94 @@ export class MenuScene extends Phaser.Scene {
 
     const line2d = this.add
       .text(layout.centerX, layout.option2dY, copy.press2d, {
-        fontFamily: 'monospace',
-        fontSize: '17px',
-        fontStyle: '700',
+        fontFamily: "monospace",
+        fontSize: "17px",
+        fontStyle: "700",
         color: MENU_TEXT,
-        align: 'center'
+        align: "center",
       })
       .setOrigin(0.5)
       .setDepth(8)
       .setInteractive({ useHandCursor: true })
       .on(Phaser.Input.Events.POINTER_DOWN, this.handleStartArena);
 
-    line3d.on(Phaser.Input.Events.POINTER_OVER, () => line3d.setColor('#ffffff'));
-    line3d.on(Phaser.Input.Events.POINTER_OUT, () => line3d.setColor(MENU_CYAN_SOFT));
-    line2d.on(Phaser.Input.Events.POINTER_OVER, () => line2d.setColor(MENU_CYAN_SOFT));
-    line2d.on(Phaser.Input.Events.POINTER_OUT, () => line2d.setColor(MENU_TEXT));
+    line3d.on(Phaser.Input.Events.POINTER_OVER, () =>
+      line3d.setColor("#ffffff"),
+    );
+    line3d.on(Phaser.Input.Events.POINTER_OUT, () =>
+      line3d.setColor(MENU_CYAN_SOFT),
+    );
+    line2d.on(Phaser.Input.Events.POINTER_OVER, () =>
+      line2d.setColor(MENU_CYAN_SOFT),
+    );
+    line2d.on(Phaser.Input.Events.POINTER_OUT, () =>
+      line2d.setColor(MENU_TEXT),
+    );
 
     this.difficultyHintText = this.add
-      .text(layout.centerX, layout.option2dY + 46, this.buildDifficultyMenuLine(), {
-        fontFamily: 'monospace',
-        fontSize: '13px',
-        fontStyle: '700',
-        color: '#ff9a38',
-        align: 'center'
-      })
+      .text(
+        layout.centerX,
+        layout.option2dY + 46,
+        this.buildDifficultyMenuLine(),
+        {
+          fontFamily: "monospace",
+          fontSize: "13px",
+          fontStyle: "700",
+          color: "#ff9a38",
+          align: "center",
+        },
+      )
       .setOrigin(0.5)
       .setDepth(8)
       .setAlpha(0.92);
 
+    this.registry.set(
+      RAYCAST_CHALLENGE_STORAGE_KEY,
+      readRaycastChallengeModifier().id,
+    );
+    this.challengeHintText = this.add
+      .text(
+        layout.centerX,
+        layout.option2dY + 68,
+        this.buildChallengeMenuLine(),
+        {
+          fontFamily: "monospace",
+          fontSize: "12px",
+          fontStyle: "700",
+          color: MENU_CYAN_SOFT,
+          align: "center",
+        },
+      )
+      .setOrigin(0.5)
+      .setDepth(8)
+      .setAlpha(0.88);
+
+    this.runtimeHintText = this.add
+      .text(layout.centerX, height - 18, formatRaycastRuntimeFooter(), {
+        fontFamily: "monospace",
+        fontSize: "11px",
+        fontStyle: "700",
+        color: "#7f97a9",
+        align: "center",
+        wordWrap: { width: width - 32 },
+      })
+      .setOrigin(0.5)
+      .setDepth(8)
+      .setAlpha(0.85);
+
     this.cameras.main.fadeIn(420, 0, 0, 0);
 
     this.registerInputListeners();
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.cleanupInputListeners, this);
-    this.events.once(Phaser.Scenes.Events.DESTROY, this.cleanupInputListeners, this);
+    this.events.once(
+      Phaser.Scenes.Events.SHUTDOWN,
+      this.cleanupInputListeners,
+      this,
+    );
+    this.events.once(
+      Phaser.Scenes.Events.DESTROY,
+      this.cleanupInputListeners,
+      this,
+    );
   }
 
   private drawBackdrop(width: number, height: number): void {
@@ -137,7 +236,8 @@ export class MenuScene extends Phaser.Scene {
       const barY = 26 + i * 34;
       const barWidth = Math.round(width * (0.2 + (i % 4) * 0.13));
       const barX = i % 2 === 0 ? 0 : width - barWidth;
-      const color = i % 3 === 0 ? MENU_CYAN : i % 3 === 1 ? MENU_EMBER : MENU_ROSE;
+      const color =
+        i % 3 === 0 ? MENU_CYAN : i % 3 === 1 ? MENU_EMBER : MENU_ROSE;
       graphics.fillStyle(color, 0.08);
       graphics.fillRect(barX, barY, barWidth, 6);
     }
@@ -164,36 +264,52 @@ export class MenuScene extends Phaser.Scene {
     graphics.lineStyle(2, MENU_CYAN, 0.45);
     graphics.strokeRoundedRect(frameX, frameY, frameWidth, frameHeight, 14);
     graphics.lineStyle(1, MENU_EMBER, 0.25);
-    graphics.strokeRoundedRect(frameX + 8, frameY + 8, frameWidth - 16, frameHeight - 16, 10);
+    graphics.strokeRoundedRect(
+      frameX + 8,
+      frameY + 8,
+      frameWidth - 16,
+      frameHeight - 16,
+      10,
+    );
   }
 
   private registerInputListeners(): void {
     if (this.inputListenersRegistered) this.cleanupInputListeners();
     const kb = this.input.keyboard;
-    kb?.once('keydown-A', this.handleStartRaycast);
-    kb?.once('keydown-a', this.handleStartRaycast);
-    kb?.once('keydown-B', this.handleStartArena);
-    kb?.once('keydown-b', this.handleStartArena);
-    kb?.on('keydown-D', this.handleCycleDifficulty);
-    kb?.on('keydown-d', this.handleCycleDifficulty);
+    kb?.once("keydown-A", this.handleStartRaycast);
+    kb?.once("keydown-a", this.handleStartRaycast);
+    kb?.once("keydown-B", this.handleStartArena);
+    kb?.once("keydown-b", this.handleStartArena);
+    kb?.on("keydown-D", this.handleCycleDifficulty);
+    kb?.on("keydown-d", this.handleCycleDifficulty);
+    kb?.on("keydown-M", this.handleCycleChallenge);
+    kb?.on("keydown-m", this.handleCycleChallenge);
     this.inputListenersRegistered = true;
   }
 
   private cleanupInputListeners(): void {
     if (!this.inputListenersRegistered) return;
     const kb = this.input.keyboard;
-    kb?.off('keydown-A', this.handleStartRaycast);
-    kb?.off('keydown-a', this.handleStartRaycast);
-    kb?.off('keydown-B', this.handleStartArena);
-    kb?.off('keydown-b', this.handleStartArena);
-    kb?.off('keydown-D', this.handleCycleDifficulty);
-    kb?.off('keydown-d', this.handleCycleDifficulty);
+    kb?.off("keydown-A", this.handleStartRaycast);
+    kb?.off("keydown-a", this.handleStartRaycast);
+    kb?.off("keydown-B", this.handleStartArena);
+    kb?.off("keydown-b", this.handleStartArena);
+    kb?.off("keydown-D", this.handleCycleDifficulty);
+    kb?.off("keydown-d", this.handleCycleDifficulty);
+    kb?.off("keydown-M", this.handleCycleChallenge);
+    kb?.off("keydown-m", this.handleCycleChallenge);
     this.inputListenersRegistered = false;
   }
 
-  private playFeedbackEvent(event: 'difficultySelect' | 'difficultyStart'): void {
+  private playFeedbackEvent(
+    event: "difficultySelect" | "difficultyStart",
+  ): void {
     getRaycastFeedbackActions(event).forEach((action) => {
-      this.audioFeedback.play(action.cue, action.intensity, this.time.now + (action.delayMs ?? 0));
+      this.audioFeedback.play(
+        action.cue,
+        action.intensity,
+        this.time.now + (action.delayMs ?? 0),
+      );
     });
   }
 }

@@ -2,12 +2,14 @@
 
 Optimized palette GIFs for README and social previews. **Do not** commit uncompressed screen recordings.
 
+Capture rules and duration guidance live in [`../../media/capture-guide.md`](../../media/capture-guide.md).
+
 ## Files
 
-| File | Contents |
-|------|----------|
+| File                         | Contents                                                          |
+| ---------------------------- | ----------------------------------------------------------------- |
 | `raycast-boot-to-sector.gif` | Menu → terminal prologue → first sector (single capture session). |
-| `raycast-combat-loop.gif` | Short segment from the same session — movement + firing. |
+| `raycast-combat-loop.gif`    | Short segment from the same session — movement + firing.          |
 
 ## Regenerate
 
