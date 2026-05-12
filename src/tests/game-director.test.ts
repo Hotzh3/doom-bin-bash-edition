@@ -522,4 +522,39 @@ describe('GameDirector', () => {
     expect(decision.state).toBe('RECOVERY');
     expect(decision.spawn).toBeNull();
   });
+
+  it('consumes multiple spawn budget slots for encounter patterns during pressure', () => {
+    const director = new GameDirector({
+      spawnCooldownMs: 0,
+      config: { warningLeadMs: 0, highIntensitySpawnCooldownMs: 0, maxEnemiesAlive: 6, maxTotalSpawns: 8 }
+    });
+    director.update({
+      ...baseInput,
+      elapsedTime: 60_000,
+      totalKills: 8,
+      enemiesAlive: 1,
+      timeSincePlayerDamagedMs: 20_000
+    });
+    const decision = director.update({
+      ...baseInput,
+      elapsedTime: 61_000,
+      totalKills: 8,
+      enemiesAlive: 1,
+      timeSincePlayerDamagedMs: 21_000,
+      encounterPattern: {
+        patternId: 'pincer',
+        bindingId: 'test',
+        cooldownMs: 9000,
+        spawns: [
+          { kind: 'GRUNT', x: 1, y: 1 },
+          { kind: 'STALKER', x: 2, y: 2 }
+        ]
+      }
+    });
+    expect(decision.state).toBe('PRESSURE');
+    expect(decision.spawn).not.toBeNull();
+    expect(decision.extraSpawns).toHaveLength(1);
+    expect(decision.events.some((e) => e.type === 'ENCOUNTER_PATTERN')).toBe(true);
+    expect(decision.debug.spawnBudgetRemaining).toBe(5);
+  });
 });

@@ -28,7 +28,7 @@ export const RAYCAST_LEVEL_WORLD2_FRACTURE: RaycastLevel = {
     { id: 'ion-well', x: 1.2, y: 1.6, width: 5.4, height: 4.6, visualTheme: 'ion-shaft', landmark: 'key' },
     { id: 'rift-secret', x: 1.1, y: 7.1, width: 2.2, height: 1.2, visualTheme: 'basalt-rift', landmark: 'secret' },
     { id: 'seam-gate', x: 7.4, y: 4.8, width: 2.0, height: 1.8, visualTheme: 'ion-shaft', landmark: 'gate' },
-    { id: 'split-push', x: 9.2, y: 4.6, width: 3.8, height: 2.0, visualTheme: 'ion-shaft', landmark: 'ambush' },
+    { id: 'split-push', x: 9.2, y: 4.6, width: 3.8, height: 2.0, visualTheme: 'ion-shaft', landmark: 'bridge' },
     { id: 'ion-run', x: 11.0, y: 1.2, width: 3.8, height: 7.3, visualTheme: 'ion-shaft' },
     { id: 'nadir-ledge', x: 13.0, y: 1.0, width: 1.8, height: 2.4, visualTheme: 'nadir-glow', landmark: 'exit' }
   ],
@@ -267,7 +267,7 @@ export const RAYCAST_LEVEL_WORLD2_THRESHOLD: RaycastLevel = {
     { id: 'nadir-pit', x: 1.0, y: 10.5, width: 6.8, height: 2.6, visualTheme: 'ion-shaft', landmark: 'key' },
     { id: 'threshold-secret', x: 2.2, y: 11.2, width: 2.4, height: 1.6, visualTheme: 'basalt-rift', landmark: 'secret' },
     { id: 'signal-seal', x: 8.2, y: 5.8, width: 2.2, height: 2.0, visualTheme: 'ion-shaft', landmark: 'gate' },
-    { id: 'glass-neck', x: 10.5, y: 5.5, width: 3.0, height: 2.4, visualTheme: 'ion-shaft', landmark: 'ambush' },
+    { id: 'glass-neck', x: 10.5, y: 5.5, width: 3.0, height: 2.4, visualTheme: 'ion-shaft', landmark: 'bridge' },
     { id: 'threshold-climb', x: 10.2, y: 1.2, width: 6.2, height: 9.0, visualTheme: 'ion-shaft' },
     { id: 'threshold-exit-zone', x: 12.0, y: 0.8, width: 4.6, height: 2.6, visualTheme: 'nadir-glow', landmark: 'exit' }
   ],
@@ -491,7 +491,7 @@ export const RAYCAST_LEVEL_WORLD2_SULFUR_LATTICE: RaycastLevel = {
     { id: 'bloom-archive', x: 1.1, y: 1.4, width: 5.6, height: 5.0, visualTheme: 'ion-shaft', landmark: 'key' },
     { id: 'sulfur-secret', x: 1.1, y: 7.8, width: 2.2, height: 1.4, visualTheme: 'basalt-rift', landmark: 'secret' },
     { id: 'lattice-seal', x: 9.1, y: 6.2, width: 2.0, height: 2.0, visualTheme: 'ion-shaft', landmark: 'gate' },
-    { id: 'sulfur-threshold', x: 11.0, y: 5.8, width: 2.2, height: 2.2, visualTheme: 'ion-shaft', landmark: 'ambush' },
+    { id: 'sulfur-threshold', x: 11.0, y: 5.8, width: 2.2, height: 2.2, visualTheme: 'ion-shaft', landmark: 'ritual' },
     { id: 'sulfur-conduit', x: 11.0, y: 1.2, width: 7.0, height: 10.2, visualTheme: 'ion-shaft' },
     { id: 'sulfur-overlook', x: 13.2, y: 1.0, width: 4.2, height: 2.4, visualTheme: 'nadir-glow', landmark: 'exit' }
   ],
@@ -729,7 +729,8 @@ export const RAYCAST_LEVEL_WORLD2_WARDEN_PIT: RaycastLevel = {
   map: RAYCAST_MAP_BOSS,
   playerStart: RAYCAST_PLAYER_START_BOSS,
   zones: [
-    { id: 'warden-arena', x: 1.0, y: 1.0, width: 13.0, height: 13.0, visualTheme: 'nadir-glow', landmark: 'ambush' },
+
+    { id: 'warden-arena', x: 1.0, y: 1.0, width: 13.0, height: 13.0, visualTheme: 'ion-shaft', landmark: 'core' },
     { id: 'warden-exit', x: 11.0, y: 6.0, width: 3.0, height: 3.0, visualTheme: 'nadir-glow', landmark: 'exit' }
   ],
   keys: [],

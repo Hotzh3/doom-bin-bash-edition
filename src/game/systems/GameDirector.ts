@@ -5,6 +5,7 @@ import type { DirectorEvent } from './DirectorEvents';
 import { shouldMatureWarning, updateAntiCampState, type AntiCampState, type DirectorPressureCause } from './DirectorPacing';
 import type { DirectorDebugInfo, DirectorState } from './DirectorState';
 import type { WeaponKind } from './WeaponTypes';
+import type { EncounterPatternId } from './EncounterPattern';
 
 export interface GameDirectorInput {
   elapsedTime: number;
@@ -24,6 +25,16 @@ export interface GameDirectorInput {
   spawnPoints?: SpawnPoint[];
   /** Living counts by kind — optional ensemble synergy during PRESSURE. */
   aliveEnemyKindCounts?: Partial<Record<EnemyKind, number>>;
+  /**
+   * Raycast: pre-resolved pattern spawns (safe points + kinds). Consumes spawn budget like normal spawns.
+   * Only honored in PRESSURE / AMBUSH when {@link canSpawn} is true.
+   */
+  encounterPattern?: {
+    patternId: EncounterPatternId;
+    bindingId?: string;
+    cooldownMs?: number;
+    spawns: SpawnRequest[];
+  } | null;
 }
 
 export interface SpawnPoint {
@@ -41,6 +52,8 @@ export interface GameDirectorDecision {
   state: DirectorState;
   maxEnemiesAlive: number;
   spawn: SpawnRequest | null;
+  /** Additional spawns same tick (Raycast encounter patterns). ArenaScene ignores. */
+  extraSpawns: SpawnRequest[];
   events: DirectorEvent[];
   debug: DirectorDebugInfo;
 }
@@ -83,6 +96,7 @@ export class GameDirector {
   private antiCamp: AntiCampState = { meterMs: 0, phase: 'none' };
   private lowEnemyPressureAccumMs = 0;
   private lastEnemiesAliveSnapshot = 0;
+  private lastEncounterPatternAt = Number.NEGATIVE_INFINITY;
 
   constructor(options: GameDirectorOptions = {}) {
     this.config = {
@@ -114,18 +128,89 @@ export class GameDirector {
     this.updateState(input, intensity);
 
     if (!this.canSpawn(input)) {
-      return this.createDecision(input, intensity, null, previousState);
+      return this.createDecision(input, intensity, null, [], previousState);
     }
+
+    const patternDecision = this.tryConsumeEncounterPattern(input, intensity, previousState);
+    if (patternDecision) return patternDecision;
 
     const kind = this.selectEnemyKind(input, intensity);
     const spawn = this.createSpawnRequest(kind, input.spawnPoints);
     if (!spawn) {
       this.lastDecisionReason = 'no safe spawn points';
-      return this.createDecision(input, intensity, null, previousState);
+      return this.createDecision(input, intensity, null, [], previousState);
     }
     this.lastSpawnAt = input.elapsedTime;
     this.lastDecisionReason = `spawn ${kind} during ${this.state}`;
-    return this.createDecision(input, intensity, spawn, previousState);
+    return this.createDecision(input, intensity, spawn, [], previousState);
+  }
+
+  private tryConsumeEncounterPattern(
+    input: GameDirectorInput,
+    intensity: number,
+    previousState: DirectorState
+  ): GameDirectorDecision | null {
+    const pack = input.encounterPattern;
+    if (!pack?.spawns?.length) return null;
+    if (this.state !== 'PRESSURE' && this.state !== 'AMBUSH') return null;
+    if (input.elapsedTime - this.lastEncounterPatternAt < 7500) {
+      this.lastDecisionReason = 'encounter pattern cooling down';
+      return null;
+    }
+
+    const maxNew = Math.min(
+      pack.spawns.length,
+      this.config.maxTotalSpawns - this.spawnedCount,
+      this.config.maxEnemiesAlive - input.enemiesAlive
+    );
+    if (maxNew <= 0) return null;
+
+    const usable = pack.spawns.slice(0, maxNew);
+    this.spawnedCount += usable.length;
+    this.lastSpawnAt = input.elapsedTime;
+    this.lastEncounterPatternAt = input.elapsedTime;
+    this.lastDecisionReason = `encounter pattern ${pack.patternId} x${usable.length}`;
+
+    const events = this.collectEvents(input, intensity, null, previousState);
+    events.push({
+      type: 'ENCOUNTER_PATTERN',
+      state: this.state,
+      message: `Tactical pattern: ${pack.patternId}`,
+      time: input.elapsedTime,
+      patternId: pack.patternId,
+      bindingId: pack.bindingId,
+      patternCooldownMs: pack.cooldownMs
+    });
+
+    return this.finishDecisionWithSpawns(input, intensity, usable, events);
+  }
+
+  private finishDecisionWithSpawns(
+    input: GameDirectorInput,
+    intensity: number,
+    spawns: SpawnRequest[],
+    events: DirectorEvent[]
+  ): GameDirectorDecision {
+    const [first, ...rest] = spawns;
+    return {
+      intensity,
+      state: this.state,
+      maxEnemiesAlive: this.config.maxEnemiesAlive,
+      spawn: first ?? null,
+      extraSpawns: rest,
+      events,
+      debug: {
+        enabled: this.config.debugEnabled,
+        state: this.state,
+        intensity,
+        enemiesAlive: input.enemiesAlive,
+        maxEnemiesAlive: this.config.maxEnemiesAlive,
+        spawnCooldownRemainingMs: Math.max(0, this.getCurrentSpawnCooldownMs() - (input.elapsedTime - this.lastSpawnAt)),
+        lastDecisionReason: this.config.debugEnabled ? this.lastDecisionReason : 'debug disabled',
+        spawnBudgetRemaining: Math.max(0, this.config.maxTotalSpawns - this.spawnedCount),
+        antiCampMeterMs: Math.round(this.antiCamp.meterMs)
+      }
+    };
   }
 
   hasExhaustedSpawnBudget(): boolean {
@@ -439,6 +524,7 @@ export class GameDirector {
     input: GameDirectorInput,
     intensity: number,
     spawn: SpawnRequest | null,
+    extraSpawns: SpawnRequest[],
     previousState: DirectorState
   ): GameDirectorDecision {
     const events = this.collectEvents(input, intensity, spawn, previousState);
@@ -447,6 +533,7 @@ export class GameDirector {
       state: this.state,
       maxEnemiesAlive: this.config.maxEnemiesAlive,
       spawn,
+      extraSpawns,
       events,
       debug: {
         enabled: this.config.debugEnabled,

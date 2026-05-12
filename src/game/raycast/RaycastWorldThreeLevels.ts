@@ -53,9 +53,9 @@ export const RAYCAST_LEVEL_WORLD3_EMBER_RAMP: RaycastLevel = {
     { id: 'm-hall', x: 3.0, y: 9.2, width: 4.8, height: 5.2, visualTheme: 'ember-vault' },
     { id: 'm-key', x: 4.5, y: 3.8, width: 3.4, height: 2.8, visualTheme: 'ash-conduit', landmark: 'key' },
     { id: 'm-gate', x: 8.0, y: 7.5, width: 2.0, height: 1.8, visualTheme: 'warning-amber', landmark: 'gate' },
-    { id: 'm-arena', x: 14.8, y: 9.6, width: 4.2, height: 5.2, visualTheme: 'ember-vault', landmark: 'ambush' },
+    { id: 'm-arena', x: 14.8, y: 9.6, width: 4.2, height: 5.2, visualTheme: 'ember-vault', landmark: 'ritual' },
     { id: 'm-secret', x: 6.1, y: 12.3, width: 2.6, height: 1.4, visualTheme: 'void-stone', landmark: 'secret' },
-    { id: 'm-drain', x: 9.5, y: 15.5, width: 5.4, height: 2.2, visualTheme: 'ash-conduit', landmark: 'ambush' },
+    { id: 'm-drain', x: 9.5, y: 15.5, width: 5.4, height: 2.2, visualTheme: 'ash-conduit', landmark: 'machinery' },
     { id: 'm-exit', x: 16.2, y: 2.2, width: 1.8, height: 2.4, visualTheme: 'exit-portal', landmark: 'exit' }
   ],
   keys: [
@@ -444,7 +444,7 @@ export const RAYCAST_LEVEL_WORLD3_ASH_JUDGE: RaycastLevel = {
   map: RAYCAST_MAP_BOSS,
   playerStart: RAYCAST_PLAYER_START_BOSS,
   zones: [
-    { id: 'aj-arena', x: 1.0, y: 1.0, width: 13.0, height: 13.0, visualTheme: 'ember-vault', landmark: 'ambush' },
+    { id: 'aj-arena', x: 1.0, y: 1.0, width: 13.0, height: 13.0, visualTheme: 'ember-vault', landmark: 'core' },
     { id: 'aj-exit', x: 11.0, y: 6.0, width: 3.0, height: 3.0, visualTheme: 'ash-conduit', landmark: 'exit' }
   ],
   keys: [],
