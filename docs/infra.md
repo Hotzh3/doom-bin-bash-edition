@@ -56,7 +56,7 @@ This document formalizes the project infrastructure for academic delivery. It fo
 
 Workflow: `.github/workflows/ci.yml`
 
-On `push` and `pull_request`:
+On `pull_request`, `push` to `main`, and manual dispatch:
 
 1. Checkout
 2. Setup Node 20
@@ -65,6 +65,7 @@ On `push` and `pull_request`:
 5. `npm run lint`
 6. `npm run build`
 7. `npm audit --audit-level=high`
+8. Upload `ci-dist-<sha>` artifact on `main` pushes
 
 Purpose: quality gate before merges/releases.
 
@@ -86,6 +87,14 @@ On `push` to `main` and `workflow_dispatch`:
 10. Deploy to GitHub Pages
 
 Purpose: simple, auditable static deployment for demos.
+
+## Workflow matrix (quick view)
+
+| Workflow | Trigger | Main output |
+|---|---|---|
+| `ci.yml` | PRs, push `main`, manual | quality gate (`test/lint/build/audit`) + `ci-dist` artifact on `main` |
+| `cd-pages.yml` | push `main`, manual | GitHub Pages deployment + `dist-<sha>` artifact |
+| `release.yml` | push `main`, tags `v*`, manual | release `dist` + zip artifacts; GitHub Release on tags |
 
 ## Release Pipeline
 
@@ -139,7 +148,23 @@ Open `http://localhost:5173`.
 docker compose up --build
 ```
 
-Open `http://localhost:5173`.
+Open `http://127.0.0.1:5173`.
+
+Validate runtime response:
+
+```bash
+curl -I http://127.0.0.1:5173
+```
+
+Expected key line:
+
+- `HTTP/1.1 200 OK`
+
+Stop:
+
+```bash
+docker compose down
+```
 
 ### Validation commands
 
@@ -175,3 +200,12 @@ If multiplayer is added later, minimal infra evolution could be:
 5. Keep CD split: static client deploy + optional server deploy.
 
 This is intentionally future-facing and not part of current runtime.
+
+## Related Runtime Docs
+
+- [runtime/docker.md](./runtime/docker.md)
+- [runtime/docker-validation.md](./runtime/docker-validation.md)
+- [runtime/runtime-architecture.md](./runtime/runtime-architecture.md)
+- [runtime/release-flow.md](./runtime/release-flow.md)
+- [runtime/deployment.md](./runtime/deployment.md)
+- [runtime/cicd-validation.md](./runtime/cicd-validation.md)
