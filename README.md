@@ -22,6 +22,12 @@ Expected Pages URL:
 
 Deployment docs:
 
+- ![CD Pages](https://github.com/Hotzh3/doom-bin-bash-edition/actions/workflows/cd-pages.yml/badge.svg) GitHub Pages deploy
+
+Runtime and delivery docs:
+
+- [docs/runtime/docker.md](docs/runtime/docker.md)
+- [docs/runtime/release-flow.md](docs/runtime/release-flow.md)
 - [docs/runtime/deployment.md](docs/runtime/deployment.md)
 - [docs/runtime/cicd-validation.md](docs/runtime/cicd-validation.md)
 
@@ -55,3 +61,32 @@ What you can actually play and show:
 | **Quality gate** | `npm test`, `npm run lint`, `npm run build` expected green in CI and before releases. |
 
 **Arena (2D):** local sandbox — useful for tests and quick PvP/PvE; not where feature depth is concentrated.
+
+## Docker Quick Start
+
+Prerequisite: Docker Desktop running.
+
+```bash
+docker compose up --build
+```
+
+Open:
+
+- [http://127.0.0.1:5173](http://127.0.0.1:5173)
+
+Validate:
+
+```bash
+curl -I http://127.0.0.1:5173
+```
+
+Stop:
+
+```bash
+docker compose down
+```
+
+More details:
+
+- [docs/runtime/docker.md](docs/runtime/docker.md)
+- [docs/runtime/docker-validation.md](docs/runtime/docker-validation.md)
