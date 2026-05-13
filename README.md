@@ -10,6 +10,21 @@
 
 **Media:** Reference captures live under `docs/assets/`; this README stays text-first. A concrete capture wishlist is in [`docs/demo/screenshots-plan.md`](docs/demo/screenshots-plan.md).
 
+## Delivery Status
+
+- ![CI](https://github.com/Hotzh3/doom-bin-bash-edition/actions/workflows/ci.yml/badge.svg) CI
+- ![Release](https://github.com/Hotzh3/doom-bin-bash-edition/actions/workflows/release.yml/badge.svg) Release artifacts
+- CD - GitHub Pages configured for `dist/`; requires `Settings -> Pages -> Source: GitHub Actions`.
+
+Expected Pages URL:
+
+- [https://Hotzh3.github.io/doom-bin-bash-edition/](https://Hotzh3.github.io/doom-bin-bash-edition/)
+
+Deployment docs:
+
+- [docs/runtime/deployment.md](docs/runtime/deployment.md)
+- [docs/runtime/cicd-validation.md](docs/runtime/cicd-validation.md)
+
 ---
 
 ## Disclaimer

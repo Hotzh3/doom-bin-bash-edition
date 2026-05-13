@@ -4,79 +4,114 @@
 
 This project deploys as a static browser app.
 
-- Local development uses Vite dev server.
-- Local production preview uses `vite preview` against `dist/`.
-- GitHub Pages publishes the same `dist/` output with a repo-specific base path.
-- GitHub Releases attach the same `dist/` bundle as a downloadable artifact.
+- Local development uses the Vite dev server.
+- Production output is generated into `dist/`.
+- GitHub Pages is the static CD target for the playable browser demo.
+- GitHub Releases can attach the same static build as a downloadable artifact.
 
-## Assumptions
+## GitHub Pages target
 
-- The host can serve static files.
-- The host does not need server-side rendering.
-- The host does not need API routes.
-- The host does not rewrite game state.
-- The browser owns all gameplay simulation.
-
-## Build outputs
-
-Recommended build flow:
-
-```bash
-npm ci
-npm run build
-```
-
-For GitHub Pages style deploys:
-
-```bash
-npm run build:preview
-```
-
-Build output:
+Expected public URL:
 
 ```text
-dist/
-  index.html
-  assets/
-  runtime-manifest.json
+https://Hotzh3.github.io/doom-bin-bash-edition/
 ```
 
-The manifest is a lightweight deploy aid. It tells you exactly what commit and
-channel produced the artifact.
+The app is served under the repository path, so the Pages build must use:
 
-## Suggested release flow
+```text
+BASE_PATH=/doom-bin-bash-edition/
+```
 
-1. Merge to `main`.
-2. Let preview deploy run on `main`.
-3. Smoke test the browser build.
-4. Tag a release, for example `v0.1.0`.
-5. Let GitHub Actions create the release artifact automatically.
+`vite.config.ts` reads `BASE_PATH` and falls back to `/` for local development,
+Docker, and normal local builds.
 
-## Static hosting notes
+## Required GitHub setting
 
-- `BASE_PATH=/` for release artifacts or local root hosting.
-- `BASE_PATH=/<repo-name>/` for GitHub Pages.
-- Use immutable asset names from Vite for cache efficiency.
-- Keep the host cache simple: HTML should refresh with deploys, assets can be cached long-term.
+GitHub Pages must be enabled once in repository settings:
 
-## Observability
+1. Open `Settings -> Pages`.
+2. Under `Build and deployment`, set `Source` to `GitHub Actions`.
+3. Save the setting.
 
-The runtime is intentionally lightweight:
+No custom secrets are required.
 
-- a small footer in the menu shows build metadata
-- local playtest telemetry stays in `localStorage`
-- `dist/runtime-manifest.json` makes the build traceable after deployment
+## CD workflow
 
-There is no backend observability because there is no backend. If the project
-ever adds one, telemetry should stay optional and additive.
+Workflow: `.github/workflows/cd-pages.yml`
 
-## Future deploy expansion
+Triggers:
 
-If the project grows beyond a static slice, the next steps should stay minimal:
+- push to `main`
+- `workflow_dispatch`
 
-- optional API for leaderboard sync
-- optional CDN cache rules
-- optional release signing
+Flow:
 
-Those would be follow-on concerns, not prerequisites for the current portfolio
-deploy.
+1. checkout
+2. setup Node 20
+3. configure Pages
+4. `npm ci`
+5. `npm run test`
+6. `npm run lint`
+7. `BASE_PATH=/<repo-name>/ npm run build`
+8. upload `dist/` with `actions/upload-pages-artifact`
+9. deploy with `actions/deploy-pages`
+
+## Local Pages validation
+
+Build with the same base path used by Pages:
+
+```bash
+npm run pages:build
+```
+
+Then inspect `dist/index.html`. Asset URLs should start with:
+
+```text
+/doom-bin-bash-edition/assets/
+```
+
+Optional preview:
+
+```bash
+npm run pages:preview
+```
+
+Open:
+
+```text
+http://localhost:4173/doom-bin-bash-edition/
+```
+
+## Remote verification
+
+If GitHub CLI is authenticated:
+
+```bash
+gh run list --workflow cd-pages.yml --limit 5
+gh run view <run-id> --log
+gh api repos/Hotzh3/doom-bin-bash-edition/pages
+```
+
+Also verify the browser URL:
+
+```text
+https://Hotzh3.github.io/doom-bin-bash-edition/
+```
+
+## If Pages fails
+
+Check these first:
+
+- `Settings -> Pages -> Source` is set to `GitHub Actions`.
+- Workflow permissions include `contents: read`, `pages: write`, and `id-token: write`.
+- The workflow has environment `github-pages`.
+- `dist/` exists before `upload-pages-artifact`.
+- `dist/index.html` uses `/doom-bin-bash-edition/assets/...` asset paths.
+- The failing GitHub Actions log does not show `npm ci`, test, lint, or build errors.
+
+## Current limitations
+
+- This deploy is static frontend only.
+- There is no backend/API deployment in the current scope.
+- Remote Pages success must be confirmed in GitHub Actions after the branch is merged or the workflow is manually dispatched.
