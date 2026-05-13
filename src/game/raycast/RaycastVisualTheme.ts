@@ -110,6 +110,29 @@ export interface RaycastEnemyVisualStyle {
   windupColor: number;
 }
 
+export const RAYCAST_ENEMY_BILLBOARD_READABILITY = {
+  minVisibility: 0.72,
+  minProjectedSize: 18,
+  outlineAlpha: 0.9,
+  fillAlpha: 0.98,
+  accentAlpha: 0.56
+} as const;
+
+export interface RaycastEnemyBillboardReadability {
+  visibility: number;
+  size: number;
+}
+
+export function enforceRaycastEnemyBillboardReadability(
+  visibility: number,
+  projectedSize: number
+): RaycastEnemyBillboardReadability {
+  return {
+    visibility: Math.max(RAYCAST_ENEMY_BILLBOARD_READABILITY.minVisibility, visibility),
+    size: Math.max(RAYCAST_ENEMY_BILLBOARD_READABILITY.minProjectedSize, projectedSize)
+  };
+}
+
 const DEFAULT_THEME: RaycastZoneTheme = {
   id: 'corrupted-metal',
   accentColor: 0x455a72,

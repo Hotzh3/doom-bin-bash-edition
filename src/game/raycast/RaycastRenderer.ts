@@ -33,7 +33,9 @@ import {
   getRaycastZoneVisual,
   getRaycastWallVisualStyle,
   getRaycastLandmarkColumnShadeBoost,
-  sampleRaycastSurfaceContext
+  sampleRaycastSurfaceContext,
+  enforceRaycastEnemyBillboardReadability,
+  RAYCAST_ENEMY_BILLBOARD_READABILITY
 } from './RaycastVisualTheme';
 export { RAYCAST_RENDERER_CONFIG, type RaycastRendererConfig } from './RaycastRendererConfig';
 
@@ -175,11 +177,11 @@ export class RaycastRenderer {
     for (let j = 0; j < list.length; j += 1) {
       const projection = list[j];
       const column = Phaser.Math.Clamp(Math.floor(projection.screenX / columnScale), 0, this.config.rayCount - 1);
-      if (projection.distance > (this.depthBuffer[column] ?? Number.POSITIVE_INFINITY) + 0.05) return;
+      if (projection.distance > (this.depthBuffer[column] ?? Number.POSITIVE_INFINITY) + 0.05) continue;
 
       if (!projection.enemy.alive) {
         this.drawEnemyDeathBurst(projection, height, time, atmosphere);
-        return;
+        continue;
       }
 
       const hitStaggerX =
@@ -231,7 +233,7 @@ export class RaycastRenderer {
           projection.size * 0.56,
           projection.size * (0.72 + pulse * 0.06)
         );
-        return;
+        continue;
       }
 
       const isWindingUp = isRaycastEnemyWindingUp(projection.enemy, time);
@@ -243,18 +245,22 @@ export class RaycastRenderer {
           ? this.blendColors(0xfff5f0, projection.enemy.color, 0.48)
           : this.blendColors(projection.enemy.color, RAYCAST_PALETTE.telegraphRose, telegraphMix);
       const enemyStyle = getRaycastEnemyVisualStyle(projection.enemy.kind, projection.enemy.color);
-      const visibility = calculateEnemyVisibility(projection.distance, atmosphere);
-      const size = projection.size * (isWindingUp ? 1.04 + windupProgress * 0.08 + pulse * 0.04 : 1);
+      const readability = enforceRaycastEnemyBillboardReadability(
+        calculateEnemyVisibility(projection.distance, atmosphere),
+        projection.size
+      );
+      const visibility = readability.visibility;
+      const size = readability.size * (isWindingUp ? 1.04 + windupProgress * 0.08 + pulse * 0.04 : 1);
       const sx = projection.screenX + hitStaggerX;
       const savedEnemyX = projection.screenX;
       projection.screenX = sx;
-      this.graphics.fillStyle(enemyStyle.outlineColor, 0.78 * visibility);
+      this.graphics.fillStyle(enemyStyle.outlineColor, RAYCAST_ENEMY_BILLBOARD_READABILITY.outlineAlpha * visibility);
       this.graphics.fillEllipse(sx, height * 0.5 + size * 0.08, size * 1.28, size * 1.42);
       if (isWindingUp) {
         this.graphics.fillStyle(enemyStyle.windupColor, (0.18 + windupProgress * 0.14 + pulse * 0.08) * visibility);
         this.graphics.fillCircle(sx, height * 0.5, size * (0.46 + windupProgress * 0.08));
       }
-      this.graphics.fillStyle(color, 0.95 * visibility);
+      this.graphics.fillStyle(color, RAYCAST_ENEMY_BILLBOARD_READABILITY.fillAlpha * visibility);
       const savedSilhouetteSize = projection.size;
       projection.size = size;
       this.drawEnemySilhouette(projection, height, color, visibility, enemyStyle, telegraphMix);

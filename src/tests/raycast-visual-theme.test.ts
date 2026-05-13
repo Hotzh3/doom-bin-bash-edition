@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { RAYCAST_LEVEL } from '../game/raycast/RaycastLevel';
 import { RAYCAST_LEVEL_WORLD2_FRACTURE, RAYCAST_LEVEL_WORLD2_SULFUR_LATTICE } from '../game/raycast/RaycastWorldTwoLevels';
+import { ENEMY_KINDS, getEnemyConfig } from '../game/entities/enemyConfig';
 import {
+  RAYCAST_ENEMY_BILLBOARD_READABILITY,
+  enforceRaycastEnemyBillboardReadability,
   getBillboardColor,
   getRaycastCellVariant,
   getRaycastEnemyVisualStyle,
@@ -168,6 +171,7 @@ describe('raycast visual theme', () => {
     const bruteStyle = getRaycastEnemyVisualStyle('BRUTE', 0xffa64d);
     const stalkerStyle = getRaycastEnemyVisualStyle('STALKER', 0x54e898);
     const rangedStyle = getRaycastEnemyVisualStyle('RANGED', 0x5cefef);
+    const scramblerStyle = getRaycastEnemyVisualStyle('SCRAMBLER', 0xff9058);
 
     expect(gruntStyle).toMatchObject({
       silhouette: 'raider',
@@ -189,8 +193,30 @@ describe('raycast visual theme', () => {
       role: 'artillery',
       hornStyle: 'antenna'
     });
+    expect(scramblerStyle).toMatchObject({
+      silhouette: 'raider',
+      role: 'flanker',
+      hornStyle: 'glitch-spikes'
+    });
     expect(bruteStyle.coreColor).not.toBe(gruntStyle.coreColor);
     expect(stalkerStyle.windupColor).not.toBe(rangedStyle.windupColor);
+  });
+
+  it('keeps every raycast enemy kind above the minimum billboard readability floor', () => {
+    for (const kind of ENEMY_KINDS) {
+      const config = getEnemyConfig(kind, 'raycast');
+      const style = getRaycastEnemyVisualStyle(kind, config.color);
+      const readability = enforceRaycastEnemyBillboardReadability(0.18, 3);
+
+      expect(style.silhouette).toBeTruthy();
+      expect(style.outlineColor).not.toBe(config.color);
+      expect(style.accentColor).not.toBe(style.outlineColor);
+      expect(style.eyeColor).not.toBe(style.outlineColor);
+      expect(readability.visibility).toBeGreaterThanOrEqual(RAYCAST_ENEMY_BILLBOARD_READABILITY.minVisibility);
+      expect(readability.size).toBeGreaterThanOrEqual(RAYCAST_ENEMY_BILLBOARD_READABILITY.minProjectedSize);
+      expect(RAYCAST_ENEMY_BILLBOARD_READABILITY.outlineAlpha).toBeGreaterThanOrEqual(0.85);
+      expect(RAYCAST_ENEMY_BILLBOARD_READABILITY.fillAlpha).toBeGreaterThanOrEqual(0.95);
+    }
   });
 
   it('defines unmistakable billboard colors for stateful interactables', () => {
