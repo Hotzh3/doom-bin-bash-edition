@@ -4,35 +4,20 @@
 
 This project deploys as a static browser app.
 
-- Local development uses Vite dev server.
-- Local production preview uses `vite preview` against `dist/`.
-- GitHub Pages publishes the same `dist/` output with a repo-specific base path.
-- GitHub Releases attach the same `dist/` bundle as a downloadable artifact.
+- Local development: Vite dev server.
+- CI build output: `dist/`.
+- Preview/live static deploy: GitHub Pages (`cd-pages.yml`).
+- Versioned downloadable bundle: GitHub Releases (`release.yml` on tags).
 
-## Assumptions
+## CI vs CD in deployment terms
 
-- The host can serve static files.
-- The host does not need server-side rendering.
-- The host does not need API routes.
-- The host does not rewrite game state.
-- The browser owns all gameplay simulation.
+- **CI (`ci.yml`)** validates code quality and buildability.
+- **CD Pages (`cd-pages.yml`)** publishes static build to GitHub Pages.
+- **Release (`release.yml`)** creates downloadable release artifacts and GitHub Releases for tags.
 
 ## Build outputs
 
-Recommended build flow:
-
-```bash
-npm ci
-npm run build
-```
-
-For GitHub Pages style deploys:
-
-```bash
-npm run build:preview
-```
-
-Build output:
+Primary output:
 
 ```text
 dist/
@@ -41,42 +26,61 @@ dist/
   runtime-manifest.json
 ```
 
-The manifest is a lightweight deploy aid. It tells you exactly what commit and
-channel produced the artifact.
+`runtime-manifest.json` provides traceability (version/sha/channel metadata).
 
-## Suggested release flow
+## GitHub Pages requirements
 
-1. Merge to `main`.
-2. Let preview deploy run on `main`.
-3. Smoke test the browser build.
-4. Tag a release, for example `v0.1.0`.
-5. Let GitHub Actions create the release artifact automatically.
+Pages deploy requires one-time repository configuration:
 
-## Static hosting notes
+1. GitHub repo -> `Settings` -> `Pages`
+2. Source: **GitHub Actions**
 
-- `BASE_PATH=/` for release artifacts or local root hosting.
-- `BASE_PATH=/<repo-name>/` for GitHub Pages.
-- Use immutable asset names from Vite for cache efficiency.
-- Keep the host cache simple: HTML should refresh with deploys, assets can be cached long-term.
+No custom secrets are required for this repo's Pages flow.
 
-## Observability
+## Base path behavior
 
-The runtime is intentionally lightweight:
+- Release/static-host default: `BASE_PATH=/`
+- Pages workflow: `BASE_PATH=/<repo-name>/`
 
-- a small footer in the menu shows build metadata
-- local playtest telemetry stays in `localStorage`
-- `dist/runtime-manifest.json` makes the build traceable after deployment
+This prevents broken asset URLs when serving under `https://<org>.github.io/<repo>/`.
 
-There is no backend observability because there is no backend. If the project
-ever adds one, telemetry should stay optional and additive.
+## Recommended release path
 
-## Future deploy expansion
+1. Open PR -> CI validates (`test/lint/build`).
+2. Merge to `main` -> CI + Pages deploy + release artifacts on main run.
+3. Tag release:
 
-If the project grows beyond a static slice, the next steps should stay minimal:
+```bash
+git tag vX.Y.Z
+git push origin vX.Y.Z
+```
 
-- optional API for leaderboard sync
-- optional CDN cache rules
-- optional release signing
+4. `release.yml` creates GitHub Release and attaches zip.
 
-Those would be follow-on concerns, not prerequisites for the current portfolio
-deploy.
+## Where to verify results
+
+- CI and CD runs: repository `Actions` tab.
+- Pages URL: workflow deployment summary (`deploy-pages` step output).
+- Artifacts: each workflow run under `Artifacts`.
+- Release zip: repository `Releases` page.
+
+## If deployment fails
+
+1. Check failing job logs in `Actions`.
+2. Validate locally:
+
+```bash
+npm ci
+npm run test
+npm run lint
+npm run build
+```
+
+3. Re-push fixes.
+4. Re-run workflow if needed.
+
+## Current limitations
+
+- No backend/API deploy (intentionally out of scope).
+- No environment-specific secret management needed in current flow.
+- No canary or multi-environment release promotion; this is a single static delivery path suitable for portfolio scale.
