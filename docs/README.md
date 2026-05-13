@@ -7,6 +7,12 @@ Quick map for reviewers, demos, and handoff.
 | Doc | Purpose |
 |-----|---------|
 | [architecture.md](./architecture.md) | Raycast-first scenes and modules (current). |
+| [infra.md](./infra.md) | Current infrastructure scope: local runtime, Docker, CI/CD. |
+| [runtime/docker.md](./runtime/docker.md) | Docker runtime quick start + troubleshooting. |
+| [runtime/docker-validation.md](./runtime/docker-validation.md) | Reproducible Docker evidence checklist for delivery. |
+| [runtime/release-flow.md](./runtime/release-flow.md) | CI/CD release strategy, tags, artifacts, and failure handling. |
+| [runtime/deployment.md](./runtime/deployment.md) | Static deployment model and GitHub Pages behavior. |
+| [runtime/cicd-validation.md](./runtime/cicd-validation.md) | Presentation-ready CI/CD validation checklist. |
 | [roadmap.md](./roadmap.md) | Historical academic roadmap + pointers to current state. |
 
 ## Demo & release

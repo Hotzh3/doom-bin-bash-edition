@@ -1,87 +1,128 @@
 # Release Flow
 
-## Objetivo
+## Goal
 
-Mantener un pipeline de entrega simple y profesional para un frontend game estático:
+Keep CI/CD simple, auditable, and portfolio-ready for a static browser game.
 
 - `CI` valida calidad.
 - `CD` publica preview en GitHub Pages.
 - `release.yml` genera artifacts descargables cuando se corta un tag de versión o cuando se dispara manualmente.
+This repo separates:
 
-## CI vs CD
+- **CI**: quality validation before/while integrating code.
+- **CD**: artifact generation + deployment automation.
 
-### CI
+## Workflows in this repo
 
-Workflow: `.github/workflows/ci.yml`
+- `CI`: [../../.github/workflows/ci.yml](../../.github/workflows/ci.yml)
+- `Release`: [../../.github/workflows/release.yml](../../.github/workflows/release.yml)
+- `CD Pages`: [../../.github/workflows/cd-pages.yml](../../.github/workflows/cd-pages.yml)
 
-Responsabilidad:
+## What counts as CI here
 
-- instalar dependencias
-- ejecutar `test`
-- ejecutar `lint`
-- ejecutar `build`
-- correr `npm audit --audit-level=high`
+Workflow: `ci.yml`
 
-CI responde la pregunta: "¿este cambio sigue siendo sano para mergearse?"
+Triggers:
 
-### CD / Release
+- `pull_request`
+- `push` to `main`
+- `workflow_dispatch`
 
-Workflows:
-
-- `.github/workflows/cd-pages.yml`
-- `.github/workflows/release.yml`
-
-Responsabilidad:
+Validation steps:
 
 - construir artifacts descargables bajo demanda
 - publicar preview estático en GitHub Pages sobre `main`
 - crear releases versionadas cuando llega un tag
 
 CD responde la pregunta: "¿qué build entregable salió de esta versión o ejecución manual?"
+1. `npm ci`
+2. `npm run test`
+3. `npm run lint`
+4. `npm run build`
+5. `npm audit --audit-level=high`
 
-## Estrategia de release
+Extra output:
 
-### `main`
+- On `main` push, uploads `ci-dist-<sha>` artifact (short retention) for quick traceability.
 
-Cada push a `main`:
+CI answers: "Is this change healthy to integrate?"
+
+## What counts as CD here
 
 - ejecuta CI
 - mantiene el deploy preview/live en GitHub Pages vía `cd-pages.yml`
 
 No ejecuta `release.yml`. Esto evita que el badge de Release se vuelva rojo por builds de main que no representan una versión publicada.
+### 1) Release automation (`release.yml`)
 
-### Tags
+Triggers:
+
+- `push` to `main`
+- `push` tags `v*`
+- `workflow_dispatch`
 
 Cada tag `v*.*.*`:
+Before publishing artifacts it runs the same quality gate (`test/lint/build`).
 
-- ejecuta `release.yml`
-- vuelve a validar `test`, `lint`, `build`
-- empaqueta `dist/` en un zip versionado
-- crea un GitHub Release automático
-- adjunta el zip al release
-- genera release notes básicas automáticas con GitHub
+Outputs:
 
-## Semantic versioning básico
+- `dist/` artifact
+- zipped build artifact (`doom-bin-bash-edition-<version>.zip`)
+- when trigger is a tag `v*`, a GitHub Release is created and zip is attached
 
-Formato recomendado:
+CD answers: "What downloadable build did this commit/tag produce?"
+
+### 2) GitHub Pages deployment (`cd-pages.yml`)
+
+Triggers:
+
+- `push` to `main`
+- `workflow_dispatch`
+
+Flow:
+
+1. `npm ci`, `test`, `lint`, `build`
+2. Build with Pages base path (`BASE_PATH=/<repo-name>/`)
+3. Upload Pages artifact
+4. Deploy with `actions/deploy-pages`
+
+This is the automated preview/demo deployment path for the static site.
+
+## Tag strategy for releases
+
+Recommended tags:
 
 - `v0.1.0`
 - `v0.2.0`
 - `v0.2.1`
 
-Regla simple:
+Cut a release:
 
-- `MAJOR`: cambios incompatibles o reposicionamiento fuerte del proyecto
-- `MINOR`: features nuevas compatibles
-- `PATCH`: fixes, polish, balance o correcciones sin romper flujo
+```bash
+git tag vX.Y.Z
+git push origin vX.Y.Z
+```
 
-Para un portfolio game, este nivel de semver es suficiente y evita sobreingeniería.
+Expected result:
 
-## Cómo cortar releases
+- `release.yml` run on that tag
+- zipped build artifact uploaded
+- GitHub Release created automatically with notes
 
-### 1. Preparar estado
+## Where to download artifacts
 
-Verifica localmente:
+- **Actions run artifacts**: GitHub repo -> `Actions` -> select run -> `Artifacts`
+- **Versioned release asset**: GitHub repo -> `Releases` -> select tag -> download attached zip
+
+## If GitHub Actions fails
+
+- `release-dist-vX.Y.Z` en tags
+- `release-zip-vX.Y.Z` en tags
+- `manual-dist-manual-<sha7>` en `workflow_dispatch`
+- `manual-zip-manual-<sha7>` en `workflow_dispatch`
+1. Open the failed run in `Actions`.
+2. Find failing step and inspect logs.
+3. Re-run locally:
 
 ```bash
 npm ci
@@ -90,47 +131,14 @@ npm run lint
 npm run build
 ```
 
-### 2. Mergear a `main`
-
-El push a `main` disparará:
-
-- preview artifact en GitHub Actions
-- deploy en GitHub Pages
-
-### 3. Crear tag
-
-Ejemplo:
-
-```bash
-git tag v0.1.0
-git push origin v0.1.0
-```
-
-### 4. Resultado esperado
-
-En GitHub:
-
-- correrá `release.yml`
-- aparecerán artifacts descargables en la run
-- se creará un GitHub Release con notas automáticas
-- el asset zip quedará adjunto al release
-
-## Artifacts generados
-
-En `release.yml`:
-
-- `release-dist-vX.Y.Z` en tags
-- `release-zip-vX.Y.Z` en tags
-- `manual-dist-manual-<sha7>` en `workflow_dispatch`
-- `manual-zip-manual-<sha7>` en `workflow_dispatch`
-
-## Trigger summary
-
 - `push` de tags `v*.*.*`
 - `workflow_dispatch`
+4. Fix issue, push again.
+5. Re-run workflow if needed.
 
-## Notas operativas
+## Current limits (honest scope)
 
-- GitHub Pages sigue siendo el preview/deploy estático más simple para este repo.
-- El release asset usa el build estándar con base path `/`, útil para descargar y servir en cualquier host estático.
-- El deploy de Pages mantiene su propio build con `BASE_PATH=/<repo>/`, porque GitHub Pages no vive en la raíz del dominio del proyecto.
+- No backend deployment pipeline (by design).
+- Pages deploy is static frontend only.
+- Release assets are build artifacts, not installer packages.
+- Runtime validation in GitHub still depends on GitHub runner environment.

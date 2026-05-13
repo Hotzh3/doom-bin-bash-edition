@@ -91,3 +91,10 @@ If the project ever needs more infrastructure, the clean path is:
 
 Those should remain additive. The browser client should keep working as a static
 site even if those extras never ship.
+
+## Docker runtime references
+
+For local containerized runtime operations and evidence:
+
+- [docker.md](./docker.md)
+- [docker-validation.md](./docker-validation.md)
