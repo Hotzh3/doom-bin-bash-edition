@@ -4,6 +4,9 @@
 
 Keep CI/CD simple, auditable, and portfolio-ready for a static browser game.
 
+- `CI` valida calidad.
+- `CD` publica preview en GitHub Pages.
+- `release.yml` genera artifacts descargables cuando se corta un tag de versión o cuando se dispara manualmente.
 This repo separates:
 
 - **CI**: quality validation before/while integrating code.
@@ -27,6 +30,11 @@ Triggers:
 
 Validation steps:
 
+- construir artifacts descargables bajo demanda
+- publicar preview estático en GitHub Pages sobre `main`
+- crear releases versionadas cuando llega un tag
+
+CD responde la pregunta: "¿qué build entregable salió de esta versión o ejecución manual?"
 1. `npm ci`
 2. `npm run test`
 3. `npm run lint`
@@ -41,6 +49,10 @@ CI answers: "Is this change healthy to integrate?"
 
 ## What counts as CD here
 
+- ejecuta CI
+- mantiene el deploy preview/live en GitHub Pages vía `cd-pages.yml`
+
+No ejecuta `release.yml`. Esto evita que el badge de Release se vuelva rojo por builds de main que no representan una versión publicada.
 ### 1) Release automation (`release.yml`)
 
 Triggers:
@@ -49,6 +61,7 @@ Triggers:
 - `push` tags `v*`
 - `workflow_dispatch`
 
+Cada tag `v*.*.*`:
 Before publishing artifacts it runs the same quality gate (`test/lint/build`).
 
 Outputs:
@@ -103,6 +116,10 @@ Expected result:
 
 ## If GitHub Actions fails
 
+- `release-dist-vX.Y.Z` en tags
+- `release-zip-vX.Y.Z` en tags
+- `manual-dist-manual-<sha7>` en `workflow_dispatch`
+- `manual-zip-manual-<sha7>` en `workflow_dispatch`
 1. Open the failed run in `Actions`.
 2. Find failing step and inspect logs.
 3. Re-run locally:
@@ -114,6 +131,8 @@ npm run lint
 npm run build
 ```
 
+- `push` de tags `v*.*.*`
+- `workflow_dispatch`
 4. Fix issue, push again.
 5. Re-run workflow if needed.
 
