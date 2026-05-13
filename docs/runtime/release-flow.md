@@ -6,7 +6,7 @@ Mantener un pipeline de entrega simple y profesional para un frontend game está
 
 - `CI` valida calidad.
 - `CD` publica preview en GitHub Pages.
-- `release.yml` genera artifacts descargables en cada build y crea GitHub Releases cuando se corta un tag.
+- `release.yml` genera artifacts descargables cuando se corta un tag de versión o cuando se dispara manualmente.
 
 ## CI vs CD
 
@@ -33,11 +33,11 @@ Workflows:
 
 Responsabilidad:
 
-- construir artifacts descargables
+- construir artifacts descargables bajo demanda
 - publicar preview estático en GitHub Pages sobre `main`
 - crear releases versionadas cuando llega un tag
 
-CD responde la pregunta: "¿qué build entregable salió de este commit?"
+CD responde la pregunta: "¿qué build entregable salió de esta versión o ejecución manual?"
 
 ## Estrategia de release
 
@@ -45,17 +45,14 @@ CD responde la pregunta: "¿qué build entregable salió de este commit?"
 
 Cada push a `main`:
 
-- ejecuta `release.yml`
-- genera `dist/`
-- genera un `.zip` del build
-- sube ambos como artifacts del workflow
+- ejecuta CI
 - mantiene el deploy preview/live en GitHub Pages vía `cd-pages.yml`
 
-Esto da trazabilidad simple para portfolio y permite descargar el build exacto de cada commit principal.
+No ejecuta `release.yml`. Esto evita que el badge de Release se vuelva rojo por builds de main que no representan una versión publicada.
 
 ### Tags
 
-Cada tag `v*`:
+Cada tag `v*.*.*`:
 
 - ejecuta `release.yml`
 - vuelve a validar `test`, `lint`, `build`
@@ -122,15 +119,14 @@ En GitHub:
 
 En `release.yml`:
 
-- `preview-dist-main-<sha7>` en pushes a `main`
-- `preview-zip-main-<sha7>` en pushes a `main`
 - `release-dist-vX.Y.Z` en tags
 - `release-zip-vX.Y.Z` en tags
+- `manual-dist-manual-<sha7>` en `workflow_dispatch`
+- `manual-zip-manual-<sha7>` en `workflow_dispatch`
 
 ## Trigger summary
 
-- `push` a `main`
-- `push` de tags `v*`
+- `push` de tags `v*.*.*`
 - `workflow_dispatch`
 
 ## Notas operativas
