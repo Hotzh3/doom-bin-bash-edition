@@ -22,6 +22,7 @@ import { RAYCAST_RENDERER_CONFIG } from './RaycastRendererConfig';
 import { RAYCAST_PALETTE } from './RaycastPalette';
 import { RAYCAST_DEATH_BURST_MS, RAYCAST_HIT_FLASH_MS } from './RaycastCombatSystem';
 import type { RaycastBossState } from './RaycastBoss';
+import { getRaycastBossVisualProfile } from './RaycastBossVisual';
 import {
   getBillboardColor,
   getRaycastCellVariant,
@@ -304,32 +305,43 @@ export class RaycastRenderer {
     if (correctedDistance > (this.depthBuffer[column] ?? Number.POSITIVE_INFINITY) + 0.08) return;
 
     const visibility = calculateEnemyVisibility(correctedDistance, atmosphere);
-    const size = Phaser.Math.Clamp(height / correctedDistance / 1.12, 44, 270);
+    const baseSize = Phaser.Math.Clamp(height / correctedDistance / 1.12, 44, 270);
+    const profile = getRaycastBossVisualProfile(boss, time);
+    const size = baseSize * profile.silhouetteScale;
     const telegraph = time < boss.telegraphUntil;
     const pulse = telegraph ? 0.55 + Math.sin(time / 42) * 0.45 : 1;
     const cx = screenX;
     const cy = height * 0.5;
-    const coreTint = boss.phase === 2 ? 0xff5a4a : 0x6b4ae8;
-    const coreColor = boss.hitFlashUntil > time ? this.blendColors(0xfff8f4, coreTint, 0.38) : coreTint;
+    const coreColor = profile.coreColor;
 
     this.graphics.fillStyle(0x120618, 0.82 * visibility);
     this.graphics.fillEllipse(cx, cy + size * 0.1, size * 1.5, size * 0.42);
-    this.graphics.lineStyle(
-      telegraph ? (boss.phase === 2 ? 6 : 5) : boss.phase === 2 ? 4 : 3,
-      telegraph ? (boss.phase === 2 ? 0xff3328 : 0xff8833) : RAYCAST_PALETTE.plasmaBright,
-      (telegraph ? 0.91 : 0.58) * visibility * pulse
-    );
-    this.graphics.strokeEllipse(cx, cy, size * 1.12, size * 1.45);
+    for (let i = 0; i < profile.ringCount; i += 1) {
+      const ringMix = i / Math.max(1, profile.ringCount - 1);
+      const ringScale = 1.04 + i * 0.14 + Math.sin(time * 0.002 + i * 0.8) * 0.02;
+      this.graphics.lineStyle(
+        telegraph ? 5 - Math.min(2, i * 0.5) : 3 - Math.min(1.2, i * 0.35),
+        this.blendColors(profile.haloColor, RAYCAST_PALETTE.plasmaBright, ringMix * 0.3),
+        (telegraph ? 0.88 : 0.52) * visibility * pulse * (1 - ringMix * 0.18)
+      );
+      this.graphics.strokeEllipse(cx, cy, size * ringScale, size * (1.34 + i * 0.08));
+    }
     this.graphics.fillStyle(coreColor, 0.92 * visibility);
     this.graphics.fillEllipse(cx, cy - size * 0.05, size * 0.88, size * 1.05);
-    this.graphics.fillStyle(RAYCAST_PALETTE.plasmaBright, 0.38 * visibility);
-    this.graphics.fillCircle(cx, cy - size * 0.38, size * 0.12);
-    this.graphics.fillCircle(cx + size * 0.22, cy - size * 0.18, size * 0.09);
-    this.graphics.fillCircle(cx - size * 0.22, cy - size * 0.18, size * 0.09);
+    this.graphics.fillStyle(RAYCAST_PALETTE.plasmaBright, 0.3 * visibility);
+    this.graphics.fillCircle(cx, cy - size * 0.4, size * 0.12);
+    this.graphics.fillCircle(cx + size * 0.24, cy - size * 0.2, size * 0.09);
+    this.graphics.fillCircle(cx - size * 0.24, cy - size * 0.2, size * 0.09);
+    for (let i = 0; i < profile.particleCount; i += 1) {
+      const t = (i / profile.particleCount) * Math.PI * 2 + time * (0.0014 + (i % 3) * 0.0002);
+      const pr = size * (0.72 + (i % 4) * 0.05 + Math.sin(time * 0.003 + i) * 0.03);
+      this.graphics.fillStyle(profile.haloColor, (0.1 + ((i + 2) % 5) * 0.03) * visibility);
+      this.graphics.fillCircle(cx + Math.cos(t) * pr, cy + Math.sin(t) * pr * 0.76, Math.max(2, size * 0.032));
+    }
     if (telegraph) {
-      const rays = boss.phase === 2 ? 7 : 4;
+      const rays = boss.phase === 3 ? 10 : boss.phase === 2 ? 7 : 4;
       const haloAlpha = (0.24 + pulse * 0.2) * visibility;
-      const haloColor = boss.phase === 2 ? 0xff4436 : 0xff8833;
+      const haloColor = profile.haloColor;
       this.graphics.fillStyle(haloColor, haloAlpha);
       this.graphics.fillCircle(cx, cy, size * (0.86 + pulse * 0.12));
       this.graphics.lineStyle(2, 0xfff1c4, (0.35 + pulse * 0.3) * visibility);
