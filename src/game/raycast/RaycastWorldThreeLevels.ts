@@ -14,13 +14,13 @@ import type { RaycastLevel } from './RaycastLevel';
 const FRACTURE_DIRECTOR = {
   enabled: true as const,
   config: {
-    maxEnemiesAlive: 5,
-    maxTotalSpawns: 11,
+    maxEnemiesAlive: 6,
+    maxTotalSpawns: 13,
     openingSpawnCount: 0,
-    baseSpawnCooldownMs: 4600,
-    buildUpSpawnCooldownMs: 3500,
-    ambushSpawnCooldownMs: 1880,
-    highIntensitySpawnCooldownMs: 3050,
+    baseSpawnCooldownMs: 4200,
+    buildUpSpawnCooldownMs: 3150,
+    ambushSpawnCooldownMs: 1660,
+    highIntensitySpawnCooldownMs: 2720,
     recoveryDurationMs: 5400,
     ambushDurationMs: 6400,
     highIntensityDurationMs: 9200,
@@ -512,8 +512,8 @@ export const RAYCAST_LEVEL_WORLD3_ASH_JUDGE: RaycastLevel = {
     displayName: 'Ash Judge',
     x: 7.5,
     y: 7.5,
-    maxHealth: 980,
-    hitRadius: 0.72,
+    maxHealth: 1080,
+    hitRadius: 0.82,
     behavior: 'ash-judge'
   },
   director: {

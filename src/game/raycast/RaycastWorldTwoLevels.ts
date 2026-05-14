@@ -799,8 +799,8 @@ export const RAYCAST_LEVEL_WORLD2_WARDEN_PIT: RaycastLevel = {
     displayName: 'Bloom Warden',
     x: 7.5,
     y: 7.5,
-    maxHealth: 760,
-    hitRadius: 0.66,
+    maxHealth: 860,
+    hitRadius: 0.72,
     behavior: 'bloom-warden'
   },
   director: {

@@ -48,6 +48,7 @@ const STAGGER_KIND_MUL: Record<EnemyKind, number> = {
 
 export class RaycastCombatSystem {
   private readonly weapons = new WeaponSystem('raycast');
+  private playerDamageMultiplier = 1;
 
   getWeaponLabel(): string {
     return this.weapons.getCurrentWeaponLabel();
@@ -59,6 +60,10 @@ export class RaycastCombatSystem {
 
   switchWeaponSlot(slot: number): void {
     this.weapons.switchBySlot(slot);
+  }
+
+  setPlayerDamageMultiplier(multiplier: number): void {
+    this.playerDamageMultiplier = Number.isFinite(multiplier) ? Math.max(0.1, multiplier) : 1;
   }
 
   fire(player: RaycastPlayerState, enemies: RaycastEnemy[], map: RaycastMap, time: number): RaycastCombatResult {
@@ -141,8 +146,9 @@ export class RaycastCombatSystem {
     const target = findEnemyAlongAim(player, projectileAngle, enemies, wallDistance, weapon.aimToleranceRadians);
     if (!target) return null;
 
-    applyRaycastEnemyKnockback(target, player.x, player.y, projectile.damage, map);
-    const directKilled = applyDamage(target, projectile.damage);
+    const scaledDamage = Math.max(1, Math.round(projectile.damage * this.playerDamageMultiplier));
+    applyRaycastEnemyKnockback(target, player.x, player.y, scaledDamage, map);
+    const directKilled = applyDamage(target, scaledDamage);
     target.hitFlashUntil = time + HIT_FLASH_MS;
     applyRaycastHitStagger(target, projectile.weaponKind, time, false);
     if (directKilled) target.deathBurstUntil = time + DEATH_BURST_MS;
@@ -152,7 +158,7 @@ export class RaycastCombatSystem {
     killedEnemyKinds.push(...splashImpacts.killedKinds);
     return {
       enemy: target,
-      damage: projectile.damage + splashImpacts.damage,
+      damage: scaledDamage + splashImpacts.damage,
       killed: directKilled || splashImpacts.killCount > 0,
       killCount: (directKilled ? 1 : 0) + splashImpacts.killCount,
       killedEnemyKinds,
@@ -180,7 +186,8 @@ export class RaycastCombatSystem {
       if (distance > radius) return;
 
       const falloff = 1 - distance / radius;
-      const splashDamage = Math.max(1, Math.round(projectile.damage * 0.62 * falloff));
+      const scaledBaseDamage = Math.max(1, Math.round(projectile.damage * this.playerDamageMultiplier));
+      const splashDamage = Math.max(1, Math.round(scaledBaseDamage * 0.62 * falloff));
       hitCount += 1;
       applyRaycastEnemyKnockback(enemy, originEnemy.x, originEnemy.y, splashDamage, map);
       if (applyDamage(enemy, splashDamage)) {

@@ -1593,8 +1593,8 @@ export const RAYCAST_LEVEL_BOSS: RaycastLevel = {
     displayName: 'Volt Archon',
     x: 7.5,
     y: 7.5,
-    maxHealth: 620,
-    hitRadius: 0.55
+    maxHealth: 700,
+    hitRadius: 0.62
   },
   director: {
     enabled: false,

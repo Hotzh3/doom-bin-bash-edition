@@ -152,8 +152,8 @@ export interface RaycastHudSummaryState {
   criticalMessage?: string;
 }
 
-export function buildRaycastHudStatusLine(health: number, weaponLabel: string, difficultyLabel?: string): string {
-  return [buildRaycastPlayerHealthLine({ health }), `WPN ${weaponLabel}`, difficultyLabel ? `MODE ${difficultyLabel}` : null]
+export function buildRaycastHudStatusLine(health: number, maxHealth: number, weaponLabel: string, difficultyLabel?: string): string {
+  return [buildRaycastPlayerHealthLine({ health, maxHealth }), `WPN ${weaponLabel}`, difficultyLabel ? `MODE ${difficultyLabel}` : null]
     .filter((part): part is string => part !== null)
     .join('  |  ');
 }
@@ -173,7 +173,7 @@ export function buildRaycastHudProgressLine(
 }
 
 export function buildRaycastMinimapLegendLine(minimapToggleKey = 'M'): string {
-  return `MAP ${minimapToggleKey}  |  KEY token  LOCK closed gate  OPEN clear gate  EXIT exfil`;
+  return `MAP ${minimapToggleKey}  |  KEY token  LOCK closed gate  OPEN clear gate  EXIT exfil  BOSS red core`;
 }
 
 export function buildRaycastScoreHudLine(score: number, highScore: number): string {
@@ -188,10 +188,10 @@ export function buildRaycastHudLayout(width: number, height: number): RaycastHud
   const healthBarWidth = 168;
   const healthBarTrackHeight = 10;
   const healthBarFillHeight = 6;
-  const minimapFrameWidth = compactTopRightCluster ? 194 : 232;
-  const minimapFrameHeight = compactTopRightCluster ? 152 : 182;
-  const minimapPanelWidth = compactTopRightCluster ? 178 : 212;
-  const minimapPanelHeight = compactTopRightCluster ? 132 : 158;
+  const minimapFrameWidth = compactTopRightCluster ? 220 : 266;
+  const minimapFrameHeight = compactTopRightCluster ? 172 : 212;
+  const minimapPanelWidth = compactTopRightCluster ? 200 : 242;
+  const minimapPanelHeight = compactTopRightCluster ? 150 : 184;
   const minimapFrameX = width - 16 - minimapFrameWidth * 0.5;
   const minimapFrameTop = compactTopRightCluster ? 126 : 114;
   const minimapTitleHeight = 20;
@@ -228,7 +228,7 @@ export function buildRaycastDebugLine(state: RaycastDebugHudState): string {
 
 export function buildRaycastHudSummary(state: RaycastHudSummaryState): string[] {
   const lines = [
-    buildRaycastHudStatusLine(state.health, state.weaponLabel, state.difficultyLabel),
+    buildRaycastHudStatusLine(state.health, 100, state.weaponLabel, state.difficultyLabel),
     buildRaycastHudProgressLine(
       state.keyCount,
       state.keyTotal,

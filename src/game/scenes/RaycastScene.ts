@@ -38,6 +38,7 @@ import {
   getRaycastLevelById,
   RAYCAST_WORLD_TWO_CATALOG,
   RAYCAST_WORLD_THREE_CATALOG,
+  RAYCAST_LEVEL_BOSS,
   isRaycastPointReachable,
   getSafeDirectorSpawnPoints,
   isNearPoint,
@@ -159,8 +160,7 @@ import {
 import {
   applyRaycastHealthPickup,
   buildRaycastLowHealthHint,
-  RAYCAST_LOW_HEALTH_HINT_THRESHOLD,
-  RAYCAST_PLAYER_MAX_HEALTH
+  RAYCAST_LOW_HEALTH_HINT_THRESHOLD
 } from '../raycast/RaycastItems';
 import {
   computeEnemySwarmHealScale,
@@ -188,6 +188,8 @@ interface RaycastSceneData {
   breachWorldTwo?: boolean;
   /** First World 3 map after World 2 finale — applies one-time breach bonus. */
   breachWorldThree?: boolean;
+  /** Campaign-per-run permanent buffs from boss clears. */
+  rewardTier?: number;
 }
 
 const DIRECTOR_SPAWN_TELEGRAPH_MS = 820;
@@ -195,6 +197,9 @@ const ENCOUNTER_SPAWN_TELEGRAPH_MS = 980;
 const VISIBLE_SPAWN_TELEGRAPH_BONUS_MS = 260;
 const CLOSE_SPAWN_TELEGRAPH_BONUS_MS = 180;
 const DEV_SHORTCUT_ENABLED = import.meta.env.DEV;
+const BASE_PLAYER_MAX_HEALTH = 100;
+const REWARD_DAMAGE_STEP = 0.2;
+const REWARD_HEALTH_STEP = 1.2;
 
 export class RaycastScene extends Phaser.Scene {
   private raycastRenderer!: RaycastRenderer;
@@ -210,7 +215,9 @@ export class RaycastScene extends Phaser.Scene {
   private enemies: RaycastEnemy[] = [];
   private enemyProjectiles: RaycastEnemyProjectile[] = [];
   private player: RaycastPlayerState = { ...RAYCAST_PLAYER_START };
-  private playerHealth = 100;
+  private playerHealth = BASE_PLAYER_MAX_HEALTH;
+  private playerMaxHealth = BASE_PLAYER_MAX_HEALTH;
+  private rewardTier = 0;
   private damageTaken = 0;
   private runStartedAt = 0;
   private playerAlive = true;
@@ -237,7 +244,7 @@ export class RaycastScene extends Phaser.Scene {
   private levelStartCampaignMetrics: RaycastCampaignMetrics = createEmptyCampaignMetrics();
   private pendingWorldTwoBreachBonus = false;
   private pendingWorldThreeBreachBonus = false;
-  private bossState: RaycastBossState | null = null;
+  private bossStates: RaycastBossState[] = [];
   private playerStationaryMs = 0;
   private lastPlayerDamageAt = 0;
   private lastPlayerPosition: { x: number; y: number } = { x: RAYCAST_PLAYER_START.x, y: RAYCAST_PLAYER_START.y };
@@ -310,8 +317,8 @@ export class RaycastScene extends Phaser.Scene {
   private finalSummaryText!: Phaser.GameObjects.Text;
   private finalHintText!: Phaser.GameObjects.Text;
   private weaponOverlayFlashUntil = 0;
-  private bossTelegraphActive = false;
-  private lastBossPhase: 1 | 2 | 3 | null = null;
+  private bossTelegraphById = new Map<string, boolean>();
+  private lastBossPhaseById = new Map<string, 1 | 2 | 3>();
   private lastCombatMessage: string = RAYCAST_ATMOSPHERE.messages.intro;
   private hudCss!: RaycastHudCssBundle;
   private combatMessageUntil = 0;
@@ -336,7 +343,8 @@ export class RaycastScene extends Phaser.Scene {
       levelId: this.currentLevel.id,
       difficultyId: this.difficultyId,
       carryScore: this.levelStartScore,
-      carryCampaignMetrics: this.levelStartCampaignMetrics
+      carryCampaignMetrics: this.levelStartCampaignMetrics,
+      rewardTier: this.rewardTier
     });
   };
 
@@ -355,6 +363,7 @@ export class RaycastScene extends Phaser.Scene {
       difficultyId: this.difficultyId,
       carryScore: this.runScore,
       carryCampaignMetrics: this.campaignMetrics,
+      rewardTier: this.rewardTier,
       breachWorldTwo,
       breachWorldThree
     });
@@ -411,31 +420,48 @@ export class RaycastScene extends Phaser.Scene {
     if (event.shiftKey) this.handleToggleHelp();
   };
 
-  private readonly handleDevJumpWorld3Final = (): void => {
+  private handleDevJumpToLevel(levelId: string, label: string): void {
     if (!DEV_SHORTCUT_ENABLED) return;
     if (this.gamePaused || !this.isRaycastSceneActive()) return;
-    const finalWorld3Level = RAYCAST_WORLD_THREE_CATALOG[RAYCAST_WORLD_THREE_CATALOG.length - 1];
-    if (!finalWorld3Level) return;
-    console.info(`[DEV SHORTCUT] Jumping to World 3 final encounter: ${finalWorld3Level.id}`);
-    this.setCombatMessage(`DEV JUMP // ${finalWorld3Level.name.toUpperCase()}`, 2600);
+    console.info(`[DEV SHORTCUT] Jumping to ${label}: ${levelId}`);
+    this.setCombatMessage(`DEV JUMP // ${label.toUpperCase()}`, 2600);
     this.scene.restart({
-      levelId: finalWorld3Level.id,
+      levelId,
       difficultyId: this.difficultyId,
       carryScore: this.runScore,
-      carryCampaignMetrics: this.campaignMetrics
+      carryCampaignMetrics: this.campaignMetrics,
+      rewardTier: this.rewardTier
     });
-  };
+  }
 
-  private readonly handleDevShiftThree = (event: KeyboardEvent): void => {
+  private readonly handleDevShiftFour = (event: KeyboardEvent): void => {
     if (!DEV_SHORTCUT_ENABLED) return;
     if (!event.shiftKey) return;
-    this.handleDevJumpWorld3Final();
+    this.handleDevJumpToLevel(RAYCAST_LEVEL_BOSS.id, 'World 1 Boss');
+  };
+
+  private readonly handleDevShiftFive = (event: KeyboardEvent): void => {
+    if (!DEV_SHORTCUT_ENABLED) return;
+    if (!event.shiftKey) return;
+    const world2Boss = RAYCAST_WORLD_TWO_CATALOG.find((level) => level.id === 'bloom-warden-pit');
+    if (!world2Boss) return;
+    this.handleDevJumpToLevel(world2Boss.id, 'World 2 Boss');
+  };
+
+  private readonly handleDevShiftSix = (event: KeyboardEvent): void => {
+    if (!DEV_SHORTCUT_ENABLED) return;
+    if (!event.shiftKey) return;
+    const world3Boss = RAYCAST_WORLD_THREE_CATALOG[RAYCAST_WORLD_THREE_CATALOG.length - 1];
+    if (!world3Boss) return;
+    this.handleDevJumpToLevel(world3Boss.id, 'World 3 Boss');
   };
 
   private readonly handleDevShiftJ = (event: KeyboardEvent): void => {
     if (!DEV_SHORTCUT_ENABLED) return;
     if (!event.shiftKey) return;
-    this.handleDevJumpWorld3Final();
+    const world3Boss = RAYCAST_WORLD_THREE_CATALOG[RAYCAST_WORLD_THREE_CATALOG.length - 1];
+    if (!world3Boss) return;
+    this.handleDevJumpToLevel(world3Boss.id, 'World 3 Boss');
   };
 
   private readonly handleEscKey = (): void => {
@@ -477,7 +503,8 @@ export class RaycastScene extends Phaser.Scene {
           levelId: this.currentLevel.id,
           difficultyId: this.difficultyId,
           carryScore: this.levelStartScore,
-          carryCampaignMetrics: this.levelStartCampaignMetrics
+          carryCampaignMetrics: this.levelStartCampaignMetrics,
+          rewardTier: this.rewardTier
         });
         break;
       case 'menu':
@@ -515,6 +542,7 @@ export class RaycastScene extends Phaser.Scene {
     this.pendingWorldTwoBreachBonus = Boolean(data.breachWorldTwo);
     this.pendingWorldThreeBreachBonus = Boolean(data.breachWorldThree);
     this.campaignMetrics = data.carryCampaignMetrics ?? createEmptyCampaignMetrics();
+    this.rewardTier = Math.max(0, data.rewardTier ?? 0);
   }
 
   create(): void {
@@ -531,6 +559,7 @@ export class RaycastScene extends Phaser.Scene {
     this.controller = new RaycastPlayerController(this, this.map, this.player);
     this.controller.create();
     this.combat = new RaycastCombatSystem();
+    this.combat.setPlayerDamageMultiplier(this.getRewardDamageMultiplier());
     this.audioFeedback = new AudioFeedbackSystem();
     this.audioFeedback.setMasterVolume(this.audioMasterVolume);
     this.gameDirector = new GameDirector({
@@ -939,7 +968,9 @@ export class RaycastScene extends Phaser.Scene {
     this.refreshBillboardCache();
     this.raycastRenderer.renderBillboards(this.player, this.cachedBillboards, GAME_WIDTH, GAME_HEIGHT);
     this.raycastRenderer.renderEnemies(this.player, this.enemies, GAME_WIDTH, GAME_HEIGHT, this.time.now, atmosphere);
-    this.raycastRenderer.renderBoss(this.player, this.bossState, GAME_WIDTH, GAME_HEIGHT, this.time.now, atmosphere);
+    this.bossStates.forEach((boss) => {
+      this.raycastRenderer.renderBoss(this.player, boss, GAME_WIDTH, GAME_HEIGHT, this.time.now, atmosphere);
+    });
     this.raycastRenderer.renderEnemyProjectiles(this.player, this.enemyProjectiles, GAME_WIDTH, GAME_HEIGHT);
     this.raycastRenderer.renderWeaponOverlay(
       this.combat.getCurrentWeapon(),
@@ -954,6 +985,7 @@ export class RaycastScene extends Phaser.Scene {
     const hint = buildRaycastHintText(objectiveState);
     let statusLine = buildRaycastHudStatusLine(
       this.playerHealth,
+      this.playerMaxHealth,
       this.combat.getWeaponLabel(),
       getRaycastDifficultyPreset(this.difficultyId).shortLabel
     );
@@ -1003,7 +1035,8 @@ export class RaycastScene extends Phaser.Scene {
       angle: this.currentLevel.playerStart.angle,
       velocity: { ...this.currentLevel.playerStart.velocity }
     };
-    this.playerHealth = 100;
+    this.playerMaxHealth = Math.round(BASE_PLAYER_MAX_HEALTH * Math.pow(REWARD_HEALTH_STEP, this.rewardTier));
+    this.playerHealth = this.playerMaxHealth;
     this.damageTaken = 0;
     this.runStartedAt = this.time.now;
     this.playerAlive = true;
@@ -1064,11 +1097,22 @@ export class RaycastScene extends Phaser.Scene {
     this.mapLayoutRevision = 0;
     this.minimapStaticCellsCacheKey = '';
     this.minimapStaticCells = null;
-    this.bossTelegraphActive = false;
-    this.bossState = this.currentLevel.bossConfig
-      ? createRaycastBossState(this.currentLevel.bossConfig, this.time.now)
-      : null;
-    this.lastBossPhase = this.bossState?.phase ?? null;
+    this.bossTelegraphById.clear();
+    this.lastBossPhaseById.clear();
+    this.bossStates = [];
+    if (this.currentLevel.bossConfig) {
+      const primary = createRaycastBossState(this.currentLevel.bossConfig, this.time.now);
+      this.bossStates.push(primary);
+      this.lastBossPhaseById.set(primary.id, primary.phase);
+    }
+    if (this.currentLevel.id === 'ash-judge-seal') {
+      const twin = createRaycastBossState(
+        { id: 'ash-judge-twin', displayName: 'Ash Judge Prime', x: 9.8, y: 7.1, maxHealth: 920, hitRadius: 0.75, behavior: 'ash-judge' },
+        this.time.now
+      );
+      this.bossStates.push(twin);
+      this.lastBossPhaseById.set(twin.id, twin.phase);
+    }
   }
 
   private registerInputListeners(): void {
@@ -1087,9 +1131,9 @@ export class RaycastScene extends Phaser.Scene {
     keyboard?.on('keydown-H', this.handleToggleHelp);
     keyboard?.on('keydown-SLASH', this.handleHelpShortcut);
     if (DEV_SHORTCUT_ENABLED) {
-      keyboard?.on('keydown-F9', this.handleDevJumpWorld3Final);
-      keyboard?.on('keydown-THREE', this.handleDevShiftThree);
-      keyboard?.on('keydown-NUMPAD_THREE', this.handleDevShiftThree);
+      keyboard?.on('keydown-FOUR', this.handleDevShiftFour);
+      keyboard?.on('keydown-FIVE', this.handleDevShiftFive);
+      keyboard?.on('keydown-SIX', this.handleDevShiftSix);
       keyboard?.on('keydown-J', this.handleDevShiftJ);
     }
     keyboard?.on('keydown-TAB', this.handleToggleDebug);
@@ -1125,9 +1169,9 @@ export class RaycastScene extends Phaser.Scene {
     keyboard?.off('keydown-H', this.handleToggleHelp);
     keyboard?.off('keydown-SLASH', this.handleHelpShortcut);
     if (DEV_SHORTCUT_ENABLED) {
-      keyboard?.off('keydown-F9', this.handleDevJumpWorld3Final);
-      keyboard?.off('keydown-THREE', this.handleDevShiftThree);
-      keyboard?.off('keydown-NUMPAD_THREE', this.handleDevShiftThree);
+      keyboard?.off('keydown-FOUR', this.handleDevShiftFour);
+      keyboard?.off('keydown-FIVE', this.handleDevShiftFive);
+      keyboard?.off('keydown-SIX', this.handleDevShiftSix);
       keyboard?.off('keydown-J', this.handleDevShiftJ);
     }
     keyboard?.off('keydown-TAB', this.handleToggleDebug);
@@ -1175,6 +1219,14 @@ export class RaycastScene extends Phaser.Scene {
     return this.scene.isActive('RaycastScene');
   }
 
+  private getLiveBosses(): RaycastBossState[] {
+    return this.bossStates.filter((boss) => boss.alive);
+  }
+
+  private getRewardDamageMultiplier(): number {
+    return 1 + this.rewardTier * REWARD_DAMAGE_STEP;
+  }
+
   private fireWeapon(): void {
     if (!this.canHandleRaycastInput()) return;
     if (!this.playerAlive || this.levelComplete) return;
@@ -1182,7 +1234,7 @@ export class RaycastScene extends Phaser.Scene {
     if (!result.fired) return;
 
     this.runPelletsFired += result.pelletCount;
-    if (this.bossState?.alive) {
+    if (this.getLiveBosses().length > 0) {
       this.runBossPelletsFired += result.pelletCount;
     }
 
@@ -1190,20 +1242,19 @@ export class RaycastScene extends Phaser.Scene {
     const weaponAudio = getWeaponAudioPlan(result.weaponKind);
     this.audioFeedback.play(weaponAudio.cue, weaponAudio.intensity, this.time.now);
 
-    if (this.bossState?.alive) {
-      const bossHud = getRaycastBossHudLines(this.currentLevel.bossConfig?.displayName ?? 'Volt Archon');
-      const bossDamage = computeRaycastBossWeaponDamage(this.bossState, this.player, this.map, result.weaponKind, 'raycast');
-      if (bossDamage > 0) {
-        const bossPellets = countRaycastBossConnectingPellets(
-          this.bossState,
-          this.player,
-          this.map,
-          result.weaponKind,
-          'raycast'
-        );
+    const liveBosses = this.getLiveBosses();
+    if (liveBosses.length > 0) {
+      const targetBoss = [...liveBosses].sort(
+        (a, b) => Math.hypot(a.x - this.player.x, a.y - this.player.y) - Math.hypot(b.x - this.player.x, b.y - this.player.y)
+      )[0];
+      const bossHud = getRaycastBossHudLines(targetBoss.displayName);
+      const baseBossDamage = computeRaycastBossWeaponDamage(targetBoss, this.player, this.map, result.weaponKind, 'raycast');
+      if (baseBossDamage > 0) {
+        const bossPellets = countRaycastBossConnectingPellets(targetBoss, this.player, this.map, result.weaponKind, 'raycast');
+        const bossDamage = Math.max(1, Math.round(baseBossDamage * this.getRewardDamageMultiplier()));
         this.runPelletsHitHostile += bossPellets;
         this.runBossPelletsHitHostile += bossPellets;
-        const killed = damageRaycastBoss(this.bossState, bossDamage, this.time.now, {
+        const killed = damageRaycastBoss(targetBoss, bossDamage, this.time.now, {
           fromX: this.player.x,
           fromY: this.player.y,
           map: this.map
@@ -1211,9 +1262,23 @@ export class RaycastScene extends Phaser.Scene {
         if (killed) {
           this.runScore = addRaycastBossClearScore(this.runScore);
           this.enemiesKilled += 1;
+          if (this.currentLevel.id === RAYCAST_LEVEL_BOSS.id && this.rewardTier < 1) {
+            this.rewardTier = 1;
+            this.playerMaxHealth = Math.round(BASE_PLAYER_MAX_HEALTH * Math.pow(REWARD_HEALTH_STEP, this.rewardTier));
+            this.playerHealth = Math.min(this.playerMaxHealth, this.playerHealth + 20);
+            this.combat.setPlayerDamageMultiplier(this.getRewardDamageMultiplier());
+            this.setCombatMessage('CORE REWARD: +20% DMG  +20 MAX HP', 3400);
+          } else if (this.currentLevel.id === 'bloom-warden-pit' && this.rewardTier < 2) {
+            this.rewardTier = 2;
+            this.playerMaxHealth = Math.round(BASE_PLAYER_MAX_HEALTH * Math.pow(REWARD_HEALTH_STEP, this.rewardTier));
+            this.playerHealth = Math.min(this.playerMaxHealth, this.playerHealth + 24);
+            this.combat.setPlayerDamageMultiplier(this.getRewardDamageMultiplier());
+            this.setCombatMessage('CORE REWARD: +40% DMG TOTAL  +44 MAX HP', 3600);
+          }
           this.audioFeedback.play('episodeComplete', 1, this.time.now);
           this.pulseFeedback(0xffc36b, 0.16, 260);
           this.cameras.main.flash(160, 255, 214, 120);
+          this.cameras.main.shake(210, 0.003);
         }
         this.audioFeedback.play(killed ? 'kill' : 'hit', killed ? 1 : 0.9, this.time.now);
         this.pulseCrosshair(killed ? '#ff5b6f' : '#ffffff', killed ? 118 : 92);
@@ -1422,7 +1487,7 @@ export class RaycastScene extends Phaser.Scene {
     if (!this.playerAlive || this.levelComplete) return;
     const directorScale = computePassiveHealCombatScale(this.lastDirectorState, this.directorIntensity);
     const swarm = computeEnemySwarmHealScale(this.countLivingEnemies());
-    const bossScale = this.bossState?.alive ? 0.45 : 1;
+    const bossScale = this.getLiveBosses().length > 0 ? 0.45 : 1;
     const combatScale = directorScale * swarm * bossScale;
     const config = getRaycastDifficultyPassiveHealConfig(this.difficultyId);
     const result = tickRaycastPassiveHeal({
@@ -1450,40 +1515,30 @@ export class RaycastScene extends Phaser.Scene {
   }
 
   private updateEnemies(delta: number): void {
-    if (this.bossState?.alive) {
-      tickRaycastBossMovement(
-        this.bossState,
-        this.map,
-        { x: this.player.x, y: this.player.y, alive: this.playerAlive },
-        delta,
-        this.time.now
-      );
-      const bossHud = getRaycastBossHudLines(this.currentLevel.bossConfig?.displayName ?? 'Volt Archon');
-      if (this.lastBossPhase !== this.bossState.phase) {
-        if (this.bossState.phase >= 2) {
+    const liveBosses = this.getLiveBosses();
+    for (const boss of liveBosses) {
+      tickRaycastBossMovement(boss, this.map, { x: this.player.x, y: this.player.y, alive: this.playerAlive }, delta, this.time.now);
+      const bossHud = getRaycastBossHudLines(boss.displayName);
+      const prevPhase = this.lastBossPhaseById.get(boss.id);
+      if (prevPhase !== boss.phase) {
+        if (boss.phase >= 2) {
           this.audioFeedback.play('bossPhaseShift', 1, this.time.now);
-          this.pulseFeedback(this.bossState.phase === 3 ? 0xff2f41 : 0xff5b6f, this.bossState.phase === 3 ? 0.13 : 0.11, 220);
-          this.cameras.main.shake(this.bossState.phase === 3 ? 160 : 132, this.bossState.phase === 3 ? 0.0022 : 0.00195);
-          this.setCombatMessage(this.bossState.phase === 3 ? `${bossHud.phase3Overdrive} // FINAL` : bossHud.phase2Overdrive);
+          this.pulseFeedback(boss.phase === 3 ? 0xff2f41 : 0xff5b6f, boss.phase === 3 ? 0.15 : 0.11, 260);
+          this.cameras.main.shake(boss.phase === 3 ? 168 : 132, boss.phase === 3 ? 0.0024 : 0.00195);
+          this.setCombatMessage(boss.phase === 3 ? `${bossHud.phase3Overdrive} // FINAL RAGE` : `${bossHud.phase2Overdrive} // ESCALATE`);
         }
-        this.lastBossPhase = this.bossState.phase;
+        this.lastBossPhaseById.set(boss.id, boss.phase);
       }
-      const telegraphActive = this.time.now < this.bossState.telegraphUntil;
-      if (telegraphActive && !this.bossTelegraphActive) {
+      const telegraphActive = this.time.now < boss.telegraphUntil;
+      if (telegraphActive && !this.bossTelegraphById.get(boss.id)) {
         this.audioFeedback.play('directorWarning', 0.95, this.time.now);
         this.audioFeedback.play('stingerDread', 0.44, this.time.now + 42);
         this.pulseFeedback(0xffb347, 0.08, 170);
         this.setCombatMessage(bossHud.telegraphLocked);
-        if (
-          this.bossState.arenaTwist === 'retreat_cut' &&
-          this.time.now < this.bossState.arenaTwistUntil
-        ) {
-          this.cameras.main.shake(82, 0.00152);
-        }
       }
-      this.bossTelegraphActive = telegraphActive;
+      this.bossTelegraphById.set(boss.id, telegraphActive);
       const bossShots = tickRaycastBossVolleys(
-        this.bossState,
+        boss,
         { x: this.player.x, y: this.player.y, alive: this.playerAlive, stationaryMs: this.playerStationaryMs },
         this.time.now
       );
@@ -1493,10 +1548,8 @@ export class RaycastScene extends Phaser.Scene {
         this.audioFeedback.play('spawn', 0.9, this.time.now);
         this.pulseFeedback(0xff8833, 0.065, 150);
       }
-    } else {
-      this.bossTelegraphActive = false;
+      tickRaycastBossArenaTwist(boss, this.time.now);
     }
-    if (this.bossState) tickRaycastBossArenaTwist(this.bossState, this.time.now);
 
     const previousTime = this.time.now - delta;
     const activatedTelegraphs = this.enemies
@@ -1539,7 +1592,7 @@ export class RaycastScene extends Phaser.Scene {
     const appliedDamage = scaleRaycastIncomingDamage(amount, this.difficultyId);
     this.playerHealth = Math.max(0, this.playerHealth - appliedDamage);
     this.damageTaken += appliedDamage;
-    if (this.bossState?.alive) {
+    if (this.getLiveBosses().length > 0) {
       this.runBossDamageTaken += appliedDamage;
     }
     this.lastPlayerDamageAt = this.time.now;
@@ -1549,7 +1602,7 @@ export class RaycastScene extends Phaser.Scene {
     this.cameras.main.shake(shakeDur, shakeMag);
     this.flashDamage(appliedDamage);
     let damageIntensity = Phaser.Math.Clamp(0.58 + appliedDamage * 0.019, 0.58, 1.05);
-    if (this.bossState?.alive) damageIntensity = Math.min(1.08, damageIntensity + 0.065);
+    if (this.getLiveBosses().length > 0) damageIntensity = Math.min(1.08, damageIntensity + 0.065);
     if (this.playerHealth > 0) {
       if (this.playerHealth <= 18) damageIntensity = Math.min(1.16, damageIntensity + 0.12);
       else if (this.playerHealth <= 35) damageIntensity = Math.min(1.1, damageIntensity + 0.06);
@@ -1649,7 +1702,7 @@ export class RaycastScene extends Phaser.Scene {
       const result = applyRaycastHealthPickup(
         this.playerHealth,
         getRaycastDifficultyHealthPickup(pickup, this.difficultyId),
-        RAYCAST_PLAYER_MAX_HEALTH
+        this.playerMaxHealth
       );
       if (!result.consumed) {
         const lastHintAt = this.deferredPickupHints.get(pickup.id) ?? Number.NEGATIVE_INFINITY;
@@ -1678,7 +1731,7 @@ export class RaycastScene extends Phaser.Scene {
         openDoorIds: this.currentLevel.doors.filter((door) => this.doorSystem.isOpen(door.id)).map((door) => door.id),
         activatedTriggerIds: this.currentLevel.triggers.filter((trigger) => this.triggerSystem.hasActivated(trigger.id)).map((trigger) => trigger.id),
         livingEnemyCount: this.countReachableLivingEnemies(),
-        bossDefeated: this.bossState ? !this.bossState.alive : true
+        bossDefeated: this.bossStates.length > 0 ? this.getLiveBosses().length === 0 : true
       });
       if (!exitAccess.allowed) {
         this.audioFeedback.play('uiDeny', 1, this.time.now);
@@ -2060,9 +2113,9 @@ export class RaycastScene extends Phaser.Scene {
   }
 
   private pickBossEncounterPatternRule(): RaycastEncounterPatternBinding | null {
-    if (!this.bossState?.alive) return null;
-    if (this.bossState.arenaTwist !== 'lateral_lane') return null;
-    if (this.time.now >= this.bossState.arenaTwistUntil) return null;
+    const boss = this.getLiveBosses().find((entry) => entry.arenaTwist === 'lateral_lane');
+    if (!boss) return null;
+    if (this.time.now >= boss.arenaTwistUntil) return null;
     if (this.playerHealth <= 28) return null;
     if (this.lastDirectorState !== 'PRESSURE' && this.lastDirectorState !== 'AMBUSH') return null;
     const id = 'boss-lateral-lane';
@@ -2338,7 +2391,7 @@ export class RaycastScene extends Phaser.Scene {
   private getAtmosphereOptions() {
     let base = getAtmosphereForDirector(this.directorDebug?.state ?? null, this.directorIntensity);
     base = applyWorldSegmentToAtmosphere(base, this.getWorldSegment());
-    const boss = this.bossState;
+    const boss = this.getLiveBosses()[0];
     if (boss?.alive && this.time.now < boss.arenaTwistUntil && boss.arenaTwist === 'ion_veil') {
       return {
         ...base,
@@ -2416,6 +2469,9 @@ export class RaycastScene extends Phaser.Scene {
       if (!enemy.alive) continue;
       blips.push({ id: enemy.id, kind: enemy.kind, x: enemy.x, y: enemy.y });
     }
+    this.getLiveBosses().forEach((boss) => {
+      blips.push({ id: boss.id, kind: 'BRUTE', x: boss.x, y: boss.y, isBoss: true });
+    });
 
     const model = buildRaycastMinimapModel({
       map: this.map,
@@ -2437,7 +2493,7 @@ export class RaycastScene extends Phaser.Scene {
     const offsetY = originY + Math.floor((panelHeight - model.height * tileSize) / 2);
 
     model.cells.forEach((cell) => {
-      const color = cell.kind === 'wall' ? 0x5f7788 : cell.kind === 'door' ? 0xffd268 : 0x0f1f14;
+      const color = cell.kind === 'wall' ? 0x8aa0b3 : cell.kind === 'door' ? 0xffd268 : 0x143424;
       const alpha = cell.kind === 'floor' ? 0.94 : 1;
       this.minimapGraphics.fillStyle(color, alpha);
       this.minimapGraphics.fillRect(offsetX + cell.x * tileSize, offsetY + cell.y * tileSize, tileSize - 1, tileSize - 1);
@@ -2469,6 +2525,16 @@ export class RaycastScene extends Phaser.Scene {
     model.enemyBlips.forEach((enemy) => {
       const px = offsetX + enemy.x * tileSize;
       const py = offsetY + enemy.y * tileSize;
+      if (enemy.isBoss) {
+        const r = Math.max(4, tileSize * 0.5);
+        this.minimapGraphics.lineStyle(2, 0x1d0206, 1);
+        this.minimapGraphics.strokeCircle(px, py, r + 2);
+        this.minimapGraphics.fillStyle(0xff2c3f, 1);
+        this.minimapGraphics.fillCircle(px, py, r);
+        this.minimapGraphics.lineStyle(2, 0xfff2bd, 1);
+        this.minimapGraphics.strokeCircle(px, py, r * 0.58);
+        return;
+      }
       const style = getRaycastMinimapEnemyDotStyle(enemy.kind);
       const baseR = Math.max(1.8, tileSize * 0.22 * style.radiusMul);
       this.minimapGraphics.lineStyle(1, style.ring, 0.88);
@@ -2542,7 +2608,7 @@ export class RaycastScene extends Phaser.Scene {
   }
 
   private updateHealthHud(): void {
-    const visual = getRaycastHealthVisualState(this.playerHealth);
+    const visual = getRaycastHealthVisualState(this.playerHealth, this.playerMaxHealth);
     this.healthText.setColor(visual.color);
     this.healthBarFill.setFillStyle(visual.accentColor, 1);
     this.healthBarFill.setSize(168 * visual.ratio, 6);
@@ -2561,9 +2627,9 @@ export class RaycastScene extends Phaser.Scene {
   }
 
   private updateBossHud(): void {
-    const boss = this.bossState;
+    const boss = this.getLiveBosses()[0] ?? null;
     const showBossHud = Boolean(
-      this.currentLevel.bossConfig &&
+      this.bossStates.length > 0 &&
       boss &&
       this.playerAlive &&
       !this.levelComplete
@@ -2587,7 +2653,9 @@ export class RaycastScene extends Phaser.Scene {
 
   private updateFocusedEnemyHud(): void {
     const wallDistance = castRay(this.map, this.player.x, this.player.y, this.player.angle, this.player.angle).distance;
-    const bossTarget = getRaycastBossCrosshairTarget(this.player, wallDistance, this.bossState, this.time.now);
+    const bossTarget = this.getLiveBosses()
+      .map((boss) => getRaycastBossCrosshairTarget(this.player, wallDistance, boss, this.time.now))
+      .find((target) => target !== null) ?? null;
     const target =
       bossTarget ??
       getRaycastCrosshairTargetInfo(this.player, this.enemies, wallDistance, this.time.now);
@@ -2619,7 +2687,7 @@ export class RaycastScene extends Phaser.Scene {
   }
 
   private flashDamage(amount: number): void {
-    const maxHp = 100;
+    const maxHp = this.playerMaxHealth;
     const ratio = Phaser.Math.Clamp(this.playerHealth / maxHp, 0, 1);
     let stress = 1;
     if (ratio <= 0.25) stress = 1.18 + (0.25 - ratio) * 0.95;
@@ -2666,7 +2734,7 @@ export class RaycastScene extends Phaser.Scene {
   private updateAtmospherePulse(): void {
     if (this.gamePaused || !this.playerAlive || this.levelComplete) return;
     if (this.time.now < this.nextAmbientCueAt) return;
-    const bossActive = Boolean(this.bossState?.alive && this.currentLevel.bossConfig && !this.levelComplete);
+    const bossActive = Boolean(this.getLiveBosses().length > 0 && !this.levelComplete);
     const segment = this.getWorldSegment();
     const dirState = this.directorDebug?.state;
     const pressure = dirState === 'AMBUSH' || dirState === 'PRESSURE';
