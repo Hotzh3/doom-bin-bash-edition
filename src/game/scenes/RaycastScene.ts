@@ -123,6 +123,13 @@ import {
   type RaycastLevelEventDefinition
 } from '../raycast/RaycastLevelEventDirector';
 import {
+  applyRunModifierRankBonus,
+  applyRunModifierScore,
+  getRunModifierById,
+  type RunModifier,
+  type RunModifierId
+} from '../raycast/RunModifierRoulette';
+import {
   applyRaycastVariantToBaseHealth,
   getRaycastFlashDurationMs,
   getRaycastVariantModifiers,
@@ -202,6 +209,8 @@ interface RaycastSceneData {
   breachWorldThree?: boolean;
   /** Campaign-per-run permanent buffs from boss clears. */
   rewardTier?: number;
+  /** Optional pre-run/world roulette modifier. */
+  runModifierId?: RunModifierId | null;
 }
 
 const DIRECTOR_SPAWN_TELEGRAPH_MS = 820;
@@ -341,6 +350,7 @@ export class RaycastScene extends Phaser.Scene {
   private sceneReady = false;
   private inputListenersRegistered = false;
   private difficultyId: RaycastDifficultyId = DEFAULT_RAYCAST_DIFFICULTY_ID;
+  private runModifier: RunModifier | null = null;
   private activeLevelEvent!: RaycastLevelEventDefinition;
   private hudObjectiveJamText: string | null = null;
   private hudHintJamText: string | null = null;
@@ -364,7 +374,8 @@ export class RaycastScene extends Phaser.Scene {
       difficultyId: this.difficultyId,
       carryScore: this.levelStartScore,
       carryCampaignMetrics: this.levelStartCampaignMetrics,
-      rewardTier: this.rewardTier
+      rewardTier: this.rewardTier,
+      runModifierId: this.runModifier?.id ?? null
     });
   };
 
@@ -385,7 +396,8 @@ export class RaycastScene extends Phaser.Scene {
       carryCampaignMetrics: this.campaignMetrics,
       rewardTier: this.rewardTier,
       breachWorldTwo,
-      breachWorldThree
+      breachWorldThree,
+      runModifierId: this.runModifier?.id ?? null
     });
   };
 
@@ -450,7 +462,8 @@ export class RaycastScene extends Phaser.Scene {
       difficultyId: this.difficultyId,
       carryScore: this.runScore,
       carryCampaignMetrics: this.campaignMetrics,
-      rewardTier: this.rewardTier
+      rewardTier: this.rewardTier,
+      runModifierId: this.runModifier?.id ?? null
     });
   }
 
@@ -524,7 +537,8 @@ export class RaycastScene extends Phaser.Scene {
           difficultyId: this.difficultyId,
           carryScore: this.levelStartScore,
           carryCampaignMetrics: this.levelStartCampaignMetrics,
-          rewardTier: this.rewardTier
+          rewardTier: this.rewardTier,
+          runModifierId: this.runModifier?.id ?? null
         });
         break;
       case 'menu':
@@ -563,6 +577,7 @@ export class RaycastScene extends Phaser.Scene {
     this.pendingWorldThreeBreachBonus = Boolean(data.breachWorldThree);
     this.campaignMetrics = data.carryCampaignMetrics ?? createEmptyCampaignMetrics();
     this.rewardTier = Math.max(0, data.rewardTier ?? 0);
+    this.runModifier = getRunModifierById(data.runModifierId ?? null);
   }
 
   create(): void {
@@ -578,10 +593,14 @@ export class RaycastScene extends Phaser.Scene {
     this.raycastRenderer = new RaycastRenderer(this, this.map, this.currentLevel);
     this.controller = new RaycastPlayerController(this, this.map, this.player);
     this.controller.create();
-    this.controller.setMoveSpeedMultiplier(this.activeLevelEvent.effects.playerMoveMultiplier ?? 1);
+    this.controller.setMoveSpeedMultiplier(
+      (this.activeLevelEvent.effects.playerMoveMultiplier ?? 1) * (this.runModifier?.effects.moveSpeedMul ?? 1)
+    );
     this.combat = new RaycastCombatSystem();
     this.combat.setPlayerDamageMultiplier(this.getPlayerDamageMultiplier());
-    this.combat.setWeaponFireRateMultiplier(this.activeLevelEvent.effects.ammoCadenceMultiplier ?? 1);
+    this.combat.setWeaponFireRateMultiplier(
+      (this.activeLevelEvent.effects.ammoCadenceMultiplier ?? 1) * (this.runModifier?.effects.fireRateMul ?? 1)
+    );
     this.audioFeedback = new AudioFeedbackSystem();
     this.audioFeedback.setMasterVolume(this.audioMasterVolume);
     this.gameDirector = new GameDirector({
@@ -969,7 +988,8 @@ export class RaycastScene extends Phaser.Scene {
 
     this.sceneReady = true;
     this.cameras.main.fadeIn(380, 0, 0, 0);
-    this.setCombatMessage(`${this.activeLevelEvent.introText} // ${this.buildLevelStartObjectiveMessage()}`, 4700);
+    const modifierIntro = this.runModifier ? ` // MOD ${this.runModifier.label}` : '';
+    this.setCombatMessage(`${this.activeLevelEvent.introText}${modifierIntro} // ${this.buildLevelStartObjectiveMessage()}`, 4700);
     this.registerInputListeners();
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.cleanupSceneLifecycle, this);
     this.events.once(Phaser.Scenes.Events.DESTROY, this.cleanupSceneLifecycle, this);
@@ -1031,7 +1051,8 @@ export class RaycastScene extends Phaser.Scene {
       )
     );
     this.scoreHudText.setText(buildRaycastScoreHudLine(this.runScore, readRaycastHighScore()));
-    this.objectiveText.setText(`OBJECTIVE // ${objectiveHud}  |  ${this.activeLevelEvent.hudText}`);
+    const modifierHud = this.runModifier ? ` | MOD ${this.runModifier.label}` : '';
+    this.objectiveText.setText(`OBJECTIVE // ${objectiveHud}  |  ${this.activeLevelEvent.hudText}${modifierHud}`);
     this.hintText.setText(`HINT // ${hint}  |  ${this.activeLevelEvent.objectiveText}`);
     this.instructionText.setText(
       this.gamePaused
@@ -1068,7 +1089,7 @@ export class RaycastScene extends Phaser.Scene {
       angle: this.currentLevel.playerStart.angle,
       velocity: { ...this.currentLevel.playerStart.velocity }
     };
-    this.playerMaxHealth = Math.round(BASE_PLAYER_MAX_HEALTH * Math.pow(REWARD_HEALTH_STEP, this.rewardTier));
+    this.playerMaxHealth = this.getBasePlayerMaxHealth();
     this.playerHealth = this.playerMaxHealth;
     this.damageTaken = 0;
     this.runStartedAt = this.time.now;
@@ -1273,16 +1294,27 @@ export class RaycastScene extends Phaser.Scene {
   }
 
   private applyEventScoreGain(scoreGain: number): number {
-    return applyRaycastEventScoreMultiplier(scoreGain, this.activeLevelEvent);
+    const eventAdjusted = applyRaycastEventScoreMultiplier(scoreGain, this.activeLevelEvent);
+    return applyRunModifierScore(eventAdjusted, this.runModifier);
   }
 
   private getPlayerDamageMultiplier(): number {
-    return this.getRewardDamageMultiplier() * (this.activeLevelEvent.effects.playerDamageMultiplier ?? 1);
+    return (
+      this.getRewardDamageMultiplier() *
+      (this.activeLevelEvent.effects.playerDamageMultiplier ?? 1) *
+      (this.runModifier?.effects.playerDamageMul ?? 1)
+    );
+  }
+
+  private getBasePlayerMaxHealth(): number {
+    const base = BASE_PLAYER_MAX_HEALTH * Math.pow(REWARD_HEALTH_STEP, this.rewardTier);
+    return Math.max(30, Math.round(base * (this.runModifier?.effects.playerMaxHealthMul ?? 1)));
   }
 
   private buildLevelEnemiesForEvent(): RaycastEnemy[] {
     const baseEnemies = cloneRaycastEnemies(this.currentLevel);
-    const spawnMul = this.activeLevelEvent.effects.spawnPressureMultiplier ?? 1;
+    const spawnMul =
+      (this.activeLevelEvent.effects.spawnPressureMultiplier ?? 1) * (this.runModifier?.effects.spawnPressureMul ?? 1);
     const keepChance = spawnMul < 1 ? Math.max(0.52, spawnMul) : 1;
     const seededRng = createSeededLevelEventRng(`${this.currentLevel.id}:spawns`);
 
@@ -1294,10 +1326,12 @@ export class RaycastScene extends Phaser.Scene {
   private withVariantApplied(enemy: RaycastEnemy, rng: () => number, indexSeed = 0): RaycastEnemy {
     const next = { ...enemy };
     const roll = (rng() + indexSeed * 0.037) % 1;
+    const eliteRateBonus = this.runModifier?.effects.eliteRateBonus ?? 0;
+    const eliteThreshold = 0.2 + eliteRateBonus;
     let variant: RaycastEnemyVariant = 'BASE';
     if (next.kind === 'RANGED' && roll < 0.3) variant = 'SNIPER';
     else if (next.kind === 'SCRAMBLER' && roll < 0.22) variant = 'EXPLODER';
-    else if ((next.kind === 'BRUTE' || next.kind === 'RANGED') && roll < 0.2) variant = 'ELITE';
+    else if ((next.kind === 'BRUTE' || next.kind === 'RANGED') && roll < eliteThreshold) variant = 'ELITE';
     else if (next.kind === 'GRUNT' && roll < 0.16) variant = 'BERSERK';
     else if ((next.kind === 'GRUNT' || next.kind === 'BRUTE') && roll >= 0.16 && roll < 0.28) variant = 'SHIELDED';
     else if (roll > 0.88) variant = 'CORRUPTED';
@@ -1354,13 +1388,13 @@ export class RaycastScene extends Phaser.Scene {
           this.enemiesKilled += 1;
           if (this.currentLevel.id === RAYCAST_LEVEL_BOSS.id && this.rewardTier < 1) {
             this.rewardTier = 1;
-            this.playerMaxHealth = Math.round(BASE_PLAYER_MAX_HEALTH * Math.pow(REWARD_HEALTH_STEP, this.rewardTier));
+            this.playerMaxHealth = this.getBasePlayerMaxHealth();
             this.playerHealth = Math.min(this.playerMaxHealth, this.playerHealth + 20);
             this.combat.setPlayerDamageMultiplier(this.getPlayerDamageMultiplier());
             this.setCombatMessage('CORE REWARD: +20% DMG  +20 MAX HP', 3400);
           } else if (this.currentLevel.id === 'bloom-warden-pit' && this.rewardTier < 2) {
             this.rewardTier = 2;
-            this.playerMaxHealth = Math.round(BASE_PLAYER_MAX_HEALTH * Math.pow(REWARD_HEALTH_STEP, this.rewardTier));
+            this.playerMaxHealth = this.getBasePlayerMaxHealth();
             this.playerHealth = Math.min(this.playerMaxHealth, this.playerHealth + 24);
             this.combat.setPlayerDamageMultiplier(this.getPlayerDamageMultiplier());
             this.setCombatMessage('CORE REWARD: +40% DMG TOTAL  +44 MAX HP', 3600);
@@ -1579,8 +1613,13 @@ export class RaycastScene extends Phaser.Scene {
     const swarm = computeEnemySwarmHealScale(this.countLivingEnemies());
     const bossScale = this.getLiveBosses().length > 0 ? 0.45 : 1;
     const eventScale = this.activeLevelEvent.effects.passiveHealMultiplier ?? 1;
-    const combatScale = directorScale * swarm * bossScale * eventScale;
-    const config = getRaycastDifficultyPassiveHealConfig(this.difficultyId);
+    const runScale = this.runModifier?.effects.passiveHealMul ?? 1;
+    const combatScale = directorScale * swarm * bossScale * eventScale * runScale;
+    const baseConfig = getRaycastDifficultyPassiveHealConfig(this.difficultyId);
+    const config = {
+      ...baseConfig,
+      delayAfterDamageMs: Math.round(baseConfig.delayAfterDamageMs * (this.runModifier?.effects.passiveHealDelayMul ?? 1))
+    };
     const result = tickRaycastPassiveHeal({
       health: this.playerHealth,
       nowMs: this.time.now,
@@ -1653,7 +1692,8 @@ export class RaycastScene extends Phaser.Scene {
       this.time.now,
       delta,
       {
-        speedMultiplier: this.activeLevelEvent.effects.enemySpeedMultiplier ?? 1,
+        speedMultiplier:
+          (this.activeLevelEvent.effects.enemySpeedMultiplier ?? 1) * (this.runModifier?.effects.enemySpeedMul ?? 1),
         projectileSpeedMultiplier: this.activeLevelEvent.effects.enemyProjectileSpeedMultiplier ?? 1
       }
     );
@@ -1697,7 +1737,8 @@ export class RaycastScene extends Phaser.Scene {
   private damagePlayer(amount: number): void {
     if (!this.playerAlive || this.levelComplete) return;
     const previousHealth = this.playerHealth;
-    const appliedDamage = scaleRaycastIncomingDamage(amount, this.difficultyId);
+    const incoming = Math.max(0, amount) * (this.runModifier?.effects.enemyDamageMul ?? 1);
+    const appliedDamage = scaleRaycastIncomingDamage(incoming, this.difficultyId);
     this.playerHealth = Math.max(0, this.playerHealth - appliedDamage);
     this.damageTaken += appliedDamage;
     if (this.getLiveBosses().length > 0) {
@@ -1755,6 +1796,8 @@ export class RaycastScene extends Phaser.Scene {
       if (!this.keySystem.hasKey(key.id) && isNearPoint(this.player.x, this.player.y, key)) {
         this.keySystem.collect(key);
         this.blockedHintReason = null;
+        const tokenBonus = this.runModifier?.effects.tokenScoreBonus ?? 0;
+        if (tokenBonus > 0) this.runScore += tokenBonus;
         this.audioFeedback.play('pickupKey', 1, this.time.now);
         this.pulseFeedback(RAYCAST_PALETTE.plasmaBright, 0.09, 140);
         this.cameras.main.shake(55, 0.0014);
@@ -1782,7 +1825,8 @@ export class RaycastScene extends Phaser.Scene {
       this.pulseFeedback(0xff5b6f, 0.06, 170);
       this.setCombatMessage(`CORRUPTION BREACH: ${trigger.activationText}`);
       const spawned: RaycastEnemy[] = [];
-      const spawnPressure = this.activeLevelEvent.effects.spawnPressureMultiplier ?? 1;
+      const spawnPressure =
+        (this.activeLevelEvent.effects.spawnPressureMultiplier ?? 1) * (this.runModifier?.effects.spawnPressureMul ?? 1);
       const triggerSpawnChance = spawnPressure < 1 ? Math.max(0.58, spawnPressure) : 1;
       const triggerRng = createSeededLevelEventRng(`${trigger.id}:${Math.floor(this.time.now / 1000)}`);
       for (let index = 0; index < trigger.spawns.length; index += 1) {
@@ -1801,7 +1845,9 @@ export class RaycastScene extends Phaser.Scene {
       if (this.collectedSecrets.has(secret.id)) return;
       if (!isNearPoint(this.player.x, this.player.y, secret)) return;
       registerRaycastSecret(this.collectedSecrets, secret);
-      this.runScore += this.applyEventScoreGain(addRaycastSecretScore(0));
+      const secretBase = addRaycastSecretScore(0);
+      const secretBoosted = Math.round(secretBase * (this.runModifier?.effects.secretScoreMul ?? 1));
+      this.runScore += this.applyEventScoreGain(secretBoosted);
       this.audioFeedback.play('secret', 1, this.time.now);
       this.pulseFeedback(RAYCAST_PALETTE.plasmaBright, 0.11, 180);
       this.setCombatMessage(`${getRaycastCombatMessageForSegment(this.getWorldSegment(), 'secret')}: ${secret.objectiveText}`);
@@ -1862,14 +1908,17 @@ export class RaycastScene extends Phaser.Scene {
       }
       const sectorMetrics = this.collectSectorMetricsSnapshot();
       this.campaignMetrics = mergeCampaignMetrics(this.campaignMetrics, sectorMetrics);
-      this.runScore += this.applyEventScoreGain(addRaycastSectorPerformanceBonus(0, sectorMetrics));
+      const clearMul = this.runModifier?.effects.clearBonusMul ?? 1;
+      this.runScore += Math.round(this.applyEventScoreGain(addRaycastSectorPerformanceBonus(0, sectorMetrics)) * clearMul);
       if (this.isTerminalArcSector()) {
-        this.runScore += RAYCAST_FULL_ARC_CLEAR_BONUS;
+        this.runScore += Math.round(RAYCAST_FULL_ARC_CLEAR_BONUS * clearMul);
       }
       this.levelComplete = true;
       this.episodeComplete = this.nextLevelId === null;
       if (this.episodeComplete) {
-        this.runScore = addRaycastCampaignCompletionBonus(this.runScore, this.campaignMetrics);
+        const campaignBonus = addRaycastCampaignCompletionBonus(0, this.campaignMetrics);
+        const boostedCampaignBonus = applyRunModifierRankBonus(campaignBonus, this.runModifier);
+        this.runScore += boostedCampaignBonus;
       }
       const bossContinueWorldTwo =
         Boolean(this.currentLevel.bossConfig) && !this.episodeComplete && this.nextLevelId !== null;
@@ -2310,7 +2359,8 @@ export class RaycastScene extends Phaser.Scene {
   }
 
   private spawnDirectorEnemy(spawn: SpawnRequest): void {
-    const spawnPressure = this.activeLevelEvent.effects.spawnPressureMultiplier ?? 1;
+    const spawnPressure =
+      (this.activeLevelEvent.effects.spawnPressureMultiplier ?? 1) * (this.runModifier?.effects.spawnPressureMul ?? 1);
     const chance = spawnPressure < 1 ? Math.max(0.6, spawnPressure) : 1;
     if (chance < 1) {
       const rng = createSeededLevelEventRng(`${spawn.x}:${spawn.y}:${this.time.now}:${spawn.kind}`);
@@ -2542,12 +2592,19 @@ export class RaycastScene extends Phaser.Scene {
   private getAtmosphereOptions() {
     let base = getAtmosphereForDirector(this.directorDebug?.state ?? null, this.directorIntensity);
     base = applyWorldSegmentToAtmosphere(base, this.getWorldSegment());
-    const fogMul = this.activeLevelEvent.effects.fogDensityMultiplier ?? 1;
+    const fogMul = (this.activeLevelEvent.effects.fogDensityMultiplier ?? 1) * (this.runModifier?.effects.fogMul ?? 1);
     if (fogMul < 1) {
       base = {
         ...base,
         fogStart: base.fogStart * fogMul,
         fogEnd: Math.max(base.fogStart * fogMul + 2.2, base.fogEnd * fogMul)
+      };
+    }
+    const darknessAdd = this.runModifier?.effects.darknessAdd ?? 0;
+    if (darknessAdd > 0) {
+      base = {
+        ...base,
+        ambientDarkness: Math.min(0.52, base.ambientDarkness + darknessAdd)
       };
     }
     if (this.corruptionZone !== null) {

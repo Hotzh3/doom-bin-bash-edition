@@ -53,7 +53,7 @@ What you can actually play and show:
 | **Combat** | Hitscan weapons, damage feedback, enemy projectiles where authored, basic knockback/flash presentation hooks — **not** a full tactical sim. |
 | **AI director** | `GameDirector` pacing (calm → pressure → ambush → recovery, etc.) tuned per level; spawns and tension staging. |
 | **Encounters** | Authored beats, triggers, optional encounter-pattern hooks for variety — scope is **vertical slice**, not endless modes. |
-| **Enemy roles** | Kinds: `GRUNT`, `STALKER`, `RANGED`, `BRUTE`, `SCRAMBLER` with different silhouettes/roles in raycast presentation. |
+| **Enemy roles** | Kinds: `GRUNT`, `STALKER`, `RANGED`, `BRUTE`, `SCRAMBLER`, `FLASHER` with different silhouettes/roles in raycast presentation. |
 | **Boss** | Episode finale boss (e.g. **Volt Archon**) with phased fight and HUD strings; additional bosses in later worlds when reached. |
 | **Score / high score** | Run scoring, medals/rank where implemented, **localStorage** persistence — **no** server backend. |
 | **HUD / minimap** | Compact terminal-style HUD, objective line, combat strip, **M** minimap (see in-game help). |
@@ -61,6 +61,26 @@ What you can actually play and show:
 | **Quality gate** | `npm test`, `npm run lint`, `npm run build` expected green in CI and before releases. |
 
 **Arena (2D):** local sandbox — useful for tests and quick PvP/PvE; not where feature depth is concentrated.
+
+## Optional pre-run modifier roulette
+
+Before starting a raycast run/world (Prologue), roulette is optional:
+
+- `M`: cycle modifiers
+- `R`: roll random modifier
+- `N`: clear (play with no modifier)
+- `SPACE/ENTER`: accept and start
+
+Current roulette options:
+
+1. `DOUBLE DAMAGE / LOW HP`
+2. `FAST ENEMIES / MORE SCORE`
+3. `NO REGEN / HIGHER RANK BONUS`
+4. `GLASS CANNON`
+5. `TREASURE SIGNAL`
+6. `OVERCLOCKED`
+7. `HUNTER MARK`
+8. `DARK ROUTE`
 
 ## Docker Quick Start
 
