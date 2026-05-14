@@ -140,16 +140,23 @@ describe('raycast HUD', () => {
     const minimapFrameTop = layout.minimapFrameY - layout.minimapFrameHeight * 0.5;
 
     expect(layout.healthBarX + layout.healthBarWidth).toBe(944);
-    expect(layout.minimapTitleX).toBe(880);
+    expect(layout.minimapTitleX).toBe(866);
+    expect(layout.minimapFrameWidth).toBe(156);
+    expect(layout.minimapPanelWidth).toBe(144);
     expect(minimapTitleTop).toBeGreaterThan(healthBarBottom);
     expect(minimapFrameTop).toBeGreaterThan(healthBarBottom);
   });
 
   it('keeps the larger default minimap treatment on roomier viewports', () => {
     const layout = buildRaycastHudLayout(1280, 720);
+    const healthBarBottom = layout.healthBarY + layout.healthBarTrackHeight * 0.5;
+    const minimapTitleTop = layout.minimapTitleY - layout.minimapTitleHeight * 0.5;
+    const minimapFrameTop = layout.minimapFrameY - layout.minimapFrameHeight * 0.5;
 
-    expect(layout.minimapFrameWidth).toBe(144);
-    expect(layout.minimapPanelWidth).toBe(132);
-    expect(layout.minimapTitleY).toBe(50);
+    expect(layout.minimapFrameWidth).toBe(178);
+    expect(layout.minimapPanelWidth).toBe(164);
+    expect(layout.minimapTitleY).toBe(90);
+    expect(minimapTitleTop).toBeGreaterThan(healthBarBottom);
+    expect(minimapFrameTop).toBeGreaterThan(healthBarBottom);
   });
 });

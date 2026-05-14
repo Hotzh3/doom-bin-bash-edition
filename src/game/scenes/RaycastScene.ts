@@ -138,6 +138,7 @@ import {
   buildRaycastDeathOverlaySummary,
   buildRaycastEpisodeBanner,
   buildRaycastHelpOverlayText,
+  buildRaycastLevelStartObjectiveMessage,
   buildRaycastOverlayHint,
   buildRaycastPriorityMessage,
   buildRaycastStatusMessage
@@ -797,30 +798,30 @@ export class RaycastScene extends Phaser.Scene {
     this.finalOverlay = this.add.rectangle(GAME_WIDTH * 0.5, GAME_HEIGHT * 0.5, GAME_WIDTH, GAME_HEIGHT, 0x020408, 0.82);
     this.finalOverlay.setDepth(30).setVisible(false);
     this.finalTitleText = this.add
-      .text(GAME_WIDTH * 0.5, GAME_HEIGHT * 0.34, '', {
-        fontSize: '46px',
+      .text(GAME_WIDTH * 0.5, GAME_HEIGHT * 0.3, '', {
+        fontSize: '34px',
         fontStyle: '700',
         color: this.hudCss.warningText,
         stroke: '#020408',
-        strokeThickness: 7
+        strokeThickness: 6
       })
       .setOrigin(0.5)
       .setDepth(31)
       .setVisible(false);
     this.finalSummaryText = this.add
       .text(GAME_WIDTH * 0.5, GAME_HEIGHT * 0.5, '', {
-        fontSize: '20px',
+        fontSize: '16px',
         fontStyle: '700',
         color: this.hudCss.systemText,
         align: 'center',
-        lineSpacing: 8
+        lineSpacing: 5
       })
       .setOrigin(0.5)
       .setDepth(31)
       .setVisible(false);
     this.finalHintText = this.add
-      .text(GAME_WIDTH * 0.5, GAME_HEIGHT * 0.72, 'R RESTART LEVEL  |  ESC MENU', {
-        fontSize: '18px',
+      .text(GAME_WIDTH * 0.5, GAME_HEIGHT * 0.73, 'R RESTART LEVEL  |  ESC MENU', {
+        fontSize: '14px',
         fontStyle: '700',
         color: this.hudCss.keyText,
         stroke: '#020408',
@@ -872,7 +873,7 @@ export class RaycastScene extends Phaser.Scene {
 
     this.sceneReady = true;
     this.cameras.main.fadeIn(380, 0, 0, 0);
-    this.setCombatMessage(`MODE ${difficultyPreset.label.toUpperCase()} // ${difficultyPreset.inGameSummary}`);
+    this.setCombatMessage(this.buildLevelStartObjectiveMessage(), 3600);
     this.registerInputListeners();
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.cleanupSceneLifecycle, this);
     this.events.once(Phaser.Scenes.Events.DESTROY, this.cleanupSceneLifecycle, this);
@@ -1767,35 +1768,7 @@ export class RaycastScene extends Phaser.Scene {
       this.nextLevelId !== null &&
       !bossContinueWorldThree;
 
-    const overlaySummary = episodeComplete
-      ? [
-          fullArcClear
-            ? 'FULL ARC CLEAR — EPISODE 1 + WORLD 2 + EMBER MERIDIAN'
-            : finaleBossEpisodeComplete
-              ? 'BOSS DEFEATED // EPISODE 1 COMPLETE'
-              : 'EPISODE CLEAR',
-          fullArcClear
-            ? 'Stratum and meridian quiet. High score and rank updated — tighten the route for a better tier.'
-            : finaleBossEpisodeComplete
-              ? 'Volt Archon decompiled. High score updated if improved.'
-              : 'Mini episode complete. Arena remains available as a secondary sandbox.',
-          levelLine,
-          ...summary
-        ]
-      : [
-          bossContinueWorldThree
-            ? 'WARDEN DOWN // MERIDIAN BREACH'
-            : bossContinueWorldTwo
-              ? 'BOSS DEFEATED // RIFT ROUTE OPEN'
-              : 'LEVEL CLEAR',
-          bossContinueWorldThree
-            ? 'Score carries into World 3 — ember meridian opens (third hell).'
-            : bossContinueWorldTwo
-              ? 'Score carries into World 2 — hunt secrets for a higher tier.'
-              : 'Score carried forward on continue.',
-          levelLine,
-          ...summary
-        ];
+    const overlaySummary = [levelLine, ...summary];
     const hint = buildRaycastOverlayHint({
       currentLevelNumber: episodeState.currentLevelNumber,
       canAdvance: !episodeComplete && this.nextLevelId !== null,
@@ -2178,6 +2151,16 @@ export class RaycastScene extends Phaser.Scene {
       Boolean(this.levelComplete && this.episodeComplete && this.isTerminalArcSector()),
       this.isWorldTwoBreachFromBossClear()
     );
+  }
+
+  private buildLevelStartObjectiveMessage(): string {
+    const state = this.getObjectiveState();
+    return buildRaycastLevelStartObjectiveMessage({
+      objective: buildRaycastCurrentObjective(state),
+      hasBoss: Boolean(this.currentLevel.bossConfig),
+      keyTotal: this.currentLevel.keys.length,
+      livingEnemyCount: state.livingEnemyCount
+    });
   }
 
   private updatePriorityMessage(objective: string, hint: string, blockedHintActive: boolean): void {
