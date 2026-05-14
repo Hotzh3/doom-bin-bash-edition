@@ -28,6 +28,7 @@ export interface RaycastMinimapState {
   collectedKeyIds: Iterable<string>;
   openDoorIds: Iterable<string>;
   collectedSecretIds: Iterable<string>;
+  hazardMarkers?: Iterable<{ x: number; y: number; label: string; active: boolean }>;
   /** Live enemies only; omit or pass empty to omit blips. */
   enemies?: Iterable<RaycastMinimapEnemyBlip>;
   /**
@@ -44,7 +45,7 @@ export interface RaycastMinimapCell {
 }
 
 export interface RaycastMinimapMarker {
-  kind: 'player' | 'key' | 'door' | 'exit' | 'landmark';
+  kind: 'player' | 'key' | 'door' | 'exit' | 'landmark' | 'hazard';
   x: number;
   y: number;
   angle?: number;
@@ -139,7 +140,16 @@ export function buildRaycastMinimapModel(state: RaycastMinimapState): RaycastMin
       label: exit.billboardLabel,
       active: true
     })),
-    ...landmarkMarkers
+    ...landmarkMarkers,
+    ...(state.hazardMarkers
+      ? Array.from(state.hazardMarkers).map((hz) => ({
+          kind: 'hazard' as const,
+          x: hz.x,
+          y: hz.y,
+          label: hz.label,
+          active: hz.active
+        }))
+      : [])
   ];
 
   const enemyBlips = state.enemies

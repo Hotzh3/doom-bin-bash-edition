@@ -97,6 +97,13 @@ import {
   tickRaycastBossVolleys,
   type RaycastBossState
 } from '../raycast/RaycastBoss';
+import {
+  createRaycastBossHazardState,
+  getRaycastBossHazardMarkers,
+  tickRaycastBossHazards,
+  type RaycastBossHazardMarker,
+  type RaycastBossHazardState
+} from '../raycast/RaycastBossHazards';
 import { castRay, RAYCAST_PLAYER_START, type RaycastMap } from '../raycast/RaycastMap';
 import { getRaycastHudCss, RAYCAST_PALETTE, type RaycastHudCssBundle } from '../raycast/RaycastPalette';
 import {
@@ -284,6 +291,7 @@ export class RaycastScene extends Phaser.Scene {
   private passiveRegenHudLabel: string | null = null;
   private passiveHealFractionalCarry = 0;
   private runUsedPassiveRegen = false;
+  private bossHazards: RaycastBossHazardState | null = null;
   private audioMasterVolume = 1;
   private billboardSig = '';
   private cachedBillboards: RaycastBillboard[] = [];
@@ -291,6 +299,7 @@ export class RaycastScene extends Phaser.Scene {
   private readonly minimapKeyIdScratch: string[] = [];
   private readonly minimapDoorIdScratch: string[] = [];
   private readonly minimapEnemyBlipScratch: RaycastMinimapEnemyBlip[] = [];
+  private readonly minimapHazardMarkerScratch: RaycastBossHazardMarker[] = [];
   /** Invalidated when a door mutates the map grid (`openRaycastDoor`). */
   private mapLayoutRevision = 0;
   private minimapStaticCellsCacheKey = '';
@@ -1006,6 +1015,7 @@ export class RaycastScene extends Phaser.Scene {
       this.updateAtmospherePulse();
       this.updateCorruptionSurge();
       this.updateBlackoutPulse();
+      this.updateBossArenaHazards();
       this.applyPassiveHeal(delta);
     }
     const atmosphere = this.getAtmosphereOptions();
@@ -1159,6 +1169,7 @@ export class RaycastScene extends Phaser.Scene {
     this.passiveRegenHudLabel = null;
     this.passiveHealFractionalCarry = 0;
     this.runUsedPassiveRegen = false;
+    this.bossHazards = this.currentLevel.bossConfig ? createRaycastBossHazardState(this.currentLevel.id) : null;
     this.billboardSig = '';
     this.cachedBillboards = [];
     this.minimapFrameCounter = 0;
@@ -2714,6 +2725,12 @@ export class RaycastScene extends Phaser.Scene {
     this.getLiveBosses().forEach((boss) => {
       blips.push({ id: boss.id, kind: 'BRUTE', x: boss.x, y: boss.y, isBoss: true });
     });
+    const hazardMarkers = this.minimapHazardMarkerScratch;
+    hazardMarkers.length = 0;
+    if (this.bossHazards) {
+      const markers = getRaycastBossHazardMarkers(this.bossHazards, this.time.now, this.getLiveBosses().length > 0);
+      markers.forEach((marker) => hazardMarkers.push(marker));
+    }
 
     const model = buildRaycastMinimapModel({
       map: this.map,
@@ -2722,6 +2739,7 @@ export class RaycastScene extends Phaser.Scene {
       collectedKeyIds: keyIds,
       openDoorIds: doorIds,
       collectedSecretIds: this.collectedSecrets,
+      hazardMarkers,
       enemies: blips,
       staticCells: this.ensureMinimapStaticCells()
     });
@@ -2755,7 +2773,9 @@ export class RaycastScene extends Phaser.Scene {
             ? 0x6fd8ff
             : marker.kind === 'landmark'
               ? 0xffde8a
-            : 0xffb347;
+              : marker.kind === 'hazard'
+                ? 0xff6ad6
+              : 0xffb347;
       this.minimapGraphics.fillStyle(color, 1);
       this.minimapGraphics.fillRect(px - 3, py - 3, Math.max(6, tileSize - 1), Math.max(6, tileSize - 1));
       this.minimapGraphics.lineStyle(1, 0x04070c, 0.95);
@@ -2849,6 +2869,7 @@ export class RaycastScene extends Phaser.Scene {
     if (marker.kind === 'exit') return marker.label === 'EXIT' || marker.label === 'PORTAL';
     if (marker.kind === 'key') return marker.label === 'KEY';
     if (marker.kind === 'landmark') return true;
+    if (marker.kind === 'hazard') return true;
     return false;
   }
 
@@ -3061,6 +3082,23 @@ export class RaycastScene extends Phaser.Scene {
     if (rng() < 0.15) {
       this.blackoutPulseUntil = this.time.now + 780;
       this.setCombatMessage('BLACKOUT PULSE // TRACK MOVEMENT', 900);
+    }
+  }
+
+  private updateBossArenaHazards(): void {
+    if (!this.bossHazards) return;
+    const tick = tickRaycastBossHazards(this.bossHazards, {
+      nowMs: this.time.now,
+      player: { x: this.player.x, y: this.player.y },
+      bossAlive: this.getLiveBosses().length > 0
+    });
+    if (tick.damage > 0) this.damagePlayer(tick.damage);
+    if (tick.triggerDarknessPulse) {
+      this.blackoutPulseUntil = Math.max(this.blackoutPulseUntil, this.time.now + 700);
+      this.setCombatMessage('HAZARD PULSE // LOW VIS', 800);
+    }
+    if (tick.telegraphLabels.length > 0) {
+      this.setCombatMessage(`HAZARD TELEGRAPH // ${tick.telegraphLabels.slice(0, 2).join(' + ')}`, 900);
     }
   }
 
