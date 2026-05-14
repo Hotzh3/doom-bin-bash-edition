@@ -27,17 +27,9 @@ describe('raycast run summary', () => {
     });
 
     expect(summary).toEqual([
-      '══ SECTOR REPORT ══',
-      ' DIFFICULTY      HARD',
-      ' ◆ TIME ◆',
-      ' ELAPSED         2:05.9',
-      ' ◆ COMBAT ◆',
-      ' HOSTILES        8',
-      ' DMG (YOU)       47',
-      ' PLAYSTYLE       ROUTE SCOUT',
-      ' ◆ INTEL ◆',
-      ' SECRETS         1/2',
-      ' TOKENS          1/1'
+      'TIME 2:05.9',
+      'HOSTILES 8',
+      'SECRETS 1/2  |  TOKENS 1/1'
     ]);
   });
 
@@ -66,10 +58,9 @@ describe('raycast run summary', () => {
 
     expect(summary.some((line) => line.includes('350') && line.includes('1,200'))).toBe(true);
     expect(summary.some((line) => line.includes('RANK'))).toBe(true);
-    expect(summary.some((line) => line.includes('ACC (SECTOR)') && line.includes('45%') && line.includes('9/20'))).toBe(
-      true
-    );
-    expect(summary.some((line) => line.includes('PLAYSTYLE') && line.includes('STRIKE RUN'))).toBe(true);
+    expect(summary).toHaveLength(5);
+    expect(summary.some((line) => line.includes('ACC (SECTOR)'))).toBe(false);
+    expect(summary.some((line) => line.includes('PLAYSTYLE'))).toBe(false);
   });
 
   it('prepends run composite when finale campaign metrics are provided', () => {
@@ -101,8 +92,8 @@ describe('raycast run summary', () => {
       episodeComplete: true,
       campaign: c
     });
-    expect(summary[0]).toBe('══ SIGNAL REPORT // RUN COMPLETE ══');
-    expect(summary.some((line) => line.includes('RUN LOCK // COMPOSITE'))).toBe(true);
-    expect(summary.some((line) => line.includes('WALL TIME'))).toBe(true);
+    expect(summary[0]).toBe('SCORE 9,000');
+    expect(summary.some((line) => line.includes('RUN LOCK // COMPOSITE'))).toBe(false);
+    expect(summary.some((line) => line.includes('TIME 2:00.0'))).toBe(true);
   });
 });

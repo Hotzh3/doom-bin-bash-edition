@@ -6,6 +6,7 @@ import {
   buildMainMenuLayout,
   buildRaycastEpisodeBanner,
   buildRaycastHelpOverlayText,
+  buildRaycastLevelStartObjectiveMessage,
   buildRaycastOverlayHint,
   buildRaycastPriorityMessage,
   buildRaycastStatusMessage,
@@ -182,6 +183,19 @@ describe('raycast presentation helpers', () => {
       text: 'TOKEN LOCKED. SWEEP THE SIDE ROUTE.',
       tone: 'warning'
     });
+  });
+
+  it('builds short level-start objective callouts for the main goal types', () => {
+    expect(buildRaycastLevelStartObjectiveMessage({ objective: 'FIND KEY', keyTotal: 1 })).toBe(
+      'OBJECTIVE // RECOVER TOKEN, OPEN ROUTE.'
+    );
+    expect(buildRaycastLevelStartObjectiveMessage({ objective: 'SURVIVE AMBUSH', livingEnemyCount: 3 })).toBe(
+      'OBJECTIVE // CLEAR HOSTILES, THEN EXFIL.'
+    );
+    expect(buildRaycastLevelStartObjectiveMessage({ objective: 'REACH EXIT' })).toBe('OBJECTIVE // REACH EXFIL.');
+    expect(buildRaycastLevelStartObjectiveMessage({ objective: 'SURVIVE AMBUSH', hasBoss: true })).toBe(
+      'OBJECTIVE // DEFEAT BOSS, THEN EXFIL.'
+    );
   });
 
   it('falls back from combat alerts to exit and routine guidance when pressure is low', () => {

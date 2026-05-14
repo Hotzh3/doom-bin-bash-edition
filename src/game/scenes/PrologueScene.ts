@@ -74,7 +74,7 @@ export class PrologueScene extends Phaser.Scene {
       .setDepth(4);
 
     this.add
-      .text(width * 0.5, height * 0.08, 'TERMINAL CORRUPTION HELL ARENA', {
+      .text(width * 0.5, height * 0.08, 'DOOM BIN BASH EDITION', {
         fontFamily: 'monospace',
         fontSize: '11px',
         color: MUTED_COLOR,
