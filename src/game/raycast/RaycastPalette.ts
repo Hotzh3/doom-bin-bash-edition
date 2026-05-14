@@ -5,10 +5,10 @@
 export const RAYCAST_PALETTE = {
   voidBlack: 0x020206,
   floorVoid: 0x04060a,
-  /** Distance fog tint — near-black with a faint sick cast. */
-  fogVoid: 0x030508,
-  /** World 1 forge envelope — faint cinder cast mixed into base fog (distinct from W2 blue rift). */
-  forgeHaze: 0x070503,
+  /** Distance fog tint — near-black with a faint terminal-green cast for World 1. */
+  fogVoid: 0x030806,
+  /** World 1 terminal envelope — green-black cinder cast mixed into base fog (distinct from W2 blue rift). */
+  forgeHaze: 0x030806,
   corruptVeil: 0x3e1432,
   criticalVeil: 0x520818,
   muzzleWarm: 0xffde9c,
@@ -40,19 +40,19 @@ export const RAYCAST_PALETTE = {
   gateSignal: 0xe83048,
   telegraphRose: 0xf05870,
   telegraphAmber: 0xffc850,
-  /** World 2 — abyss stratum (blue-violet void + ion fracture; deliberately not infernal rust/teal). */
-  /** Phase 31: deeper ice-fog vs W1 fogVoid — reads as “underworld seam,” not brown haze. */
-  riftFog: 0x010814,
-  /** Stronger violet interference sheet vs infernal corruptVeil pink. */
-  riftVeil: 0x341060,
-  /** Sharper ion line for shaft / conductor reads in fog. */
-  riftIon: 0x48f8ff,
-  riftViolet: 0xa078f0,
-  /** Basalt crust — colder blue deck than W1 wallSteel silhouettes. */
-  riftBasalt: 0x0e1834,
-  riftBone: 0xc8cce8,
-  /** Cold corrosion accent — sulfur lattice / bio bloom pockets in W2 only (billboards / blends). */
-  riftBloom: 0x58f088
+  /** World 2 — abyss stratum (blue-violet void + ion fracture; deliberately not W1 green terminal). */
+  /** Deeper blue fog vs W1 fogVoid — reads as “underworld seam,” not terminal haze. */
+  riftFog: 0x02061a,
+  /** Violet interference sheet separate from W1 corruption and W3 ember. */
+  riftVeil: 0x21105a,
+  /** Ion conductor line for shafts and readable cold highlights. */
+  riftIon: 0x5ab8ff,
+  riftViolet: 0x8a5cff,
+  /** Basalt crust — cold blue deck, not W1 steel/oxide. */
+  riftBasalt: 0x07112c,
+  riftBone: 0xaeb8ff,
+  /** Cold functional accent for W2-only blends; pickups keep their gameplay colors. */
+  riftBloom: 0x6fd0ff
 } as const;
 
 /** CSS strings for Phaser text and DOM-adjacent HUD. */

@@ -135,35 +135,35 @@ export function enforceRaycastEnemyBillboardReadability(
 
 const DEFAULT_THEME: RaycastZoneTheme = {
   id: 'corrupted-metal',
-  accentColor: 0x455a72,
-  patternColor: 0x9cabb8,
-  floorColor: 0x060910,
+  accentColor: 0x183c2c,
+  patternColor: 0x6fd0a0,
+  floorColor: 0x050b08,
   ceilingColor: 0x020408,
-  signalColor: RAYCAST_PALETTE.amberSoft
+  signalColor: RAYCAST_PALETTE.toxicMid
 };
 
 export const RAYCAST_ZONE_THEMES: Record<RaycastZoneThemeId, RaycastZoneTheme> = {
   'corrupted-metal': {
     id: 'corrupted-metal',
-    accentColor: 0x556080,
-    patternColor: 0xb0bec8,
-    floorColor: 0x080c14,
-    ceilingColor: 0x03060c,
-    signalColor: RAYCAST_PALETTE.amberSoft
+    accentColor: 0x1d4a34,
+    patternColor: 0x78d8a8,
+    floorColor: 0x050c08,
+    ceilingColor: 0x020604,
+    signalColor: RAYCAST_PALETTE.toxicMid
   },
   'void-stone': {
     id: 'void-stone',
-    accentColor: 0x5a4a68,
-    patternColor: 0xc4b8d8,
-    floorColor: 0x0a0810,
-    ceilingColor: 0x040308,
-    signalColor: RAYCAST_PALETTE.corruptMist
+    accentColor: 0x183a30,
+    patternColor: 0x6fa88f,
+    floorColor: 0x040908,
+    ceilingColor: 0x020504,
+    signalColor: 0x52b878
   },
   'warning-amber': {
     id: 'warning-amber',
-    accentColor: 0xc86828,
-    patternColor: 0xffe0a0,
-    floorColor: 0x120c06,
+    accentColor: 0x7a3a18,
+    patternColor: 0xd89458,
+    floorColor: 0x0e0804,
     ceilingColor: 0x080502,
     signalColor: RAYCAST_PALETTE.amberWarn
   },
@@ -188,40 +188,40 @@ export const RAYCAST_ZONE_THEMES: Record<RaycastZoneThemeId, RaycastZoneTheme> =
     accentColor: RAYCAST_PALETTE.riftBasalt,
     patternColor: RAYCAST_PALETTE.riftBone,
     /** Fracture crust — icy deck vs W1 rust slabs (grammar: noise floors + violet seam). */
-    floorColor: 0x020914,
-    ceilingColor: 0x01040e,
+    floorColor: 0x010718,
+    ceilingColor: 0x010314,
     signalColor: RAYCAST_PALETTE.riftViolet
   },
   'ion-shaft': {
     id: 'ion-shaft',
-    accentColor: 0x164e72,
+    accentColor: 0x12356c,
     patternColor: RAYCAST_PALETTE.riftIon,
     /** Frost circulation lanes — vertical shaft read (cyan conductor, not amber hazard). */
-    floorColor: 0x02141c,
-    ceilingColor: 0x010e18,
+    floorColor: 0x010f22,
+    ceilingColor: 0x010716,
     signalColor: RAYCAST_PALETTE.riftIon
   },
   'nadir-glow': {
     id: 'nadir-glow',
-    accentColor: 0x401878,
-    patternColor: 0xe8eaff,
-    floorColor: 0x030c22,
-    ceilingColor: 0x020818,
+    accentColor: 0x2a145f,
+    patternColor: 0xd6d9ff,
+    floorColor: 0x030824,
+    ceilingColor: 0x020416,
     signalColor: RAYCAST_PALETTE.riftViolet
   },
   'ash-conduit': {
     id: 'ash-conduit',
-    accentColor: 0x6a3020,
-    patternColor: 0xffc4a0,
-    floorColor: 0x100805,
+    accentColor: 0x7a2010,
+    patternColor: 0xffb070,
+    floorColor: 0x160604,
     ceilingColor: 0x080402,
     signalColor: RAYCAST_PALETTE.amberWarn
   },
   'ember-vault': {
     id: 'ember-vault',
-    accentColor: 0x4a1a0a,
-    patternColor: 0xff9a6a,
-    floorColor: 0x140a06,
+    accentColor: 0x641404,
+    patternColor: 0xff7a38,
+    floorColor: 0x1a0703,
     ceilingColor: 0x0a0402,
     signalColor: 0xff6633
   }
