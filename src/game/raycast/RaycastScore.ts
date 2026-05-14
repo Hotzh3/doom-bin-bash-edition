@@ -9,7 +9,8 @@ export const RAYCAST_SCORE_TUNING = {
     STALKER: 150,
     RANGED: 175,
     BRUTE: 250,
-    SCRAMBLER: 130
+    SCRAMBLER: 130,
+    FLASHER: 145
   } as const satisfies Record<EnemyKind, number>,
   bonuses: {
     bossClear: 2500,

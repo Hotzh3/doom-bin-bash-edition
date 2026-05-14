@@ -42,6 +42,7 @@ export interface RaycastEnemyProjectile {
 export interface RaycastEnemyUpdateResult {
   meleeDamage: number;
   spawnedProjectiles: RaycastEnemyProjectile[];
+  flashActivations: { enemyId: string; baseDurationMs: number }[];
 }
 
 export interface RaycastPlayerTarget {
@@ -84,6 +85,7 @@ export function updateRaycastEnemies(
 ): RaycastEnemyUpdateResult {
   let meleeDamage = 0;
   const spawnedProjectiles: RaycastEnemyProjectile[] = [];
+  const flashActivations: { enemyId: string; baseDurationMs: number }[] = [];
 
   enemies.forEach((enemy) => {
     if (!enemy.alive || !player.alive) return;
@@ -114,6 +116,13 @@ export function updateRaycastEnemies(
     }
 
     const { aware } = computeRaycastEnemyPlayerAwareness(hasSight, distance, config.detectionRange);
+    if (enemy.kind === 'FLASHER' && aware && hasSight && distance <= 3.1) {
+      const nextFlashAt = enemy.flashCooldownUntil ?? 0;
+      if (time >= nextFlashAt) {
+        enemy.flashCooldownUntil = time + 3600;
+        flashActivations.push({ enemyId: enemy.id, baseDurationMs: 1000 });
+      }
+    }
     let decision = decideEnemyBehavior({
       distanceToTarget: distance * GRID_SCALE,
       enemyAlive: enemy.alive,
@@ -266,7 +275,7 @@ export function updateRaycastEnemies(
     }
   });
 
-  return { meleeDamage, spawnedProjectiles };
+  return { meleeDamage, spawnedProjectiles, flashActivations };
 }
 
 export function updateRaycastEnemyProjectiles(
@@ -327,7 +336,10 @@ function createRaycastEnemyProjectile(
 ): RaycastEnemyProjectile {
   const config = getEnemyConfig(enemy.kind, 'raycast');
   const direction = getDirection(enemy, player);
-  const speed = ((config.projectileSpeed ?? 320) / GRID_SCALE) * (modifiers.projectileSpeedMultiplier ?? 1);
+  const speed =
+    ((config.projectileSpeed ?? 320) / GRID_SCALE) *
+    (modifiers.projectileSpeedMultiplier ?? 1) *
+    (enemy.projectileSpeedMultiplier ?? 1);
 
   return {
     x: enemy.x + direction.x * (enemy.radius + RANGED_MUZZLE_OFFSET),

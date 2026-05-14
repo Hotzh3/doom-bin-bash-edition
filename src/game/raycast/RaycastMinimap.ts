@@ -181,5 +181,6 @@ export function getRaycastMinimapEnemyDotStyle(kind: EnemyKind): { fill: number;
   if (kind === 'STALKER') return { fill: 0x54e898, radiusMul: 0.82, ring: 0xa8f0c8 };
   if (kind === 'RANGED') return { fill: 0x5cefef, radiusMul: 1.0, ring: 0x9ffbff };
   if (kind === 'SCRAMBLER') return { fill: 0xff8844, radiusMul: 0.88, ring: 0xffc090 };
+  if (kind === 'FLASHER') return { fill: 0xb86dff, radiusMul: 0.96, ring: 0xe0c5ff };
   return { fill: 0xff5c42, radiusMul: 0.92, ring: 0xff9a80 };
 }

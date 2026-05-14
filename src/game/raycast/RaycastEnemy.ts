@@ -1,5 +1,6 @@
 import { getEnemyConfig } from '../entities/enemyConfig';
 import type { EnemyKind } from '../types/game';
+import type { RaycastEnemyVariant } from './RaycastEnemyVariants';
 import { RAYCAST_LEVEL, type RaycastEnemySpawn, type RaycastLevel } from './RaycastLevel';
 import { buildRaycastPatrolWaypoints, hashStringToSeed, type PatrolWaypoint } from './RaycastPatrol';
 
@@ -37,6 +38,14 @@ export interface RaycastEnemy {
   roamStuckMs: number;
   damageMultiplier?: number;
   speedMultiplier?: number;
+  projectileSpeedMultiplier?: number;
+  variant?: RaycastEnemyVariant;
+  variantAccentColor?: number;
+  frontalDamageReduction?: number;
+  shieldPulseUntil?: number;
+  exploderBurstDamage?: number;
+  exploded?: boolean;
+  flashCooldownUntil?: number;
 }
 
 export function cloneRaycastEnemies(level: RaycastLevel = RAYCAST_LEVEL): RaycastEnemy[] {
@@ -75,7 +84,13 @@ export function createRaycastEnemy(spawn: RaycastEnemySpawn): RaycastEnemy {
     roamNextRedirectAt: 0,
     roamStuckMs: 0,
     damageMultiplier: 1,
-    speedMultiplier: 1
+    speedMultiplier: 1,
+    projectileSpeedMultiplier: 1,
+    variant: 'BASE',
+    frontalDamageReduction: 0,
+    exploderBurstDamage: 0,
+    exploded: false,
+    flashCooldownUntil: 0
   };
 }
 

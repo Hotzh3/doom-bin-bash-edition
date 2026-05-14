@@ -122,6 +122,12 @@ import {
   selectRaycastLevelEvent,
   type RaycastLevelEventDefinition
 } from '../raycast/RaycastLevelEventDirector';
+import {
+  applyRaycastVariantToBaseHealth,
+  getRaycastFlashDurationMs,
+  getRaycastVariantModifiers,
+  type RaycastEnemyVariant
+} from '../raycast/RaycastEnemyVariants';
 import type { RaycastSetpieceCue } from '../raycast/RaycastSetpiece';
 import {
   buildRaycastHudLayout,
@@ -342,6 +348,7 @@ export class RaycastScene extends Phaser.Scene {
   private nextCorruptionZoneAt = 0;
   private corruptionZone: { x: number; y: number; radius: number; expiresAt: number; nextTickAt: number } | null = null;
   private blackoutPulseUntil = 0;
+  private flashBlindUntil = 0;
 
   private readonly handleExitToMenu = (): void => {
     if (!this.isRaycastSceneActive()) return;
@@ -1031,6 +1038,13 @@ export class RaycastScene extends Phaser.Scene {
         ? 'HALT // UP/DOWN  SELECT  |  ENTER CONFIRM  |  ESC RESUME'
         : `${buildRaycastMinimapLegendLine()}  |  H/? HELP`
     );
+    const blinded = this.time.now < this.flashBlindUntil;
+    const hudAlpha = blinded ? 0.55 : 1;
+    this.healthText.setAlpha(hudAlpha);
+    this.weaponText.setAlpha(hudAlpha);
+    this.objectiveText.setAlpha(hudAlpha);
+    this.hintText.setAlpha(blinded ? 0.5 : 1);
+    this.instructionText.setAlpha(blinded ? 0.45 : 0.82);
     this.updateHealthHud();
     this.updateBossHud();
     this.updateFocusedEnemyHud();
@@ -1115,6 +1129,7 @@ export class RaycastScene extends Phaser.Scene {
     this.nextCorruptionZoneAt = this.time.now + 5000;
     this.corruptionZone = null;
     this.blackoutPulseUntil = 0;
+    this.flashBlindUntil = 0;
     this.sceneReady = false;
     this.gamePaused = false;
     this.pauseSelectionIndex = 0;
@@ -1269,22 +1284,37 @@ export class RaycastScene extends Phaser.Scene {
     const baseEnemies = cloneRaycastEnemies(this.currentLevel);
     const spawnMul = this.activeLevelEvent.effects.spawnPressureMultiplier ?? 1;
     const keepChance = spawnMul < 1 ? Math.max(0.52, spawnMul) : 1;
-    const elitesBuffed = this.activeLevelEvent.effects.eliteHealthMultiplier !== undefined;
     const seededRng = createSeededLevelEventRng(`${this.currentLevel.id}:spawns`);
 
     return baseEnemies
       .filter((enemy, index) => index < 2 || seededRng() <= keepChance)
-      .map((enemy) => {
-        const next = { ...enemy };
-        const isElite = next.kind === 'BRUTE' || next.kind === 'RANGED' || next.kind === 'SCRAMBLER';
-        if (elitesBuffed && isElite) {
-          const healthMul = this.activeLevelEvent.effects.eliteHealthMultiplier ?? 1;
-          next.maxHealth = Math.max(1, Math.round(next.maxHealth * healthMul));
-          next.health = next.maxHealth;
-          next.damageMultiplier = this.activeLevelEvent.effects.eliteDamageMultiplier ?? 1;
-        }
-        return next;
-      });
+      .map((enemy, index) => this.withVariantApplied(enemy, seededRng, index));
+  }
+
+  private withVariantApplied(enemy: RaycastEnemy, rng: () => number, indexSeed = 0): RaycastEnemy {
+    const next = { ...enemy };
+    const roll = (rng() + indexSeed * 0.037) % 1;
+    let variant: RaycastEnemyVariant = 'BASE';
+    if (next.kind === 'RANGED' && roll < 0.3) variant = 'SNIPER';
+    else if (next.kind === 'SCRAMBLER' && roll < 0.22) variant = 'EXPLODER';
+    else if ((next.kind === 'BRUTE' || next.kind === 'RANGED') && roll < 0.2) variant = 'ELITE';
+    else if (next.kind === 'GRUNT' && roll < 0.16) variant = 'BERSERK';
+    else if ((next.kind === 'GRUNT' || next.kind === 'BRUTE') && roll >= 0.16 && roll < 0.28) variant = 'SHIELDED';
+    else if (roll > 0.88) variant = 'CORRUPTED';
+    if (roll > 0.92 && next.kind === 'STALKER') next.kind = 'FLASHER';
+
+    const mods = getRaycastVariantModifiers(variant, this.activeLevelEvent, roll);
+    const baseCfg = getEnemyConfig(next.kind, 'raycast');
+    next.variant = variant;
+    next.variantAccentColor = mods.outlineAccent;
+    next.maxHealth = applyRaycastVariantToBaseHealth(baseCfg, mods);
+    next.health = next.maxHealth;
+    next.damageMultiplier = (next.damageMultiplier ?? 1) * mods.damageMultiplier;
+    next.speedMultiplier = (next.speedMultiplier ?? 1) * mods.speedMultiplier;
+    next.projectileSpeedMultiplier = (next.projectileSpeedMultiplier ?? 1) * mods.projectileSpeedMultiplier;
+    next.frontalDamageReduction = mods.frontalDamageReduction;
+    next.exploderBurstDamage = mods.exploderBurstDamage;
+    return next;
   }
 
   private fireWeapon(): void {
@@ -1311,7 +1341,7 @@ export class RaycastScene extends Phaser.Scene {
       const baseBossDamage = computeRaycastBossWeaponDamage(targetBoss, this.player, this.map, result.weaponKind, 'raycast');
       if (baseBossDamage > 0) {
         const bossPellets = countRaycastBossConnectingPellets(targetBoss, this.player, this.map, result.weaponKind, 'raycast');
-        const bossDamage = Math.max(1, Math.round(baseBossDamage * this.getRewardDamageMultiplier()));
+        const bossDamage = Math.max(1, Math.round(baseBossDamage * this.getPlayerDamageMultiplier()));
         this.runPelletsHitHostile += bossPellets;
         this.runBossPelletsHitHostile += bossPellets;
         const killed = damageRaycastBoss(targetBoss, bossDamage, this.time.now, {
@@ -1627,6 +1657,18 @@ export class RaycastScene extends Phaser.Scene {
         projectileSpeedMultiplier: this.activeLevelEvent.effects.enemyProjectileSpeedMultiplier ?? 1
       }
     );
+    if (enemyResult.flashActivations.length > 0) {
+      const baseDuration = enemyResult.flashActivations[0].baseDurationMs;
+      const duration = getRaycastFlashDurationMs({
+        baseMs: baseDuration,
+        difficultyId: this.difficultyId,
+        directorIntensity: this.directorIntensity,
+        event: this.activeLevelEvent
+      });
+      this.flashBlindUntil = Math.max(this.flashBlindUntil, this.time.now + duration);
+      this.setCombatMessage('FLASH BURST // VISION SCRAMBLED', 900);
+      this.pulseFeedback(0xd5b4ff, 0.08, 220);
+    }
     if (activatedTelegraphs.length > 0) {
       this.audioFeedback.play('spawn', 0.84, this.time.now);
       this.pulseFeedback(0xffb347, 0.04, 120);
@@ -1639,6 +1681,7 @@ export class RaycastScene extends Phaser.Scene {
       this.pulseFeedback(0xff5b6f, 0.04, 120);
     }
     if (enemyResult.meleeDamage > 0) this.damagePlayer(enemyResult.meleeDamage);
+    this.applyExploderBursts();
 
     const projectileDamage = updateRaycastEnemyProjectiles(
       this.map,
@@ -1749,7 +1792,7 @@ export class RaycastScene extends Phaser.Scene {
           { id: `${trigger.id}-${index}`, kind: spawn.kind, x: spawn.x, y: spawn.y },
           'encounter'
         );
-        if (enemy) spawned.push(enemy);
+        if (enemy) spawned.push(this.withVariantApplied(enemy, triggerRng, index));
       }
       this.enemies.push(...spawned);
     });
@@ -2283,15 +2326,17 @@ export class RaycastScene extends Phaser.Scene {
       'director'
     );
     if (!enemy) return;
-    if (spawnPressure > 1) enemy.speedMultiplier = (enemy.speedMultiplier ?? 1) * Math.min(1.2, spawnPressure);
-    const isElite = enemy.kind === 'BRUTE' || enemy.kind === 'RANGED' || enemy.kind === 'SCRAMBLER';
+    const rng = createSeededLevelEventRng(`${spawn.kind}:${spawn.x}:${spawn.y}:${this.time.now}`);
+    const staged = this.withVariantApplied(enemy, rng, this.directorSpawnCounter);
+    if (spawnPressure > 1) staged.speedMultiplier = (staged.speedMultiplier ?? 1) * Math.min(1.2, spawnPressure);
+    const isElite = staged.kind === 'BRUTE' || staged.kind === 'RANGED' || staged.kind === 'SCRAMBLER';
     if (isElite) {
-      enemy.damageMultiplier = (enemy.damageMultiplier ?? 1) * (this.activeLevelEvent.effects.eliteDamageMultiplier ?? 1);
+      staged.damageMultiplier = (staged.damageMultiplier ?? 1) * (this.activeLevelEvent.effects.eliteDamageMultiplier ?? 1);
       const eliteHealthMul = this.activeLevelEvent.effects.eliteHealthMultiplier ?? 1;
-      enemy.maxHealth = Math.max(1, Math.round(enemy.maxHealth * eliteHealthMul));
-      enemy.health = enemy.maxHealth;
+      staged.maxHealth = Math.max(1, Math.round(staged.maxHealth * eliteHealthMul));
+      staged.health = staged.maxHealth;
     }
-    this.enemies.push(enemy);
+    this.enemies.push(staged);
     this.directorSpawnCounter += 1;
     this.audioFeedback.play('directorAmbush', 1, this.time.now);
     this.pulseCorruption();
@@ -2516,6 +2561,13 @@ export class RaycastScene extends Phaser.Scene {
         ...base,
         ambientDarkness: Math.min(0.45, base.ambientDarkness + 0.12),
         enemyMinVisibility: Math.max(0.56, base.enemyMinVisibility - 0.08)
+      };
+    }
+    if (this.time.now < this.flashBlindUntil) {
+      base = {
+        ...base,
+        pulseAlpha: Math.min(0.35, base.pulseAlpha + 0.11),
+        corruptionAlpha: Math.min(0.34, base.corruptionAlpha + 0.09)
       };
     }
     const boss = this.getLiveBosses()[0];
@@ -2890,6 +2942,22 @@ export class RaycastScene extends Phaser.Scene {
 
     const interval = bossActive ? 3000 : recovery ? 13200 : pressure ? 4400 : 8200;
     this.nextAmbientCueAt = this.time.now + interval;
+  }
+
+  private applyExploderBursts(): void {
+    for (let i = 0; i < this.enemies.length; i += 1) {
+      const enemy = this.enemies[i];
+      if (enemy.exploded) continue;
+      const burstDamage = enemy.exploderBurstDamage ?? 0;
+      if (burstDamage <= 0) continue;
+      const close = Math.hypot(enemy.x - this.player.x, enemy.y - this.player.y) <= 0.95;
+      if ((close || !enemy.alive) && this.playerAlive && !this.levelComplete) {
+        enemy.exploded = true;
+        this.damagePlayer(burstDamage);
+        this.setCombatMessage('EXPLODER BURST', 900);
+        this.pulseFeedback(0xffa35a, 0.1, 180);
+      }
+    }
   }
 
   private updateCorruptionSurge(): void {

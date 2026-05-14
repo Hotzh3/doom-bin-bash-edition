@@ -86,6 +86,7 @@ export function formatRaycastEnemyKindLabel(kind: EnemyKind): string {
   if (kind === 'BRUTE') return 'BRUTE';
   if (kind === 'STALKER') return 'STALK';
   if (kind === 'SCRAMBLER') return 'SCRAM';
+  if (kind === 'FLASHER') return 'FLASH';
   return 'TURRET';
 }
 
@@ -173,7 +174,7 @@ export function buildRaycastHudProgressLine(
 }
 
 export function buildRaycastMinimapLegendLine(minimapToggleKey = 'M'): string {
-  return `MAP ${minimapToggleKey}  |  KEY token  LOCK closed gate  OPEN clear gate  EXIT exfil  BOSS red core`;
+  return `MAP ${minimapToggleKey}  |  KEY token  LOCK gate  OPEN gate  EXIT exfil  BOSS core  PURP flash`;
 }
 
 export function buildRaycastScoreHudLine(score: number, highScore: number): string {

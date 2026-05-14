@@ -10,7 +10,8 @@ const KNOCKBACK_KIND_SCALE: Record<EnemyKind, number> = {
   BRUTE: 0.38,
   STALKER: 1.06,
   RANGED: 0.52,
-  SCRAMBLER: 0.88
+  SCRAMBLER: 0.88,
+  FLASHER: 0.94
 };
 
 const KNOCKBACK_BASE = 0.022;
