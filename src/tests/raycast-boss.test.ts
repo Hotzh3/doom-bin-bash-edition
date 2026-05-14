@@ -85,6 +85,16 @@ describe('raycast boss', () => {
     expect(getRaycastBossPhaseLabel(boss)).toContain('PHASE 3');
   });
 
+  it('uses strict thresholds at exactly 66% and 33% hp', () => {
+    const boss = createRaycastBossState(CONFIG, 0);
+    boss.health = 80; // 66.66%
+    syncRaycastBossPhase(boss);
+    expect(boss.phase).toBe(2);
+    boss.health = 40; // 33.33%
+    syncRaycastBossPhase(boss);
+    expect(boss.phase).toBe(3);
+  });
+
   it('applies weapon damage along pellet rays against boss disk', () => {
     const boss = createRaycastBossState(CONFIG, 0);
     const player: RaycastPlayerState = {

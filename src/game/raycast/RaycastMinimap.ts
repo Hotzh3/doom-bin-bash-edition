@@ -14,6 +14,7 @@ export interface RaycastMinimapEnemyBlip {
   kind: EnemyKind;
   x: number;
   y: number;
+  isBoss?: boolean;
 }
 
 export interface RaycastMinimapState {

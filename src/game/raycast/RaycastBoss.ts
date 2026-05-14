@@ -21,6 +21,8 @@ const BOSS_PROJECTILE_COLOR = 0xff8833;
 /** Bloom Warden volleys — toxic yellow-green read vs Volt Archon ion orange (Phase 30). */
 const BLOOM_WARDEN_PROJECTILE_COLOR = 0xa8dd58;
 const ASH_JUDGE_PROJECTILE_COLOR = 0xff5522;
+const PHASE_TWO_DAMAGE_MUL = 1.05;
+const PHASE_THREE_DAMAGE_MUL = 1.15;
 
 export interface RaycastBossConfig {
   id: string;
@@ -137,7 +139,7 @@ export function tickRaycastBossArenaTwist(state: RaycastBossState, time: number)
 
 export function syncRaycastBossPhase(state: RaycastBossState): void {
   const r = state.maxHealth <= 0 ? 0 : state.health / state.maxHealth;
-  state.phase = r >= 0.67 ? 1 : r >= 0.34 ? 2 : 3;
+  state.phase = r > 2 / 3 ? 1 : r > 1 / 3 ? 2 : 3;
 }
 
 export interface RaycastBossDamageKnockback {
@@ -306,7 +308,8 @@ function spawnBossProjectile(
   toX: number,
   toY: number,
   time: number,
-  color: number = BOSS_PROJECTILE_COLOR
+  color: number = BOSS_PROJECTILE_COLOR,
+  damage: number = BOSS_PROJECTILE_DAMAGE
 ): RaycastEnemyProjectile {
   const dx = toX - fromX;
   const dy = toY - fromY;
@@ -317,7 +320,7 @@ function spawnBossProjectile(
     y: fromY + (dy / len) * 0.35,
     vx: (dx / len) * speed,
     vy: (dy / len) * speed,
-    damage: BOSS_PROJECTILE_DAMAGE,
+    damage,
     radius: BOSS_PROJECTILE_RADIUS,
     alive: true,
     color,
@@ -478,32 +481,62 @@ export function tickRaycastBossVolleys(
         : state.behavior === 'ash-judge'
           ? ASH_JUDGE_PROJECTILE_COLOR
           : BOSS_PROJECTILE_COLOR;
+    const phaseDamageMul = state.phase === 3 ? PHASE_THREE_DAMAGE_MUL : state.phase === 2 ? PHASE_TWO_DAMAGE_MUL : 1;
+    const projectileDamage = Math.max(1, Math.round(BOSS_PROJECTILE_DAMAGE * phaseDamageMul));
 
     if (state.behavior === 'ash-judge') {
       if (state.phase === 1) {
         const spin = time * 0.00105;
         for (let i = 0; i < 3; i += 1) {
           const a = spin + (i * Math.PI * 2) / 3;
-          volley.push(spawnBossProjectile(state.x, state.y, state.x + Math.cos(a) * 3, state.y + Math.sin(a) * 3, time, pelletColor));
+          volley.push(
+            spawnBossProjectile(state.x, state.y, state.x + Math.cos(a) * 3, state.y + Math.sin(a) * 3, time, pelletColor, projectileDamage)
+          );
         }
       } else if (state.phase === 2) {
         const spread = playerStationary ? 0.58 : 0.42;
         const fanCount = playerStationary ? 6 : 4;
         for (const a of fanAngles(base, fanCount, spread)) {
-          volley.push(spawnBossProjectile(state.x, state.y, state.x + Math.cos(a) * 3, state.y + Math.sin(a) * 3, time, pelletColor));
+          volley.push(
+            spawnBossProjectile(state.x, state.y, state.x + Math.cos(a) * 3, state.y + Math.sin(a) * 3, time, pelletColor, projectileDamage)
+          );
         }
-        volley.push(spawnBossProjectile(state.x, state.y, state.x + Math.cos(base + Math.PI * 0.5) * 3, state.y + Math.sin(base + Math.PI * 0.5) * 3, time, pelletColor));
-        volley.push(spawnBossProjectile(state.x, state.y, state.x + Math.cos(base - Math.PI * 0.5) * 3, state.y + Math.sin(base - Math.PI * 0.5) * 3, time, pelletColor));
+        volley.push(
+          spawnBossProjectile(
+            state.x,
+            state.y,
+            state.x + Math.cos(base + Math.PI * 0.5) * 3,
+            state.y + Math.sin(base + Math.PI * 0.5) * 3,
+            time,
+            pelletColor,
+            projectileDamage
+          )
+        );
+        volley.push(
+          spawnBossProjectile(
+            state.x,
+            state.y,
+            state.x + Math.cos(base - Math.PI * 0.5) * 3,
+            state.y + Math.sin(base - Math.PI * 0.5) * 3,
+            time,
+            pelletColor,
+            projectileDamage
+          )
+        );
       } else {
         const spread = playerStationary ? 0.84 : 0.7;
         const fanCount = playerStationary ? 8 : 6;
         for (const a of fanAngles(base, fanCount, spread)) {
-          volley.push(spawnBossProjectile(state.x, state.y, state.x + Math.cos(a) * 3, state.y + Math.sin(a) * 3, time, pelletColor));
+          volley.push(
+            spawnBossProjectile(state.x, state.y, state.x + Math.cos(a) * 3, state.y + Math.sin(a) * 3, time, pelletColor, projectileDamage)
+          );
         }
         const spin = time * 0.00122;
         for (let i = 0; i < 4; i += 1) {
           const a = spin + (i * Math.PI * 2) / 4;
-          volley.push(spawnBossProjectile(state.x, state.y, state.x + Math.cos(a) * 3, state.y + Math.sin(a) * 3, time, pelletColor));
+          volley.push(
+            spawnBossProjectile(state.x, state.y, state.x + Math.cos(a) * 3, state.y + Math.sin(a) * 3, time, pelletColor, projectileDamage)
+          );
         }
       }
       return volley;

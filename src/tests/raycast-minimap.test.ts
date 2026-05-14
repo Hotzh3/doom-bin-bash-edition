@@ -44,6 +44,23 @@ describe('raycast minimap model', () => {
     expect(model.markers.some((m) => m.label === 'HIDDEN')).toBe(false);
   });
 
+  it('keeps boss blips explicit for finale minimap readability', () => {
+    const model = buildRaycastMinimapModel({
+      map: RAYCAST_LEVEL.map,
+      level: RAYCAST_LEVEL,
+      player: { x: 3.5, y: 10.5, angle: 0 },
+      collectedKeyIds: [],
+      openDoorIds: [],
+      collectedSecretIds: [],
+      enemies: [
+        { id: 'boss-a', kind: 'BRUTE', x: 7.5, y: 7.5, isBoss: true },
+        { id: 'boss-b', kind: 'BRUTE', x: 9.5, y: 7.5, isBoss: true }
+      ]
+    });
+
+    expect(model.enemyBlips.filter((blip) => blip.isBoss)).toHaveLength(2);
+  });
+
   it('matches full model cells when staticCells is precomputed', () => {
     const staticCells = buildStaticRaycastMinimapCells({ map: RAYCAST_LEVEL.map, level: RAYCAST_LEVEL });
     const withStatic = buildRaycastMinimapModel({

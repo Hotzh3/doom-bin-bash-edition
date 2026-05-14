@@ -37,8 +37,8 @@ describe('raycast HUD', () => {
   });
 
   it('splits the readable hub into status and progress lines', () => {
-    expect(buildRaycastHudStatusLine(82, 'Shotgun')).toBe('HP 82/100 STABLE  |  WPN Shotgun');
-    expect(buildRaycastHudStatusLine(82, 'Shotgun', 'AST')).toBe('HP 82/100 STABLE  |  WPN Shotgun  |  MODE AST');
+    expect(buildRaycastHudStatusLine(82, 100, 'Shotgun')).toBe('HP 82/100 STABLE  |  WPN Shotgun');
+    expect(buildRaycastHudStatusLine(82, 100, 'Shotgun', 'AST')).toBe('HP 82/100 STABLE  |  WPN Shotgun  |  MODE AST');
     expect(buildRaycastHudProgressLine(1, 2, 0, 1, 'Reach Exit')).toBe('TOKENS 1/2  |  SECRETS 0/1  |  OBJECTIVE EXIT');
   });
 
@@ -130,7 +130,7 @@ describe('raycast HUD', () => {
   });
 
   it('builds a compact minimap legend line for key markers', () => {
-    expect(buildRaycastMinimapLegendLine()).toBe('MAP M  |  KEY token  LOCK closed gate  OPEN clear gate  EXIT exfil');
+    expect(buildRaycastMinimapLegendLine()).toBe('MAP M  |  KEY token  LOCK closed gate  OPEN clear gate  EXIT exfil  BOSS red core');
   });
 
   it('separates the top-right HUD and minimap cluster at 960x540', () => {
@@ -140,9 +140,9 @@ describe('raycast HUD', () => {
     const minimapFrameTop = layout.minimapFrameY - layout.minimapFrameHeight * 0.5;
 
     expect(layout.healthBarX + layout.healthBarWidth).toBe(944);
-    expect(layout.minimapTitleX).toBe(847);
-    expect(layout.minimapFrameWidth).toBe(194);
-    expect(layout.minimapPanelWidth).toBe(178);
+    expect(layout.minimapTitleX).toBe(834);
+    expect(layout.minimapFrameWidth).toBe(220);
+    expect(layout.minimapPanelWidth).toBe(200);
     expect(minimapTitleTop).toBeGreaterThan(healthBarBottom);
     expect(minimapFrameTop).toBeGreaterThan(healthBarBottom);
   });
@@ -153,8 +153,8 @@ describe('raycast HUD', () => {
     const minimapTitleTop = layout.minimapTitleY - layout.minimapTitleHeight * 0.5;
     const minimapFrameTop = layout.minimapFrameY - layout.minimapFrameHeight * 0.5;
 
-    expect(layout.minimapFrameWidth).toBe(232);
-    expect(layout.minimapPanelWidth).toBe(212);
+    expect(layout.minimapFrameWidth).toBe(266);
+    expect(layout.minimapPanelWidth).toBe(242);
     expect(layout.minimapTitleY).toBe(98);
     expect(minimapTitleTop).toBeGreaterThan(healthBarBottom);
     expect(minimapFrameTop).toBeGreaterThan(healthBarBottom);
