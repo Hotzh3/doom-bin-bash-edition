@@ -432,6 +432,12 @@ export class RaycastScene extends Phaser.Scene {
     this.handleDevJumpWorld3Final();
   };
 
+  private readonly handleDevShiftJ = (event: KeyboardEvent): void => {
+    if (!DEV_SHORTCUT_ENABLED) return;
+    if (!event.shiftKey) return;
+    this.handleDevJumpWorld3Final();
+  };
+
   private readonly handleEscKey = (): void => {
     if (!this.isRaycastSceneActive()) return;
     if (this.gamePaused) {
@@ -1083,6 +1089,8 @@ export class RaycastScene extends Phaser.Scene {
     if (DEV_SHORTCUT_ENABLED) {
       keyboard?.on('keydown-F9', this.handleDevJumpWorld3Final);
       keyboard?.on('keydown-THREE', this.handleDevShiftThree);
+      keyboard?.on('keydown-NUMPAD_THREE', this.handleDevShiftThree);
+      keyboard?.on('keydown-J', this.handleDevShiftJ);
     }
     keyboard?.on('keydown-TAB', this.handleToggleDebug);
     keyboard?.on('keydown-BACKTICK', this.handleToggleDebug);
@@ -1119,6 +1127,8 @@ export class RaycastScene extends Phaser.Scene {
     if (DEV_SHORTCUT_ENABLED) {
       keyboard?.off('keydown-F9', this.handleDevJumpWorld3Final);
       keyboard?.off('keydown-THREE', this.handleDevShiftThree);
+      keyboard?.off('keydown-NUMPAD_THREE', this.handleDevShiftThree);
+      keyboard?.off('keydown-J', this.handleDevShiftJ);
     }
     keyboard?.off('keydown-TAB', this.handleToggleDebug);
     keyboard?.off('keydown-BACKTICK', this.handleToggleDebug);
