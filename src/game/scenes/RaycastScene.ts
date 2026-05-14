@@ -283,6 +283,7 @@ export class RaycastScene extends Phaser.Scene {
   private passiveRegenHudActive = false;
   private passiveRegenHudLabel: string | null = null;
   private passiveHealFractionalCarry = 0;
+  private runUsedPassiveRegen = false;
   private audioMasterVolume = 1;
   private billboardSig = '';
   private cachedBillboards: RaycastBillboard[] = [];
@@ -1157,6 +1158,7 @@ export class RaycastScene extends Phaser.Scene {
     this.passiveRegenHudActive = false;
     this.passiveRegenHudLabel = null;
     this.passiveHealFractionalCarry = 0;
+    this.runUsedPassiveRegen = false;
     this.billboardSig = '';
     this.cachedBillboards = [];
     this.minimapFrameCounter = 0;
@@ -1642,6 +1644,7 @@ export class RaycastScene extends Phaser.Scene {
       })
     );
     this.passiveHealFractionalCarry = result.nextFractionalCarry;
+    if (result.healingThisTick > 0) this.runUsedPassiveRegen = true;
   }
 
   private updateEnemies(delta: number): void {
@@ -2031,7 +2034,10 @@ export class RaycastScene extends Phaser.Scene {
       hadBoss: Boolean(this.currentLevel.bossConfig),
       medals: medals.length > 0 ? medals : undefined,
       campaign: episodeComplete ? this.campaignMetrics : undefined,
-      episodeComplete: !isDeath && episodeComplete
+      episodeComplete: !isDeath && episodeComplete,
+      regenUsed: this.runUsedPassiveRegen,
+      deaths: isDeath ? 1 : 0,
+      retries: 0
     });
     const levelLine =
       worldThreeIndex >= 0

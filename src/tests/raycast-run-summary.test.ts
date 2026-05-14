@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   buildRaycastRunSummary,
+  computeRaycastRunMasteryMarks,
   computeRaycastRunRank,
   computeRaycastRunRankParts,
   formatRunDuration
@@ -27,17 +28,25 @@ describe('raycast run summary', () => {
     });
 
     expect(summary).toEqual([
+      'RANK B — SOLID CONTROL',
       'TIME 2:05.9',
-      'SECRETS 1/2'
+      'SECRETS 1/2',
+      'TOKENS 1/1',
+      'MARKS SPEED CLEAR | NO REGEN USED | CLEAN RUN'
     ]);
   });
 
   it('computes discrete rank tiers from score', () => {
+    expect(computeRaycastRunRank(3000)).toContain('RANK D');
     expect(computeRaycastRunRank(6200)).toContain('RANK C');
+    expect(computeRaycastRunRank(10_500)).toContain('RANK B');
     expect(computeRaycastRunRank(14_500)).toContain('RANK A');
     expect(computeRaycastRunRank(19_000)).toContain('RANK S');
+    expect(computeRaycastRunRank(23_000)).toContain('RANK SS');
     expect(computeRaycastRunRankParts(6200).tierLetter).toBe('C');
+    expect(computeRaycastRunRankParts(10_500).tierLetter).toBe('B');
     expect(computeRaycastRunRankParts(19_000).tierLetter).toBe('S');
+    expect(computeRaycastRunRankParts(23_000).tierLetter).toBe('SS');
   });
 
   it('includes score lines when provided', () => {
@@ -57,8 +66,9 @@ describe('raycast run summary', () => {
 
     expect(summary.some((line) => line.includes('350') && line.includes('1,200'))).toBe(true);
     expect(summary.some((line) => line.includes('RANK'))).toBe(true);
-    expect(summary).toHaveLength(5);
+    expect(summary).toHaveLength(7);
     expect(summary.some((line) => line.includes('ACCURACY'))).toBe(true);
+    expect(summary.some((line) => line.includes('TOKENS 0/1'))).toBe(true);
     expect(summary.some((line) => line.includes('ACC (SECTOR)'))).toBe(false);
     expect(summary.some((line) => line.includes('PLAYSTYLE'))).toBe(false);
   });
@@ -95,5 +105,32 @@ describe('raycast run summary', () => {
     expect(summary[0]).toBe('SCORE 9,000');
     expect(summary.some((line) => line.includes('RUN LOCK // COMPOSITE'))).toBe(false);
     expect(summary.some((line) => line.includes('TIME 2:00.0'))).toBe(true);
+  });
+
+  it('awards requested mastery marks from run conditions', () => {
+    const marks = computeRaycastRunMasteryMarks({
+      elapsedMs: 3 * 60 * 1000,
+      enemiesKilled: 9,
+      secretsFound: 2,
+      secretTotal: 2,
+      tokensFound: 1,
+      tokenTotal: 1,
+      damageTaken: 0,
+      pelletsFired: 40,
+      pelletsHitHostile: 40,
+      hadBoss: true,
+      bossArenaDamageTaken: 12,
+      regenUsed: false,
+      deaths: 0,
+      retries: 0
+    });
+    expect(marks).toContain('NO DAMAGE');
+    expect(marks).toContain('SPEED CLEAR');
+    expect(marks).toContain('FULL ACCURACY');
+    expect(marks).toContain('ALL SECRETS');
+    expect(marks).toContain('NO REGEN USED');
+    expect(marks).toContain('FULL INTEL');
+    expect(marks).toContain('BOSS BREAKER');
+    expect(marks).toContain('CLEAN RUN');
   });
 });
