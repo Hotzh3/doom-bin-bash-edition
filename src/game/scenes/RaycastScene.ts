@@ -169,13 +169,21 @@ import {
   buildRaycastEpisodeBanner,
   buildRaycastHelpOverlayText,
   buildRaycastLevelStartObjectiveMessage,
+  buildRaycastMasteryEndingLines,
   buildRaycastOverlayHint,
   buildRaycastPriorityMessage,
   buildRaycastStatusMessage
 } from '../raycast/RaycastPresentation';
+import {
+  applyRaycastMasteryUnlock,
+  evaluateRaycastMasteryEnding,
+  readRaycastMasteryUnlockState,
+  writeRaycastMasteryUnlockState,
+  type RaycastMasteryUnlockState
+} from '../raycast/RaycastMasteryEnding';
+import { buildRaycastRunSummary, computeRaycastRunMasteryRankParts } from '../raycast/RaycastRunSummary';
 import { RaycastPlayerController, type RaycastPlayerState } from '../raycast/RaycastPlayerController';
 import { RaycastRenderer, type RaycastBillboard } from '../raycast/RaycastRenderer';
-import { buildRaycastRunSummary } from '../raycast/RaycastRunSummary';
 import { appendRaycastPlaytestTelemetry } from '../raycast/RaycastTelemetry';
 import {
   buildRaycastLowHealthWarningMessage,
@@ -291,6 +299,9 @@ export class RaycastScene extends Phaser.Scene {
   private passiveRegenHudLabel: string | null = null;
   private passiveHealFractionalCarry = 0;
   private runUsedPassiveRegen = false;
+  private masteryUnlockState: RaycastMasteryUnlockState = readRaycastMasteryUnlockState();
+  private readonly runClearedLevelIds = new Set<string>();
+  private readonly runRankByLevelId = new Map<string, 'SS' | 'S' | 'A' | 'B' | 'C' | 'D'>();
   private bossHazards: RaycastBossHazardState | null = null;
   private audioMasterVolume = 1;
   private billboardSig = '';
@@ -1169,6 +1180,8 @@ export class RaycastScene extends Phaser.Scene {
     this.passiveRegenHudLabel = null;
     this.passiveHealFractionalCarry = 0;
     this.runUsedPassiveRegen = false;
+    this.runClearedLevelIds.clear();
+    this.runRankByLevelId.clear();
     this.bossHazards = this.currentLevel.bossConfig ? createRaycastBossHazardState(this.currentLevel.id) : null;
     this.billboardSig = '';
     this.cachedBillboards = [];
@@ -1929,6 +1942,24 @@ export class RaycastScene extends Phaser.Scene {
       }
       this.levelComplete = true;
       this.episodeComplete = this.nextLevelId === null;
+      const masteryRank = computeRaycastRunMasteryRankParts({
+        elapsedMs: this.time.now - this.runStartedAt,
+        enemiesKilled: this.enemiesKilled,
+        secretsFound: this.collectedSecrets.size,
+        secretTotal: this.currentLevel.secrets.length,
+        tokensFound: this.getKeyCount(),
+        tokenTotal: this.currentLevel.keys.length,
+        damageTaken: this.damageTaken,
+        bossArenaDamageTaken: this.currentLevel.bossConfig ? this.runBossDamageTaken : undefined,
+        pelletsFired: this.runPelletsFired,
+        pelletsHitHostile: this.runPelletsHitHostile,
+        hadBoss: Boolean(this.currentLevel.bossConfig),
+        regenUsed: this.runUsedPassiveRegen,
+        deaths: 0,
+        retries: 0
+      });
+      this.runClearedLevelIds.add(this.currentLevel.id);
+      this.runRankByLevelId.set(this.currentLevel.id, masteryRank.tierLetter);
       if (this.episodeComplete) {
         const campaignBonus = addRaycastCampaignCompletionBonus(0, this.campaignMetrics);
         const boostedCampaignBonus = applyRunModifierRankBonus(campaignBonus, this.runModifier);
@@ -2017,6 +2048,18 @@ export class RaycastScene extends Phaser.Scene {
     const worldTwoIndex = RAYCAST_WORLD_TWO_CATALOG.findIndex((entry) => entry.id === this.currentLevel.id);
     const worldThreeIndex = RAYCAST_WORLD_THREE_CATALOG.findIndex((entry) => entry.id === this.currentLevel.id);
     const fullArcClear = episodeComplete && this.isTerminalArcSector();
+    let masteryUnlockedNow = false;
+    if (!isDeath && episodeComplete && fullArcClear) {
+      const evaluation = evaluateRaycastMasteryEnding({
+        terminalArcCleared: true,
+        clearedLevelIds: [...this.runClearedLevelIds],
+        levelRankById: Object.fromEntries(this.runRankByLevelId.entries())
+      });
+      const nextUnlock = applyRaycastMasteryUnlock(evaluation, this.masteryUnlockState, new Date().toISOString());
+      masteryUnlockedNow = !this.masteryUnlockState.trueSignalUnlocked && nextUnlock.trueSignalUnlocked;
+      this.masteryUnlockState = nextUnlock;
+      writeRaycastMasteryUnlockState(this.masteryUnlockState);
+    }
     const sectorMetrics = this.collectSectorMetricsSnapshot();
     const medals = !isDeath
       ? RaycastScene.dedupeMedalList([
@@ -2080,7 +2123,14 @@ export class RaycastScene extends Phaser.Scene {
       this.nextLevelId !== null &&
       !bossContinueWorldThree;
 
-    const overlaySummary = [levelLine, ...summary];
+    const endingLines = buildRaycastMasteryEndingLines({
+      episodeComplete,
+      fullArcClear,
+      masteryUnlocked: this.masteryUnlockState.trueSignalUnlocked,
+      impossibleModeUnlocked: this.masteryUnlockState.impossibleModeUnlocked,
+      hiddenChallengeHookUnlocked: this.masteryUnlockState.hiddenFinalChallengeHookUnlocked
+    });
+    const overlaySummary = [levelLine, ...summary, ...endingLines];
     const hint = buildRaycastOverlayHint({
       currentLevelNumber: episodeState.currentLevelNumber,
       canAdvance: !episodeComplete && this.nextLevelId !== null,
@@ -2088,7 +2138,8 @@ export class RaycastScene extends Phaser.Scene {
       finaleBossCleared: finaleBossEpisodeComplete || bossContinueWorldTwo || bossContinueWorldThree,
       worldTwoLocked: RAYCAST_WORLD_TWO_CATALOG.length === 0,
       continueToWorldTwo: bossContinueWorldTwo,
-      continueToWorldThree: bossContinueWorldThree
+      continueToWorldThree: bossContinueWorldThree,
+      masteryUnlocked: masteryUnlockedNow || this.masteryUnlockState.trueSignalUnlocked
     });
 
     this.finalTitleText.setText(title).setColor(titleColor);

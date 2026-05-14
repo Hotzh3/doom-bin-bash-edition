@@ -7,6 +7,7 @@ import {
   buildRaycastEpisodeBanner,
   buildRaycastHelpOverlayText,
   buildRaycastLevelStartObjectiveMessage,
+  buildRaycastMasteryEndingLines,
   buildRaycastOverlayHint,
   buildRaycastPriorityMessage,
   buildRaycastStatusMessage,
@@ -102,6 +103,37 @@ describe('raycast presentation helpers', () => {
         worldTwoLocked: true
       })
     ).toBe('W WORLD 2 (LOCKED)  |  R REPLAY BOSS  |  ESC MENU');
+
+    expect(
+      buildRaycastOverlayHint({
+        currentLevelNumber: 12,
+        canAdvance: false,
+        episodeComplete: true,
+        masteryUnlocked: true
+      })
+    ).toBe('TRUE SIGNAL UNLOCKED  |  R REPLAY FINALE  |  ESC MENU');
+  });
+
+  it('builds normal vs mastery ending footer lines compactly', () => {
+    const normal = buildRaycastMasteryEndingLines({
+      episodeComplete: true,
+      fullArcClear: true,
+      masteryUnlocked: false,
+      impossibleModeUnlocked: false,
+      hiddenChallengeHookUnlocked: false
+    });
+    expect(normal[0]).toContain('NORMAL ENDING');
+
+    const mastery = buildRaycastMasteryEndingLines({
+      episodeComplete: true,
+      fullArcClear: true,
+      masteryUnlocked: true,
+      impossibleModeUnlocked: true,
+      hiddenChallengeHookUnlocked: true
+    });
+    expect(mastery.join('\n')).toContain('TRUE SIGNAL ENDING');
+    expect(mastery.join('\n')).toContain('SECRET ENDING');
+    expect(mastery.join('\n')).toContain('IMPOSSIBLE MODE');
   });
 
   it('builds status copy for play, clear, and death states', () => {

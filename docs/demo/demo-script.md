@@ -45,7 +45,8 @@
     45|
     46|8. **Score / run summary**
     47|   - Tras sector claro o hitos: **overlay** con puntuación, tiempo, rango/medallas si están visibles; **high score** local (**localStorage**).
-    48|   - **N** para continuar cuando el overlay lo permita; **R** reinicia sector; **ESC** vuelve al menú.
+    48|   - Objetivo mastery: lograr **S/SS en todos los sectores del arco completo** para desbloquear **True Signal ending**, final secreto y hook de **Impossible Mode**.
+    49|   - **N** para continuar cuando el overlay lo permita; **R** reinicia sector; **ESC** vuelve al menú.
     49|
     50|9. **World 2 teaser**
     51|   - Tras boss de Ep. 1, si el flujo lo permite: **N** hacia **World 2** (banner “abyss stratum” / copy fría vs forja).
