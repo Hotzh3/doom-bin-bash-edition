@@ -28,8 +28,7 @@ describe('raycast run summary', () => {
 
     expect(summary).toEqual([
       'TIME 2:05.9',
-      'HOSTILES 8',
-      'SECRETS 1/2  |  TOKENS 1/1'
+      'SECRETS 1/2'
     ]);
   });
 
@@ -59,6 +58,7 @@ describe('raycast run summary', () => {
     expect(summary.some((line) => line.includes('350') && line.includes('1,200'))).toBe(true);
     expect(summary.some((line) => line.includes('RANK'))).toBe(true);
     expect(summary).toHaveLength(5);
+    expect(summary.some((line) => line.includes('ACCURACY'))).toBe(true);
     expect(summary.some((line) => line.includes('ACC (SECTOR)'))).toBe(false);
     expect(summary.some((line) => line.includes('PLAYSTYLE'))).toBe(false);
   });

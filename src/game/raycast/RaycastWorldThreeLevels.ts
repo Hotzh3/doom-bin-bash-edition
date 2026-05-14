@@ -512,8 +512,8 @@ export const RAYCAST_LEVEL_WORLD3_ASH_JUDGE: RaycastLevel = {
     displayName: 'Ash Judge',
     x: 7.5,
     y: 7.5,
-    maxHealth: 430,
-    hitRadius: 0.52,
+    maxHealth: 980,
+    hitRadius: 0.72,
     behavior: 'ash-judge'
   },
   director: {

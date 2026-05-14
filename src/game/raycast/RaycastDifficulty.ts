@@ -50,9 +50,9 @@ export const RAYCAST_DIFFICULTY_PRESETS: RaycastDifficultyPreset[] = [
     directorSpawnBudgetMultiplier: 1,
     directorSpawnCooldownMultiplier: 1,
     directorOpeningSpawnOffset: 0,
-    passiveHealDelayMs: 5200,
-    passiveHealPerSecond: 1.8,
-    passiveHealMaxHealth: 70
+    passiveHealDelayMs: 3000,
+    passiveHealPerSecond: 2.2,
+    passiveHealMaxHealth: 75
   },
   {
     id: 'hard',

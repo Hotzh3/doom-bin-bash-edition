@@ -14,7 +14,7 @@ import {
   type RaycastBossConfig
 } from '../game/raycast/RaycastBoss';
 import { addRaycastBossClearScore } from '../game/raycast/RaycastScore';
-import { RAYCAST_LEVEL_BOSS, RAYCAST_WORLD_TWO_CATALOG } from '../game/raycast/RaycastLevel';
+import { RAYCAST_LEVEL_BOSS, RAYCAST_WORLD_THREE_CATALOG, RAYCAST_WORLD_TWO_CATALOG } from '../game/raycast/RaycastLevel';
 import { getRaycastBossVisualProfile } from '../game/raycast/RaycastBossVisual';
 
 const CONFIG: RaycastBossConfig = {
@@ -202,6 +202,16 @@ describe('raycast boss', () => {
     expect(world2Boss?.displayName).not.toBe(world1Boss?.displayName);
     expect((world2Boss?.maxHealth ?? 0)).toBeGreaterThan(world1Boss?.maxHealth ?? 0);
     expect((world2Boss?.hitRadius ?? 0)).toBeGreaterThan(world1Boss?.hitRadius ?? 0);
+  });
+
+  it('keeps World 3 boss harder than World 2 with distinct behavior', () => {
+    const world2Boss = RAYCAST_WORLD_TWO_CATALOG.find((level) => level.id === 'bloom-warden-pit')?.bossConfig;
+    const world3Boss = RAYCAST_WORLD_THREE_CATALOG.find((level) => level.id === 'ash-judge-seal')?.bossConfig;
+    expect(world2Boss).toBeDefined();
+    expect(world3Boss).toBeDefined();
+    expect(world3Boss?.behavior).toBe('ash-judge');
+    expect((world3Boss?.maxHealth ?? 0)).toBeGreaterThan(world2Boss?.maxHealth ?? 0);
+    expect((world3Boss?.hitRadius ?? 0)).toBeGreaterThan(world2Boss?.hitRadius ?? 0);
   });
 
   it('uses oversized layered boss visuals distinct from regular enemy billboards', () => {

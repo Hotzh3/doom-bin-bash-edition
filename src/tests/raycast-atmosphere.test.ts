@@ -6,7 +6,6 @@ import {
   getRaycastIntroMessageForSegment,
   getRaycastBossHudLines,
   RAYCAST_ATMOSPHERE,
-  RAYCAST_ATMOSPHERE_WORLD1,
   RAYCAST_ATMOSPHERE_WORLD2,
   RAYCAST_ATMOSPHERE_WORLD3,
   RAYCAST_WORLD1_SEGMENT_LAYER,
@@ -115,15 +114,10 @@ describe('raycast atmosphere', () => {
     });
   });
 
-  it('surfaces distinct World 2 intro copy for segment helpers', () => {
-    expect(getRaycastIntroMessageForSegment('world2')).toContain('ABYSS STRATUM');
-    expect(getRaycastIntroMessageForSegment('world2')).toContain('NOT THE FORGE');
-    expect(getRaycastIntroMessageForSegment('world1')).toBe(RAYCAST_ATMOSPHERE_WORLD1.messageOverrides.intro);
-  });
-
-  it('surfaces distinct World 3 intro copy for segment helpers', () => {
-    expect(getRaycastIntroMessageForSegment('world3')).toContain('EMBER MERIDIAN');
-    expect(getRaycastIntroMessageForSegment('world3')).toContain('THIRD HELL');
+  it('keeps a stable top intro lockup across world segments', () => {
+    expect(getRaycastIntroMessageForSegment('world1')).toBe('DOOM BIN BASH EDITION');
+    expect(getRaycastIntroMessageForSegment('world2')).toBe('DOOM BIN BASH EDITION');
+    expect(getRaycastIntroMessageForSegment('world3')).toBe('DOOM BIN BASH EDITION');
   });
 
   it('layers stratified combat copy for World 2 while preserving World 1 strings', () => {

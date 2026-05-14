@@ -9,7 +9,7 @@ import {
 } from '../systems/EncounterPattern';
 import { KeySystem } from '../systems/KeySystem';
 import { TriggerSystem } from '../systems/TriggerSystem';
-import { getRaycastEnemyRoleAbbrev } from '../entities/enemyConfig';
+import { getEnemyConfig, getRaycastEnemyRoleAbbrev } from '../entities/enemyConfig';
 import type { EnemyKind } from '../types/game';
 import {
   AudioFeedbackSystem,
@@ -45,6 +45,7 @@ import {
   registerRaycastPickup,
   registerRaycastSecret,
   RAYCAST_LEVEL,
+  isRaycastSpawnPlacementValid,
   type RaycastDoor,
   type RaycastEncounterBeat,
   type RaycastEncounterPatternBinding,
@@ -815,7 +816,7 @@ export class RaycastScene extends Phaser.Scene {
     this.finalOverlay.setDepth(30).setVisible(false);
     this.finalTitleText = this.add
       .text(GAME_WIDTH * 0.5, GAME_HEIGHT * 0.3, '', {
-        fontSize: '34px',
+        fontSize: '28px',
         fontStyle: '700',
         color: this.hudCss.warningText,
         stroke: '#020408',
@@ -826,18 +827,18 @@ export class RaycastScene extends Phaser.Scene {
       .setVisible(false);
     this.finalSummaryText = this.add
       .text(GAME_WIDTH * 0.5, GAME_HEIGHT * 0.5, '', {
-        fontSize: '16px',
+        fontSize: '13px',
         fontStyle: '700',
         color: this.hudCss.systemText,
         align: 'center',
-        lineSpacing: 5
+        lineSpacing: 8
       })
       .setOrigin(0.5)
       .setDepth(31)
       .setVisible(false);
     this.finalHintText = this.add
       .text(GAME_WIDTH * 0.5, GAME_HEIGHT * 0.73, 'R RESTART LEVEL  |  ESC MENU', {
-        fontSize: '14px',
+        fontSize: '12px',
         fontStyle: '700',
         color: this.hudCss.keyText,
         stroke: '#020408',
@@ -1423,9 +1424,7 @@ export class RaycastScene extends Phaser.Scene {
           this.audioFeedback.play('bossPhaseShift', 1, this.time.now);
           this.pulseFeedback(this.bossState.phase === 3 ? 0xff2f41 : 0xff5b6f, this.bossState.phase === 3 ? 0.13 : 0.11, 220);
           this.cameras.main.shake(this.bossState.phase === 3 ? 160 : 132, this.bossState.phase === 3 ? 0.0022 : 0.00195);
-          this.setCombatMessage(
-            this.bossState.phase === 3 ? `${bossHud.phase2Overdrive.replace('PHASE 2', 'PHASE 3')} // FINAL` : bossHud.phase2Overdrive
-          );
+          this.setCombatMessage(this.bossState.phase === 3 ? `${bossHud.phase3Overdrive} // FINAL` : bossHud.phase2Overdrive);
         }
         this.lastBossPhase = this.bossState.phase;
       }
@@ -1581,14 +1580,16 @@ export class RaycastScene extends Phaser.Scene {
       this.pulseCorruption();
       this.pulseFeedback(0xff5b6f, 0.06, 170);
       this.setCombatMessage(`CORRUPTION BREACH: ${trigger.activationText}`);
-      this.enemies.push(
-        ...trigger.spawns.map((spawn, index) =>
-          this.createTelegraphedSpawnEnemy(
-            { id: `${trigger.id}-${index}`, kind: spawn.kind, x: spawn.x, y: spawn.y },
-            'encounter'
-          )
-        )
-      );
+      const spawned: RaycastEnemy[] = [];
+      for (let index = 0; index < trigger.spawns.length; index += 1) {
+        const spawn = trigger.spawns[index];
+        const enemy = this.createTelegraphedSpawnEnemy(
+          { id: `${trigger.id}-${index}`, kind: spawn.kind, x: spawn.x, y: spawn.y },
+          'encounter'
+        );
+        if (enemy) spawned.push(enemy);
+      }
+      this.enemies.push(...spawned);
     });
 
     this.currentLevel.secrets.forEach((secret) => {
@@ -2102,17 +2103,17 @@ export class RaycastScene extends Phaser.Scene {
   }
 
   private spawnDirectorEnemy(spawn: SpawnRequest): void {
-    this.enemies.push(
-      this.createTelegraphedSpawnEnemy(
-        {
-          id: `director-${this.directorSpawnCounter}`,
-          kind: spawn.kind,
-          x: spawn.x,
-          y: spawn.y
-        },
-        'director'
-      )
+    const enemy = this.createTelegraphedSpawnEnemy(
+      {
+        id: `director-${this.directorSpawnCounter}`,
+        kind: spawn.kind,
+        x: spawn.x,
+        y: spawn.y
+      },
+      'director'
     );
+    if (!enemy) return;
+    this.enemies.push(enemy);
     this.directorSpawnCounter += 1;
     this.audioFeedback.play('directorAmbush', 1, this.time.now);
     this.pulseCorruption();
@@ -2128,19 +2129,49 @@ export class RaycastScene extends Phaser.Scene {
   private createTelegraphedSpawnEnemy(
     spawn: { id: string; kind: SpawnRequest['kind']; x: number; y: number },
     source: 'director' | 'encounter'
-  ): RaycastEnemy {
-    const visibleToPlayer = this.hasLineOfSightToPoint(spawn.x, spawn.y);
-    const distanceToPlayer = Math.hypot(spawn.x - this.player.x, spawn.y - this.player.y);
+  ): RaycastEnemy | null {
+    const safe = this.resolveSafeSpawnPoint(spawn);
+    if (!safe) return null;
+    const visibleToPlayer = this.hasLineOfSightToPoint(safe.x, safe.y);
+    const distanceToPlayer = Math.hypot(safe.x - this.player.x, safe.y - this.player.y);
     const baseDuration = source === 'director' ? DIRECTOR_SPAWN_TELEGRAPH_MS : ENCOUNTER_SPAWN_TELEGRAPH_MS;
     const telegraphDurationMs =
       baseDuration +
       (visibleToPlayer ? VISIBLE_SPAWN_TELEGRAPH_BONUS_MS : 0) +
       (distanceToPlayer <= 5.5 ? CLOSE_SPAWN_TELEGRAPH_BONUS_MS : 0);
 
-    return createTelegraphedRaycastEnemy(spawn, {
+    return createTelegraphedRaycastEnemy({ ...spawn, x: safe.x, y: safe.y }, {
       telegraphStartedAt: this.time.now,
       telegraphDurationMs
     });
+  }
+
+  private resolveSafeSpawnPoint(spawn: { x: number; y: number; kind: EnemyKind }): { x: number; y: number } | null {
+    const radius = Math.max(0.2, getEnemyConfig(spawn.kind, 'raycast').size / 100);
+    const isClear = (x: number, y: number): boolean => {
+      if (!isRaycastMapPointReachable(this.map, this.player, { x, y })) return false;
+      if (!isRaycastSpawnPlacementValid(this.map, { x, y }, radius)) return false;
+      if (Math.hypot(x - this.player.x, y - this.player.y) < 0.72) return false;
+      for (let i = 0; i < this.enemies.length; i += 1) {
+        const enemy = this.enemies[i];
+        if (!enemy.alive) continue;
+        if (Math.hypot(x - enemy.x, y - enemy.y) < radius + enemy.radius + 0.16) return false;
+      }
+      return true;
+    };
+    if (isClear(spawn.x, spawn.y)) return { x: spawn.x, y: spawn.y };
+
+    const probeStep = 0.45;
+    for (let ring = 1; ring <= 3; ring += 1) {
+      const r = ring * probeStep;
+      for (let i = 0; i < 8; i += 1) {
+        const a = (i / 8) * Math.PI * 2;
+        const nx = spawn.x + Math.cos(a) * r;
+        const ny = spawn.y + Math.sin(a) * r;
+        if (isClear(nx, ny)) return { x: nx, y: ny };
+      }
+    }
+    return null;
   }
 
   private hasLineOfSightToPoint(x: number, y: number): boolean {
@@ -2361,13 +2392,13 @@ export class RaycastScene extends Phaser.Scene {
     const panelHeight = hudLayout.minimapPanelHeight;
     const originX = hudLayout.minimapPanelX;
     const originY = hudLayout.minimapPanelY;
-    const tileSize = Math.max(4, Math.floor(Math.min(panelWidth / model.width, panelHeight / model.height)));
+    const tileSize = Math.max(5, Math.floor(Math.min(panelWidth / model.width, panelHeight / model.height)));
     const offsetX = originX + Math.floor((panelWidth - model.width * tileSize) / 2);
     const offsetY = originY + Math.floor((panelHeight - model.height * tileSize) / 2);
 
     model.cells.forEach((cell) => {
-      const color = cell.kind === 'wall' ? 0x47606d : cell.kind === 'door' ? 0xffb347 : 0x142129;
-      const alpha = cell.kind === 'floor' ? 0.88 : 1;
+      const color = cell.kind === 'wall' ? 0x5f7788 : cell.kind === 'door' ? 0xffd268 : 0x0f1f14;
+      const alpha = cell.kind === 'floor' ? 0.94 : 1;
       this.minimapGraphics.fillStyle(color, alpha);
       this.minimapGraphics.fillRect(offsetX + cell.x * tileSize, offsetY + cell.y * tileSize, tileSize - 1, tileSize - 1);
     });
@@ -2385,8 +2416,14 @@ export class RaycastScene extends Phaser.Scene {
             : marker.kind === 'landmark'
               ? 0xffde8a
             : 0xffb347;
-      this.minimapGraphics.fillStyle(color, 0.95);
-      this.minimapGraphics.fillRect(px - 2, py - 2, Math.max(4, tileSize - 2), Math.max(4, tileSize - 2));
+      this.minimapGraphics.fillStyle(color, 1);
+      this.minimapGraphics.fillRect(px - 3, py - 3, Math.max(6, tileSize - 1), Math.max(6, tileSize - 1));
+      this.minimapGraphics.lineStyle(1, 0x04070c, 0.95);
+      this.minimapGraphics.strokeRect(px - 3, py - 3, Math.max(6, tileSize - 1), Math.max(6, tileSize - 1));
+      if (marker.kind === 'exit') {
+        this.minimapGraphics.lineStyle(2, 0xe2f7ff, 1);
+        this.minimapGraphics.strokeCircle(px + tileSize * 0.1, py + tileSize * 0.1, Math.max(5, tileSize * 0.55));
+      }
     }
 
     model.enemyBlips.forEach((enemy) => {
@@ -2420,16 +2457,16 @@ export class RaycastScene extends Phaser.Scene {
     if (playerMarker) {
       const px = offsetX + playerMarker.x * tileSize;
       const py = offsetY + playerMarker.y * tileSize;
-      const bodyR = Math.max(2.6, tileSize * 0.34);
-      this.minimapGraphics.lineStyle(2, 0x1a0805, 1);
-      this.minimapGraphics.strokeCircle(px, py, bodyR + 1.4);
-      this.minimapGraphics.fillStyle(0xfffdf5, 1);
-      this.minimapGraphics.fillCircle(px, py, bodyR);
-      this.minimapGraphics.fillStyle(0xffe8a8, 1);
+      const bodyR = Math.max(3.4, tileSize * 0.42);
+      this.minimapGraphics.lineStyle(3, 0x05070c, 1);
+      this.minimapGraphics.strokeCircle(px, py, bodyR + 2);
+      this.minimapGraphics.fillStyle(0xffffff, 1);
+      this.minimapGraphics.fillCircle(px, py, bodyR + 0.4);
+      this.minimapGraphics.fillStyle(0x58f2e4, 1);
       this.minimapGraphics.fillCircle(px, py, Math.max(1.6, tileSize * 0.14));
-      const dirX = Math.cos(playerMarker.angle ?? 0) * tileSize * 0.82;
-      const dirY = Math.sin(playerMarker.angle ?? 0) * tileSize * 0.82;
-      this.minimapGraphics.lineStyle(3, 0xfff29e, 0.98);
+      const dirX = Math.cos(playerMarker.angle ?? 0) * tileSize * 1.15;
+      const dirY = Math.sin(playerMarker.angle ?? 0) * tileSize * 1.15;
+      this.minimapGraphics.lineStyle(4, 0xfff29e, 1);
       this.minimapGraphics.beginPath();
       this.minimapGraphics.moveTo(px, py);
       this.minimapGraphics.lineTo(px + dirX, py + dirY);

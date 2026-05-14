@@ -57,14 +57,14 @@ export const RAYCAST_PALETTE = {
 
 /** CSS strings for Phaser text and DOM-adjacent HUD. */
 export const RAYCAST_CSS = {
-  hudPanel: '#04060acc',
-  debugText: '#6a9084',
-  systemText: '#52e8d4',
+  hudPanel: '#030905cc',
+  debugText: '#5f8f74',
+  systemText: '#72f2b0',
   warningText: '#ff4f68',
-  keyText: '#ffe8b8',
-  bodyText: '#d8d4cc',
-  mutedText: '#6f8f82',
-  accentText: '#58f2e4'
+  keyText: '#dfffd0',
+  bodyText: '#cce4d6',
+  mutedText: '#4f7860',
+  accentText: '#72f2b0'
 } as const;
 
 /** World 2 HUD — violet-shifted terminal glass over abyss canvas (distinct from W1 teal corruption). */

@@ -328,10 +328,22 @@ export class RaycastRenderer {
     }
     this.graphics.fillStyle(coreColor, 0.92 * visibility);
     this.graphics.fillEllipse(cx, cy - size * 0.05, size * 0.88, size * 1.05);
+    const finRot = time * 0.0018;
+    for (let i = 0; i < 3; i += 1) {
+      const a = finRot + (i * Math.PI * 2) / 3;
+      const tipX = cx + Math.cos(a) * size * 0.82;
+      const tipY = cy + Math.sin(a) * size * 0.62;
+      const leftX = cx + Math.cos(a + 0.42) * size * 0.42;
+      const leftY = cy + Math.sin(a + 0.42) * size * 0.36;
+      const rightX = cx + Math.cos(a - 0.42) * size * 0.42;
+      const rightY = cy + Math.sin(a - 0.42) * size * 0.36;
+      this.graphics.fillStyle(this.blendColors(profile.haloColor, 0x11151f, 0.45), (0.44 - i * 0.06) * visibility);
+      this.graphics.fillTriangle(tipX, tipY, leftX, leftY, rightX, rightY);
+    }
     this.graphics.fillStyle(RAYCAST_PALETTE.plasmaBright, 0.3 * visibility);
-    this.graphics.fillCircle(cx, cy - size * 0.4, size * 0.12);
-    this.graphics.fillCircle(cx + size * 0.24, cy - size * 0.2, size * 0.09);
-    this.graphics.fillCircle(cx - size * 0.24, cy - size * 0.2, size * 0.09);
+    this.graphics.fillRect(cx - size * 0.08, cy - size * 0.56, size * 0.16, size * 0.2);
+    this.graphics.fillRect(cx + size * 0.18, cy - size * 0.28, size * 0.12, size * 0.16);
+    this.graphics.fillRect(cx - size * 0.3, cy - size * 0.28, size * 0.12, size * 0.16);
     for (let i = 0; i < profile.particleCount; i += 1) {
       const t = (i / profile.particleCount) * Math.PI * 2 + time * (0.0014 + (i % 3) * 0.0002);
       const pr = size * (0.72 + (i % 4) * 0.05 + Math.sin(time * 0.003 + i) * 0.03);
