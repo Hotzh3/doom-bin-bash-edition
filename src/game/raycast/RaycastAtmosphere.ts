@@ -131,18 +131,18 @@ export const RAYCAST_WORLD2_SEGMENT_LAYER = {
   /** Deeper cold envelope vs W1 — keeps silhouette floor bounded by fogEndCap. */
   fogEndDelta: 0.5,
   fogEndCap: 11.6,
-  corruptionAlphaScale: 0.82,
-  pulseAlphaScale: 0.77,
-  ambientDarknessBump: 0.019,
-  ambientDarknessMax: 0.314,
-  enemyMinVisibilityDelta: 0.038,
-  enemyMinVisibilityCap: 0.735
+  corruptionAlphaScale: 0.9,
+  pulseAlphaScale: 0.82,
+  ambientDarknessBump: 0.026,
+  ambientDarknessMax: 0.322,
+  enemyMinVisibilityDelta: 0.042,
+  enemyMinVisibilityCap: 0.742
 } as const;
 
 /** World 3 — warm ash haze; distinct from icy World 2 without breaking silhouette caps. */
 export const RAYCAST_ATMOSPHERE_WORLD3 = {
-  fogColor: 0x140804,
-  corruptionTint: 0x5a1820,
+  fogColor: 0x1a0602,
+  corruptionTint: 0x721818,
   messageOverrides: {
     intro:
       'EMBER MERIDIAN — THIRD HELL — ASH CLOCKS YOUR ROUTE AND SCRAMBLES IDLE LANES',
@@ -171,10 +171,10 @@ export const RAYCAST_WORLD3_SEGMENT_LAYER = {
   fogStartDelta: 0.18,
   fogEndDelta: 0.42,
   fogEndCap: 11.4,
-  corruptionAlphaScale: 0.85,
-  pulseAlphaScale: 0.8,
-  ambientDarknessBump: 0.015,
-  ambientDarknessMax: 0.308,
+  corruptionAlphaScale: 0.93,
+  pulseAlphaScale: 0.9,
+  ambientDarknessBump: 0.02,
+  ambientDarknessMax: 0.318,
   enemyMinVisibilityDelta: 0.032,
   enemyMinVisibilityCap: 0.728
 } as const;
