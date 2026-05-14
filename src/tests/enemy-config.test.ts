@@ -3,7 +3,7 @@ import { ARENA_ENEMY_CONFIG, ENEMY_CONFIG, ENEMY_KINDS, getEnemyConfig, RAYCAST_
 
 describe('enemy config', () => {
   it('defines stats for every enemy kind', () => {
-    expect(ENEMY_KINDS).toEqual(['GRUNT', 'BRUTE', 'STALKER', 'RANGED', 'SCRAMBLER']);
+    expect(ENEMY_KINDS).toEqual(['GRUNT', 'BRUTE', 'STALKER', 'RANGED', 'SCRAMBLER', 'FLASHER']);
     expect(Object.keys(ENEMY_CONFIG)).toEqual(ENEMY_KINDS);
 
     ENEMY_KINDS.forEach((kind) => {
@@ -29,6 +29,12 @@ describe('enemy config', () => {
       color: 0xff4f5f,
       size: 28
     });
+  });
+
+  it('adds FLASHER as a purple harassment enemy with base-grunt damage', () => {
+    expect(ENEMY_CONFIG.FLASHER.damage).toBe(ENEMY_CONFIG.GRUNT.damage);
+    expect(ENEMY_CONFIG.FLASHER.color).not.toBe(ENEMY_CONFIG.GRUNT.color);
+    expect(ENEMY_CONFIG.FLASHER.color).toBe(0xb86dff);
   });
 
   it('creates distinct archetype stat profiles', () => {

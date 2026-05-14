@@ -29,7 +29,7 @@ export interface EnemyConfig {
   tacticalRole: EnemyTacticalRole;
 }
 
-export const ENEMY_KINDS: EnemyKind[] = ['GRUNT', 'BRUTE', 'STALKER', 'RANGED', 'SCRAMBLER'];
+export const ENEMY_KINDS: EnemyKind[] = ['GRUNT', 'BRUTE', 'STALKER', 'RANGED', 'SCRAMBLER', 'FLASHER'];
 
 const BASE_ENEMY_CONFIG: Record<EnemyKind, EnemyConfig> = {
   GRUNT: {
@@ -103,6 +103,20 @@ const BASE_ENEMY_CONFIG: Record<EnemyKind, EnemyConfig> = {
     attackWindupMs: 88,
     behaviorHint: 'MELEE_PRESSURE',
     tacticalRole: 'HARASS'
+  },
+  FLASHER: {
+    kind: 'FLASHER',
+    health: 52,
+    speed: 148,
+    damage: 8,
+    color: 0xb86dff,
+    size: 27,
+    attackRange: 40,
+    detectionRange: 1020,
+    attackCooldownMs: 780,
+    attackWindupMs: 100,
+    behaviorHint: 'MELEE_PRESSURE',
+    tacticalRole: 'HARASS'
   }
 };
 
@@ -112,7 +126,8 @@ function cloneEnemyConfigRecord(config: Record<EnemyKind, EnemyConfig>): Record<
     BRUTE: Object.freeze({ ...config.BRUTE }),
     STALKER: Object.freeze({ ...config.STALKER }),
     RANGED: Object.freeze({ ...config.RANGED }),
-    SCRAMBLER: Object.freeze({ ...config.SCRAMBLER })
+    SCRAMBLER: Object.freeze({ ...config.SCRAMBLER }),
+    FLASHER: Object.freeze({ ...config.FLASHER })
   };
 }
 
@@ -155,6 +170,14 @@ export const RAYCAST_ENEMY_CONFIG = cloneEnemyConfigRecord({
     attackCooldownMs: 400,
     attackWindupMs: 82,
     size: 26
+  },
+  FLASHER: {
+    ...BASE_ENEMY_CONFIG.FLASHER,
+    color: 0xc17cff,
+    speed: 156,
+    attackCooldownMs: 740,
+    attackWindupMs: 96,
+    size: 27
   }
 });
 

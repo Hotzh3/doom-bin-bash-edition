@@ -676,6 +676,19 @@ export function getRaycastEnemyVisualStyle(kind: EnemyKind, color: number): Rayc
     };
   }
 
+  if (kind === 'FLASHER') {
+    return {
+      silhouette: 'sentinel',
+      outlineColor: 0x12051a,
+      accentColor: blendThemeColor(color, 0xe7d4ff, 0.34),
+      eyeColor: 0xf2d9ff,
+      coreColor: 0xb86dff,
+      hornStyle: 'antenna',
+      role: 'flanker',
+      windupColor: 0xe3b6ff
+    };
+  }
+
   if (kind === 'RANGED') {
     return {
       silhouette: 'sentinel',

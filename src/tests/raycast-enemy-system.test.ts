@@ -243,4 +243,15 @@ describe('raycast enemy system', () => {
     const baseSpeed = (getEnemyConfig('RANGED', 'raycast').projectileSpeed ?? 0) / 100;
     expect(Math.hypot(projectile.vx, projectile.vy)).toBeCloseTo(baseSpeed * 0.85);
   });
+
+  it('triggers FLASHER blind pulse with cooldown and no spam', () => {
+    const flasher = createRaycastEnemy({ id: 'flash-1', kind: 'FLASHER', x: 1.5, y: 8.1 });
+    const first = updateRaycastEnemies(RAYCAST_MAP, [flasher], { x: 1.5, y: 10.1, alive: true }, 1000, 16);
+    const second = updateRaycastEnemies(RAYCAST_MAP, [flasher], { x: 1.5, y: 10.1, alive: true }, 1200, 16);
+    const afterCooldown = updateRaycastEnemies(RAYCAST_MAP, [flasher], { x: 1.5, y: 10.1, alive: true }, 4700, 16);
+
+    expect(first.flashActivations).toHaveLength(1);
+    expect(second.flashActivations).toHaveLength(0);
+    expect(afterCooldown.flashActivations).toHaveLength(1);
+  });
 });

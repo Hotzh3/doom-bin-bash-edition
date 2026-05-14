@@ -123,6 +123,7 @@ describe('raycast HUD', () => {
   it('tags focused targets with a compact tactical role abbreviation', () => {
     expect(formatRaycastEnemyTargetLabel('GRUNT')).toBe('SCAV·PRS');
     expect(formatRaycastEnemyTargetLabel('STALKER')).toBe('STALK·FLK');
+    expect(formatRaycastEnemyTargetLabel('FLASHER')).toBe('FLASH·HR');
     expect(formatRaycastEnemyTargetLabel('RANGED')).toBe('TURRET·ZONE');
     expect(buildRaycastFocusedEnemyLine({ kind: 'BRUTE', health: 120, maxHealth: 190, isWindingUp: false })).toContain(
       'BRUTE·DEN'
@@ -130,7 +131,7 @@ describe('raycast HUD', () => {
   });
 
   it('builds a compact minimap legend line for key markers', () => {
-    expect(buildRaycastMinimapLegendLine()).toBe('MAP M  |  KEY token  LOCK closed gate  OPEN clear gate  EXIT exfil  BOSS red core');
+    expect(buildRaycastMinimapLegendLine()).toBe('MAP M  |  KEY token  LOCK gate  OPEN gate  EXIT exfil  BOSS core  PURP flash');
   });
 
   it('separates the top-right HUD and minimap cluster at 960x540', () => {

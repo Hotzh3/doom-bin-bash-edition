@@ -246,6 +246,7 @@ export class RaycastRenderer {
           ? this.blendColors(0xfff5f0, projection.enemy.color, 0.48)
           : this.blendColors(projection.enemy.color, RAYCAST_PALETTE.telegraphRose, telegraphMix);
       const enemyStyle = getRaycastEnemyVisualStyle(projection.enemy.kind, projection.enemy.color);
+      const accentColor = projection.enemy.variantAccentColor ?? enemyStyle.accentColor;
       const readability = enforceRaycastEnemyBillboardReadability(
         calculateEnemyVisibility(projection.distance, atmosphere),
         projection.size
@@ -257,6 +258,10 @@ export class RaycastRenderer {
       projection.screenX = sx;
       this.graphics.fillStyle(enemyStyle.outlineColor, RAYCAST_ENEMY_BILLBOARD_READABILITY.outlineAlpha * visibility);
       this.graphics.fillEllipse(sx, height * 0.5 + size * 0.08, size * 1.28, size * 1.42);
+      if ((projection.enemy.shieldPulseUntil ?? 0) > time) {
+        this.graphics.lineStyle(3, 0x8fd8ff, 0.62 * visibility);
+        this.graphics.strokeEllipse(sx, height * 0.5 + size * 0.08, size * 1.38, size * 1.46);
+      }
       if (isWindingUp) {
         this.graphics.fillStyle(enemyStyle.windupColor, (0.18 + windupProgress * 0.14 + pulse * 0.08) * visibility);
         this.graphics.fillCircle(sx, height * 0.5, size * (0.46 + windupProgress * 0.08));
@@ -268,7 +273,7 @@ export class RaycastRenderer {
       projection.size = savedSilhouetteSize;
       projection.screenX = savedEnemyX;
       if (isWindingUp) {
-        this.graphics.lineStyle(4, enemyStyle.accentColor, (0.78 + pulse * 0.14) * visibility);
+        this.graphics.lineStyle(4, accentColor, (0.78 + pulse * 0.14) * visibility);
         this.graphics.strokeEllipse(sx, height * 0.5 + size * 0.08, size * 1.48, size * 1.56);
         this.graphics.fillStyle(enemyStyle.windupColor, (0.5 + windupProgress * 0.2) * visibility);
         this.graphics.fillRect(sx - size * 0.42, height * 0.5 - size * 0.92, size * 0.84, 6);

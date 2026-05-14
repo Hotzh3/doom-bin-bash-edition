@@ -43,7 +43,8 @@ const STAGGER_KIND_MUL: Record<EnemyKind, number> = {
   STALKER: 1.18,
   RANGED: 1.14,
   SCRAMBLER: 1.22,
-  BRUTE: 0.64
+  BRUTE: 0.64,
+  FLASHER: 1.08
 };
 
 export class RaycastCombatSystem {
@@ -150,10 +151,16 @@ export class RaycastCombatSystem {
     const target = findEnemyAlongAim(player, projectileAngle, enemies, wallDistance, weapon.aimToleranceRadians);
     if (!target) return null;
 
-    const scaledDamage = Math.max(1, Math.round(projectile.damage * this.playerDamageMultiplier));
+    const scaledDamageBase = Math.max(1, Math.round(projectile.damage * this.playerDamageMultiplier));
+    const reducedForShield =
+      (target.frontalDamageReduction ?? 0) > 0 && isFrontalHit(player, projectileAngle, target)
+        ? Math.max(1, Math.round(scaledDamageBase * (1 - (target.frontalDamageReduction ?? 0))))
+        : scaledDamageBase;
+    const scaledDamage = reducedForShield;
     applyRaycastEnemyKnockback(target, player.x, player.y, scaledDamage, map);
     const directKilled = applyDamage(target, scaledDamage);
     target.hitFlashUntil = time + HIT_FLASH_MS;
+    if ((target.frontalDamageReduction ?? 0) > 0) target.shieldPulseUntil = time + 180;
     applyRaycastHitStagger(target, projectile.weaponKind, time, false);
     if (directKilled) target.deathBurstUntil = time + DEATH_BURST_MS;
     const splashImpacts = this.applyExplosionSplash(target, projectile, enemies, map, time);
@@ -290,4 +297,13 @@ function findEnemyAlongAim(
 
 export function normalizeAngle(angle: number): number {
   return Math.atan2(Math.sin(angle), Math.cos(angle));
+}
+
+function isFrontalHit(
+  player: Pick<RaycastPlayerState, 'x' | 'y'>,
+  projectileAngle: number,
+  enemy: Pick<RaycastEnemy, 'x' | 'y'>
+): boolean {
+  const enemyToPlayer = Math.atan2(player.y - enemy.y, player.x - enemy.x);
+  return Math.abs(normalizeAngle(projectileAngle - enemyToPlayer)) <= Math.PI / 3;
 }
