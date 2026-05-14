@@ -50,6 +50,11 @@ export interface RaycastPlayerTarget {
   alive: boolean;
 }
 
+export interface RaycastEnemyRuntimeModifiers {
+  speedMultiplier?: number;
+  projectileSpeedMultiplier?: number;
+}
+
 export function computeRaycastEnemyPlayerAwareness(
   hasSight: boolean,
   distanceWorld: number,
@@ -74,7 +79,8 @@ export function updateRaycastEnemies(
   enemies: RaycastEnemy[],
   player: RaycastPlayerTarget,
   time: number,
-  deltaMs: number
+  deltaMs: number,
+  modifiers: RaycastEnemyRuntimeModifiers = {}
 ): RaycastEnemyUpdateResult {
   let meleeDamage = 0;
   const spawnedProjectiles: RaycastEnemyProjectile[] = [];
@@ -102,7 +108,7 @@ export function updateRaycastEnemies(
       enemy.attackWindupUntil = 0;
       if (distance * GRID_SCALE <= config.attackRange && hasSight) {
         enemy.lastAttack = time;
-        meleeDamage += config.damage;
+        meleeDamage += Math.max(1, Math.round(config.damage * (enemy.damageMultiplier ?? 1)));
       }
       return;
     }
@@ -150,7 +156,7 @@ export function updateRaycastEnemies(
             map,
             enemy,
             { x: Math.cos(alertSteer), y: Math.sin(alertSteer) },
-            alertSpeed,
+            alertSpeed * (modifiers.speedMultiplier ?? 1) * (enemy.speedMultiplier ?? 1),
             deltaMs
           );
         }
@@ -195,7 +201,13 @@ export function updateRaycastEnemies(
 
       const steer = pickOpenRoamHeadingToward(map, enemy.x, enemy.y, enemy.radius, targetWp.x, targetWp.y);
       enemy.roamHeadingRad = steer;
-      moveEnemy(map, enemy, { x: Math.cos(steer), y: Math.sin(steer) }, patrolSpeed, deltaMs);
+      moveEnemy(
+        map,
+        enemy,
+        { x: Math.cos(steer), y: Math.sin(steer) },
+        patrolSpeed * (modifiers.speedMultiplier ?? 1) * (enemy.speedMultiplier ?? 1),
+        deltaMs
+      );
 
       const moved = Math.hypot(enemy.x - beforeX, enemy.y - beforeY);
       enemy.roamStuckMs = accumulateRoamStuck(moved, deltaMs, enemy.roamStuckMs);
@@ -205,13 +217,25 @@ export function updateRaycastEnemies(
     if (decision.action === 'CHASE') {
       enemy.attackWindupStartedAt = 0;
       enemy.attackWindupUntil = 0;
-      moveEnemy(map, enemy, getDirection(enemy, player), (config.speed / GRID_SCALE) * decision.speedMultiplier, deltaMs);
+      moveEnemy(
+        map,
+        enemy,
+        getDirection(enemy, player),
+        (config.speed / GRID_SCALE) * decision.speedMultiplier * (modifiers.speedMultiplier ?? 1) * (enemy.speedMultiplier ?? 1),
+        deltaMs
+      );
     }
 
     if (decision.action === 'RETREAT') {
       enemy.attackWindupStartedAt = 0;
       enemy.attackWindupUntil = 0;
-      moveEnemy(map, enemy, getDirection(player, enemy), (config.speed / GRID_SCALE) * decision.speedMultiplier, deltaMs);
+      moveEnemy(
+        map,
+        enemy,
+        getDirection(player, enemy),
+        (config.speed / GRID_SCALE) * decision.speedMultiplier * (modifiers.speedMultiplier ?? 1) * (enemy.speedMultiplier ?? 1),
+        deltaMs
+      );
     }
 
     if (decision.action === 'MELEE_ATTACK' && canAttack(enemy, time)) {
@@ -237,7 +261,7 @@ export function updateRaycastEnemies(
         enemy.lastAttack = time;
         enemy.attackWindupStartedAt = 0;
         enemy.attackWindupUntil = 0;
-        spawnedProjectiles.push(createRaycastEnemyProjectile(enemy, player, time));
+        spawnedProjectiles.push(createRaycastEnemyProjectile(enemy, player, time, modifiers));
       }
     }
   });
@@ -295,17 +319,22 @@ function moveEnemy(map: RaycastMap, enemy: RaycastEnemy, direction: MovementVect
   if (!collides(map, enemy.x, nextY, enemy.radius)) enemy.y = nextY;
 }
 
-function createRaycastEnemyProjectile(enemy: RaycastEnemy, player: RaycastPlayerTarget, time: number): RaycastEnemyProjectile {
+function createRaycastEnemyProjectile(
+  enemy: RaycastEnemy,
+  player: RaycastPlayerTarget,
+  time: number,
+  modifiers: RaycastEnemyRuntimeModifiers
+): RaycastEnemyProjectile {
   const config = getEnemyConfig(enemy.kind, 'raycast');
   const direction = getDirection(enemy, player);
-  const speed = (config.projectileSpeed ?? 320) / GRID_SCALE;
+  const speed = ((config.projectileSpeed ?? 320) / GRID_SCALE) * (modifiers.projectileSpeedMultiplier ?? 1);
 
   return {
     x: enemy.x + direction.x * (enemy.radius + RANGED_MUZZLE_OFFSET),
     y: enemy.y + direction.y * (enemy.radius + RANGED_MUZZLE_OFFSET),
     vx: direction.x * speed,
     vy: direction.y * speed,
-    damage: config.damage,
+    damage: Math.max(1, Math.round(config.damage * (enemy.damageMultiplier ?? 1))),
     radius: PROJECTILE_RADIUS,
     alive: true,
     color: config.color,

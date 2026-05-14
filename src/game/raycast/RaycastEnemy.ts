@@ -35,6 +35,8 @@ export interface RaycastEnemy {
   /** Next game time (ms) to pick a new roam heading even if not stuck. */
   roamNextRedirectAt: number;
   roamStuckMs: number;
+  damageMultiplier?: number;
+  speedMultiplier?: number;
 }
 
 export function cloneRaycastEnemies(level: RaycastLevel = RAYCAST_LEVEL): RaycastEnemy[] {
@@ -71,7 +73,9 @@ export function createRaycastEnemy(spawn: RaycastEnemySpawn): RaycastEnemy {
     wasCombatActiveLastTick: false,
     roamHeadingRad: (hashStringToSeed(spawn.id) % 360) * (Math.PI / 180),
     roamNextRedirectAt: 0,
-    roamStuckMs: 0
+    roamStuckMs: 0,
+    damageMultiplier: 1,
+    speedMultiplier: 1
   };
 }
 
