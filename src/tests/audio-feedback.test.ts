@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   AUDIO_FEEDBACK_CONFIG,
+  getDynamicAmbientAudioPlan,
   getDirectorEventAudioPlan,
   getWeaponAudioPlan,
   shouldThrottleAudioCue,
@@ -77,5 +78,19 @@ describe('AudioFeedbackSystem config', () => {
     expect(shouldThrottleAudioCue('directorWarning', 1300, 500)).toBe(false);
     expect(shouldThrottleAudioCue('shootPistol', 1000, 995)).toBe(false);
     expect(shouldThrottleAudioCue('wallImpact', 1000, undefined)).toBe(false);
+  });
+
+  it('builds dynamic ambient plans across exploration, combat, and boss phases', () => {
+    const exploration = getDynamicAmbientAudioPlan({ inCombat: false, bossPhase: 0, lowHp: false, worldSegment: 'world1' });
+    const combat = getDynamicAmbientAudioPlan({ inCombat: true, bossPhase: 0, lowHp: false, worldSegment: 'world1' });
+    const bossP2 = getDynamicAmbientAudioPlan({ inCombat: true, bossPhase: 2, lowHp: false, worldSegment: 'world2' });
+    const bossP3Low = getDynamicAmbientAudioPlan({ inCombat: true, bossPhase: 3, lowHp: true, worldSegment: 'world2' });
+
+    expect(exploration.primary.cue).toBe('ambient');
+    expect(combat.primary.cue).toBe('ambientIndustrial');
+    expect(bossP2.overlays.some((p) => p.cue === 'bossPhaseShift')).toBe(true);
+    expect(bossP3Low.overlays.some((p) => p.cue === 'stingerDread')).toBe(true);
+    expect(bossP3Low.overlays.some((p) => p.cue === 'lowHealthWarning')).toBe(true);
+    expect(bossP3Low.intervalMs).toBeLessThan(combat.intervalMs);
   });
 });

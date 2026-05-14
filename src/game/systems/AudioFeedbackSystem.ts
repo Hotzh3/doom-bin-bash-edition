@@ -296,6 +296,19 @@ export interface AudioFeedbackPlan {
   intensity: number;
 }
 
+export interface DynamicAmbientAudioInput {
+  inCombat: boolean;
+  bossPhase: 0 | 1 | 2 | 3;
+  lowHp: boolean;
+  worldSegment?: 'world1' | 'world2' | 'world3';
+}
+
+export interface DynamicAmbientAudioPlan {
+  primary: AudioFeedbackPlan;
+  overlays: AudioFeedbackPlan[];
+  intervalMs: number;
+}
+
 export function getWeaponAudioPlan(weapon: WeaponKind): AudioFeedbackPlan {
   if (weapon === 'SHOTGUN') return { cue: 'shootShotgun', intensity: 1 };
   if (weapon === 'LAUNCHER') return { cue: 'shootLauncher', intensity: 1 };
@@ -319,6 +332,29 @@ export function getDirectorEventAudioPlan(eventType: DirectorEventType): AudioFe
     return { cue: 'damage', intensity: 0.9 };
   }
   return { cue: 'ambient', intensity: 0.75 };
+}
+
+export function getDynamicAmbientAudioPlan(input: DynamicAmbientAudioInput): DynamicAmbientAudioPlan {
+  const world = input.worldSegment ?? 'world1';
+  const inBoss = input.bossPhase >= 1;
+  const highBoss = input.bossPhase >= 3;
+  const midBoss = input.bossPhase === 2;
+
+  const primary: AudioFeedbackPlan = inBoss
+    ? { cue: world === 'world2' ? 'ambientCorrupt' : 'ambientIndustrial', intensity: highBoss ? 0.95 : 0.88 }
+    : input.inCombat
+      ? { cue: 'ambientIndustrial', intensity: 0.82 }
+      : world === 'world2'
+        ? { cue: 'ambientCorrupt', intensity: 0.72 }
+        : { cue: 'ambient', intensity: 0.72 };
+
+  const overlays: AudioFeedbackPlan[] = [];
+  if (midBoss) overlays.push({ cue: 'bossPhaseShift', intensity: 0.46 });
+  if (highBoss) overlays.push({ cue: 'bossPhaseShift', intensity: 0.62 }, { cue: 'stingerDread', intensity: 0.5 });
+  if (input.lowHp) overlays.push({ cue: 'lowHealthWarning', intensity: 0.42 });
+
+  const intervalMs = highBoss ? 2400 : midBoss ? 3200 : inBoss ? 3800 : input.inCombat ? 4600 : 8600;
+  return { primary, overlays, intervalMs };
 }
 
 export function shouldThrottleAudioCue(
