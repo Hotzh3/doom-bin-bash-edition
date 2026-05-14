@@ -194,6 +194,7 @@ const DIRECTOR_SPAWN_TELEGRAPH_MS = 820;
 const ENCOUNTER_SPAWN_TELEGRAPH_MS = 980;
 const VISIBLE_SPAWN_TELEGRAPH_BONUS_MS = 260;
 const CLOSE_SPAWN_TELEGRAPH_BONUS_MS = 180;
+const DEV_SHORTCUT_ENABLED = import.meta.env.DEV;
 
 export class RaycastScene extends Phaser.Scene {
   private raycastRenderer!: RaycastRenderer;
@@ -408,6 +409,27 @@ export class RaycastScene extends Phaser.Scene {
   private readonly handleHelpShortcut = (event: KeyboardEvent): void => {
     if (this.gamePaused) return;
     if (event.shiftKey) this.handleToggleHelp();
+  };
+
+  private readonly handleDevJumpWorld3Final = (): void => {
+    if (!DEV_SHORTCUT_ENABLED) return;
+    if (this.gamePaused || !this.isRaycastSceneActive()) return;
+    const finalWorld3Level = RAYCAST_WORLD_THREE_CATALOG[RAYCAST_WORLD_THREE_CATALOG.length - 1];
+    if (!finalWorld3Level) return;
+    console.info(`[DEV SHORTCUT] Jumping to World 3 final encounter: ${finalWorld3Level.id}`);
+    this.setCombatMessage(`DEV JUMP // ${finalWorld3Level.name.toUpperCase()}`, 2600);
+    this.scene.restart({
+      levelId: finalWorld3Level.id,
+      difficultyId: this.difficultyId,
+      carryScore: this.runScore,
+      carryCampaignMetrics: this.campaignMetrics
+    });
+  };
+
+  private readonly handleDevShiftThree = (event: KeyboardEvent): void => {
+    if (!DEV_SHORTCUT_ENABLED) return;
+    if (!event.shiftKey) return;
+    this.handleDevJumpWorld3Final();
   };
 
   private readonly handleEscKey = (): void => {
@@ -1058,6 +1080,10 @@ export class RaycastScene extends Phaser.Scene {
     keyboard?.on('keydown-M', this.handleToggleMinimap);
     keyboard?.on('keydown-H', this.handleToggleHelp);
     keyboard?.on('keydown-SLASH', this.handleHelpShortcut);
+    if (DEV_SHORTCUT_ENABLED) {
+      keyboard?.on('keydown-F9', this.handleDevJumpWorld3Final);
+      keyboard?.on('keydown-THREE', this.handleDevShiftThree);
+    }
     keyboard?.on('keydown-TAB', this.handleToggleDebug);
     keyboard?.on('keydown-BACKTICK', this.handleToggleDebug);
     keyboard?.on('keydown-UP', this.handlePauseMenuUp);
@@ -1090,6 +1116,10 @@ export class RaycastScene extends Phaser.Scene {
     keyboard?.off('keydown-M', this.handleToggleMinimap);
     keyboard?.off('keydown-H', this.handleToggleHelp);
     keyboard?.off('keydown-SLASH', this.handleHelpShortcut);
+    if (DEV_SHORTCUT_ENABLED) {
+      keyboard?.off('keydown-F9', this.handleDevJumpWorld3Final);
+      keyboard?.off('keydown-THREE', this.handleDevShiftThree);
+    }
     keyboard?.off('keydown-TAB', this.handleToggleDebug);
     keyboard?.off('keydown-BACKTICK', this.handleToggleDebug);
     keyboard?.off('keydown-UP', this.handlePauseMenuUp);
