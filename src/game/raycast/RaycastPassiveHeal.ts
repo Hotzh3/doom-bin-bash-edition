@@ -61,6 +61,30 @@ export interface TickRaycastPassiveHealResult {
   nextFractionalCarry: number;
 }
 
+export type RaycastPassiveRegenHudState = 'hidden' | 'waiting' | 'blocked' | 'active';
+
+export function getRaycastPassiveRegenHudState(input: {
+  health: number;
+  nowMs: number;
+  lastDamageAtMs: number;
+  config: RaycastPassiveHealConfig;
+  combatScale: number;
+  isRegenerating: boolean;
+}): RaycastPassiveRegenHudState {
+  const maxH = Math.min(input.config.maxHealth, RAYCAST_PLAYER_MAX_HEALTH);
+  if (input.health >= maxH) return 'hidden';
+  if (input.nowMs - input.lastDamageAtMs < input.config.delayAfterDamageMs) return 'waiting';
+  if (input.combatScale <= 0) return 'blocked';
+  return input.isRegenerating ? 'active' : 'waiting';
+}
+
+export function formatRaycastPassiveRegenHudLabel(state: RaycastPassiveRegenHudState): string | null {
+  if (state === 'active') return 'REGEN';
+  if (state === 'blocked') return 'REGEN LOCK';
+  if (state === 'waiting') return 'REGEN WAIT';
+  return null;
+}
+
 export function tickRaycastPassiveHeal(input: TickRaycastPassiveHealInput): TickRaycastPassiveHealResult {
   const { health, nowMs, lastDamageAtMs, deltaMs, config, combatScale } = input;
   const maxH = Math.min(config.maxHealth, RAYCAST_PLAYER_MAX_HEALTH);
