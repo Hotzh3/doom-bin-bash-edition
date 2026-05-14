@@ -138,9 +138,12 @@ function masteryToRankParts(mastery: number): RaycastRunRankParts {
   return { tierLetter: 'D', subtitle: 'BARE EXIT' };
 }
 
+export function computeRaycastRunMasteryRankParts(input: RaycastRunSummaryInput): RaycastRunRankParts {
+  return masteryToRankParts(computeMasteryIndex(input));
+}
+
 export function buildRaycastRunSummary(input: RaycastRunSummaryInput): string[] {
-  const mastery = computeMasteryIndex(input);
-  const rankParts = input.includeRank !== false ? masteryToRankParts(mastery) : null;
+  const rankParts = input.includeRank !== false ? computeRaycastRunMasteryRankParts(input) : null;
   const rankFormatted = rankParts ? `RANK ${rankParts.tierLetter} — ${rankParts.subtitle}` : null;
   const marks = computeRaycastRunMasteryMarks(input);
 

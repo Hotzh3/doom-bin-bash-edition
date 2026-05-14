@@ -20,6 +20,7 @@ export interface RaycastOverlayHintInput {
   continueToWorldTwo?: boolean;
   /** World 2 finale cleared and next sector is World 3 — emphasize N continue. */
   continueToWorldThree?: boolean;
+  masteryUnlocked?: boolean;
 }
 
 export interface RaycastDifficultyMenuCopyInput {
@@ -103,6 +104,9 @@ export function buildRaycastEpisodeBanner(input: RaycastEpisodeBannerInput): str
 }
 
 export function buildRaycastOverlayHint(input: RaycastOverlayHintInput): string {
+  if (input.episodeComplete && input.masteryUnlocked) {
+    return 'TRUE SIGNAL UNLOCKED  |  R REPLAY FINALE  |  ESC MENU';
+  }
   if (input.episodeComplete && input.finaleBossCleared && input.worldTwoLocked) {
     return 'W WORLD 2 (LOCKED)  |  R REPLAY BOSS  |  ESC MENU';
   }
@@ -115,6 +119,26 @@ export function buildRaycastOverlayHint(input: RaycastOverlayHintInput): string 
   if (input.episodeComplete) return 'R REPLAY FINALE  |  ESC MENU';
   if (input.canAdvance) return `N CONTINUE  |  R RESTART SECTOR  |  ESC MENU`;
   return `R RESTART SECTOR  |  ESC MENU`;
+}
+
+export function buildRaycastMasteryEndingLines(input: {
+  episodeComplete: boolean;
+  fullArcClear: boolean;
+  masteryUnlocked: boolean;
+  impossibleModeUnlocked: boolean;
+  hiddenChallengeHookUnlocked: boolean;
+}): string[] {
+  if (!input.episodeComplete || !input.fullArcClear) return [];
+  if (!input.masteryUnlocked) {
+    return ['NORMAL ENDING // SIGNAL CONTAINED', 'MASTERY GOAL // EARN S OR SS ON ALL ARC SECTORS'];
+  }
+  const lines = [
+    'TRUE SIGNAL ENDING // CORE LATTICE STABILIZED',
+    'SECRET ENDING // CORRUPTED ECHO STILL CALLS BELOW'
+  ];
+  if (input.impossibleModeUnlocked) lines.push('UNLOCK // IMPOSSIBLE MODE');
+  if (input.hiddenChallengeHookUnlocked) lines.push('HOOK // FINAL CHALLENGE NODE ARMED');
+  return lines;
 }
 
 export function buildRaycastStatusMessage(
