@@ -62,6 +62,20 @@ What you can actually play and show:
 
 **Arena (2D):** local sandbox — useful for tests and quick PvP/PvE; not where feature depth is concentrated.
 
+## Ranking and mastery marks
+
+- Rank tiers in run summary: `D`, `C`, `B`, `A`, `S`, `SS`.
+- Rank evaluation blends time, accuracy, damage taken, secrets, tokens, regen usage, retries/deaths, and boss arena performance (when boss data exists).
+- Compact mastery marks shown in summary include:
+  - `NO DAMAGE`
+  - `SPEED CLEAR`
+  - `FULL ACCURACY`
+  - `ALL SECRETS`
+  - `NO REGEN USED`
+  - `FULL INTEL`
+  - `BOSS BREAKER`
+  - `CLEAN RUN`
+
 ## Optional pre-run modifier roulette
 
 Before starting a raycast run/world (Prologue), roulette is optional:
