@@ -26,7 +26,7 @@ export const RAYCAST_MOVEMENT: RaycastMovementConfig = {
   friction: 540,
   stopEpsilon: 0.03,
   turnSpeed: 3.85,
-  mouseTurnSensitivity: 0.0032,
+  mouseTurnSensitivity: 0.00256,
   collisionRadius: 0.18
 };
 
