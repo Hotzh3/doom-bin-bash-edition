@@ -113,7 +113,7 @@ export const RAYCAST_WORLD1_SEGMENT_LAYER = {
   fogStartDelta: -0.1,
   fogEndDelta: -0.42,
   fogEndFloor: 6.92,
-  fogColorMix: 0.15,
+  fogColorMix: 0.24,
   corruptionAlphaScale: 1.05,
   pulseAlphaScale: 1.04,
   ambientDarknessDelta: -0.014,
@@ -141,8 +141,8 @@ export const RAYCAST_WORLD2_SEGMENT_LAYER = {
 
 /** World 3 — warm ash haze; distinct from icy World 2 without breaking silhouette caps. */
 export const RAYCAST_ATMOSPHERE_WORLD3 = {
-  fogColor: 0x1a0602,
-  corruptionTint: 0x721818,
+  fogColor: 0x240802,
+  corruptionTint: 0x7e1c16,
   messageOverrides: {
     intro:
       'EMBER MERIDIAN — THIRD HELL — ASH CLOCKS YOUR ROUTE AND SCRAMBLES IDLE LANES',
@@ -168,8 +168,8 @@ export const RAYCAST_ATMOSPHERE_WORLD3 = {
 };
 
 export const RAYCAST_WORLD3_SEGMENT_LAYER = {
-  fogStartDelta: 0.18,
-  fogEndDelta: 0.42,
+  fogStartDelta: 0.14,
+  fogEndDelta: 0.32,
   fogEndCap: 11.4,
   corruptionAlphaScale: 0.93,
   pulseAlphaScale: 0.9,

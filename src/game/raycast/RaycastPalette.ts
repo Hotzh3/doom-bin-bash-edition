@@ -7,8 +7,8 @@ export const RAYCAST_PALETTE = {
   floorVoid: 0x04060a,
   /** Distance fog tint — near-black with a faint terminal-green cast for World 1. */
   fogVoid: 0x030806,
-  /** World 1 terminal envelope — green-black cinder cast mixed into base fog (distinct from W2 blue rift). */
-  forgeHaze: 0x030806,
+  /** World 1 terminal envelope — greener phosphor-black cast (distinct from W2 blue rift). */
+  forgeHaze: 0x031006,
   corruptVeil: 0x3e1432,
   criticalVeil: 0x520818,
   muzzleWarm: 0xffde9c,
@@ -81,14 +81,14 @@ export const RAYCAST_CSS_WORLD2 = {
 
 /** World 3 — Ember Meridian: warm ash glass vs cold stratum (Phase 34). */
 export const RAYCAST_CSS_WORLD3 = {
-  hudPanel: '#140804cc',
-  debugText: '#c87858',
-  systemText: '#ffb090',
+  hudPanel: '#180903cc',
+  debugText: '#d07a4e',
+  systemText: '#ffb878',
   warningText: '#ff5566',
-  keyText: '#ffe8c8',
-  bodyText: '#ecd8cc',
-  mutedText: '#8a6050',
-  accentText: '#ff8844'
+  keyText: '#ffe2b8',
+  bodyText: '#f0d2be',
+  mutedText: '#97614a',
+  accentText: '#ff7a32'
 } as const;
 
 export type RaycastHudCssBundle = { [K in keyof typeof RAYCAST_CSS]: string };
