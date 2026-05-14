@@ -75,7 +75,7 @@ export const RAYCAST_LEVEL_WORLD2_FRACTURE: RaycastLevel = {
         { x: 9.5, y: 2.5, kind: 'RANGED' },
         { x: 13.5, y: 6.5, kind: 'GRUNT' },
         { x: 13.5, y: 3.5, kind: 'STALKER' },
-        { x: 11.2, y: 4.6, kind: 'GRUNT' }
+        { x: 14.5, y: 2.5, kind: 'GRUNT' }
       ]
     },
     {
@@ -633,7 +633,7 @@ export const RAYCAST_LEVEL_WORLD2_SULFUR_LATTICE: RaycastLevel = {
     }
   ],
   initialSpawns: [
-    { id: 'sulfur-scout', kind: 'GRUNT', x: 5.5, y: 12.5 },
+    { id: 'sulfur-scout', kind: 'GRUNT', x: 6.5, y: 13.5 },
     { id: 'archive-skirmisher', kind: 'SCRAMBLER', x: 5.5, y: 4.5 },
     { id: 'conduit-rifle', kind: 'RANGED', x: 11.5, y: 3.5 },
     { id: 'lane-anchor', kind: 'BRUTE', x: 15.5, y: 6.5 },

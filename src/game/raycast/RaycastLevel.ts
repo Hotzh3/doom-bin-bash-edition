@@ -1637,6 +1637,29 @@ export function openRaycastDoor(map: RaycastMap, door: RaycastDoor): void {
   map.grid[door.tileY][door.tileX] = RAYCAST_TILE.EMPTY;
 }
 
+export function isRaycastSpawnPlacementValid(
+  map: RaycastMap,
+  point: { x: number; y: number },
+  radius = 0.4,
+  clearance = 0.04
+): boolean {
+  if (!Number.isFinite(point.x) || !Number.isFinite(point.y)) return false;
+  const guardRadius = Math.max(0, radius + clearance);
+  const samples = [
+    { x: point.x, y: point.y },
+    { x: point.x - guardRadius, y: point.y },
+    { x: point.x + guardRadius, y: point.y },
+    { x: point.x, y: point.y - guardRadius },
+    { x: point.x, y: point.y + guardRadius },
+    { x: point.x - guardRadius, y: point.y - guardRadius },
+    { x: point.x + guardRadius, y: point.y - guardRadius },
+    { x: point.x - guardRadius, y: point.y + guardRadius },
+    { x: point.x + guardRadius, y: point.y + guardRadius }
+  ];
+
+  return samples.every((sample) => map.grid[Math.floor(sample.y)]?.[Math.floor(sample.x)] === RAYCAST_TILE.EMPTY);
+}
+
 export function isNearPoint(x: number, y: number, point: { x: number; y: number; radius: number }): boolean {
   return Math.hypot(point.x - x, point.y - y) <= point.radius;
 }
@@ -1765,7 +1788,7 @@ export function getSafeDirectorSpawnPoints(
     const distance = Math.hypot(point.x - player.x, point.y - player.y);
     const safeDistanceFloor = Math.max(point.minPlayerDistance, 2.75);
     if (distance < safeDistanceFloor) return false;
-    if (options?.map && options.map.grid[Math.floor(point.y)]?.[Math.floor(point.x)] !== RAYCAST_TILE.EMPTY) return false;
+    if (options?.map && !isRaycastSpawnPlacementValid(options.map, point)) return false;
     if (options?.enemies?.some((enemy) => enemy.alive && Math.hypot(point.x - enemy.x, point.y - enemy.y) <= enemy.radius + 0.45)) {
       return false;
     }
@@ -1800,8 +1823,16 @@ export function isRaycastPointReachable(
     .filter((door) => openDoorIds.has(door.id))
     .forEach((door) => openRaycastDoor(map, door));
 
-  const startX = Math.floor(level.playerStart.x);
-  const startY = Math.floor(level.playerStart.y);
+  return isRaycastMapPointReachable(map, level.playerStart, point);
+}
+
+export function isRaycastMapPointReachable(
+  map: RaycastMap,
+  from: { x: number; y: number },
+  point: { x: number; y: number }
+): boolean {
+  const startX = Math.floor(from.x);
+  const startY = Math.floor(from.y);
   const targetX = Math.floor(point.x);
   const targetY = Math.floor(point.y);
 

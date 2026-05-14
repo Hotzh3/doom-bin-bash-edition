@@ -17,6 +17,7 @@ import {
   getRaycastExitAccess,
   getRaycastLevelIndex,
   getSafeDirectorSpawnPoints,
+  isRaycastSpawnPlacementValid,
   isNearPoint,
   openRaycastDoor,
   registerRaycastPickup,
@@ -28,6 +29,13 @@ import {
 } from '../game/raycast/RaycastLevel';
 import { RAYCAST_ATMOSPHERE } from '../game/raycast/RaycastAtmosphere';
 import { RAYCAST_TILE, type RaycastMap } from '../game/raycast/RaycastMap';
+import { getEnemyConfig } from '../game/entities/enemyConfig';
+
+const ALL_RAYCAST_LEVELS = [
+  ...RAYCAST_LEVEL_CATALOG,
+  ...RAYCAST_WORLD_TWO_CATALOG,
+  ...RAYCAST_WORLD_THREE_CATALOG
+];
 
 describe('raycast level catalog', () => {
   it('includes six episode maps (five sectors + boss) with unique ids and stable ordering', () => {
@@ -114,7 +122,7 @@ describe('raycast level catalog', () => {
   });
 
   it('keeps player starts, objectives, spawns, and director points on walkable cells for each level', () => {
-    RAYCAST_LEVEL_CATALOG.forEach((level) => {
+    ALL_RAYCAST_LEVELS.forEach((level) => {
       const points = [
         level.playerStart,
         ...level.keys,
@@ -131,6 +139,38 @@ describe('raycast level catalog', () => {
         const tile = level.map.grid[Math.floor(point.y)]?.[Math.floor(point.x)];
         expect(tile, `${level.id} @ (${point.x},${point.y})`).toBe(RAYCAST_TILE.EMPTY);
       });
+    });
+  });
+
+  it('keeps every authored enemy spawn clear of walls and reachable once authored gates are open', () => {
+    ALL_RAYCAST_LEVELS.forEach((level) => {
+      const openDoorIds = level.doors.map((door) => door.id);
+      const enemySpawns = [
+        ...level.initialSpawns.map((spawn) => ({ ...spawn, source: 'initial' })),
+        ...level.triggers.flatMap((trigger) =>
+          trigger.spawns.map((spawn) => ({ ...spawn, source: `trigger:${trigger.id}` }))
+        )
+      ];
+
+      enemySpawns.forEach((spawn) => {
+        const radius = getEnemyConfig(spawn.kind, 'raycast').size / 100;
+        const label = `${level.id} ${spawn.source} ${'id' in spawn ? spawn.id : spawn.kind} @ (${spawn.x},${spawn.y})`;
+        expect(isRaycastSpawnPlacementValid(level.map, spawn, radius), label).toBe(true);
+        expect(isRaycastPointReachable(level, spawn, { openDoorIds }), label).toBe(true);
+      });
+
+      level.director.spawnPoints.forEach((spawn) => {
+        const label = `${level.id} director ${spawn.id} @ (${spawn.x},${spawn.y})`;
+        expect(isRaycastSpawnPlacementValid(level.map, spawn), label).toBe(true);
+        expect(isRaycastPointReachable(level, spawn, { openDoorIds }), label).toBe(true);
+      });
+
+      if (level.bossConfig) {
+        const boss = level.bossConfig;
+        const label = `${level.id} boss ${boss.id} @ (${boss.x},${boss.y})`;
+        expect(isRaycastSpawnPlacementValid(level.map, boss, boss.hitRadius), label).toBe(true);
+        expect(isRaycastPointReachable(level, boss, { openDoorIds }), label).toBe(true);
+      }
     });
   });
 

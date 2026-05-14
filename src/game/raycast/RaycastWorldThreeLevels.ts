@@ -33,7 +33,7 @@ const FRACTURE_DIRECTOR = {
   },
   spawnPoints: [
     { id: 'm-start', zoneId: 'm-start', x: 3.5, y: 11.5, minPlayerDistance: 2.0 },
-    { id: 'm-hall', zoneId: 'm-hall', x: 10.5, y: 9.5, minPlayerDistance: 1.9 },
+    { id: 'm-hall', zoneId: 'm-hall', x: 11.5, y: 9.5, minPlayerDistance: 1.9 },
     { id: 'm-arena', zoneId: 'm-arena', x: 14.5, y: 11.5, minPlayerDistance: 2.1 },
     { id: 'm-east', zoneId: 'm-east', x: 22.5, y: 10.5, minPlayerDistance: 2.0 },
     { id: 'm-drain', zoneId: 'm-drain', x: 10.5, y: 14.5, minPlayerDistance: 2.0 }
@@ -116,7 +116,7 @@ export const RAYCAST_LEVEL_WORLD3_EMBER_RAMP: RaycastLevel = {
         { x: 10.5, y: 7.5, kind: 'SCRAMBLER' },
         { x: 13.5, y: 9.5, kind: 'GRUNT' },
         { x: 13.5, y: 7.5, kind: 'RANGED' },
-        { x: 11.2, y: 8.5, kind: 'SCRAMBLER' }
+        { x: 12.5, y: 9.5, kind: 'SCRAMBLER' }
       ]
     },
     {
@@ -299,7 +299,7 @@ export const RAYCAST_LEVEL_WORLD3_GATE_CUT: RaycastLevel = {
         { x: 10.5, y: 9.5, kind: 'RANGED' },
         { x: 11.5, y: 6.5, kind: 'SCRAMBLER' },
         { x: 10.5, y: 10.5, kind: 'SCRAMBLER' },
-        { x: 11.5, y: 8.5, kind: 'BRUTE' }
+        { x: 12.5, y: 9.5, kind: 'BRUTE' }
       ]
     },
     {
@@ -429,8 +429,8 @@ export const RAYCAST_LEVEL_WORLD3_GATE_CUT: RaycastLevel = {
     },
     spawnPoints: [
       { id: 'mg-sp-a', zoneId: 'mg-start', x: 3.5, y: 11.5, minPlayerDistance: 2.0 },
-      { id: 'mg-sp-b', zoneId: 'mg-ring', x: 12.5, y: 5.5, minPlayerDistance: 2.0 },
-      { id: 'mg-sp-c', zoneId: 'mg-threshold', x: 10.5, y: 7.5, minPlayerDistance: 1.9 }
+      { id: 'mg-sp-b', zoneId: 'mg-ring', x: 14.5, y: 5.5, minPlayerDistance: 2.0 },
+      { id: 'mg-sp-c', zoneId: 'mg-threshold', x: 12.5, y: 9.5, minPlayerDistance: 1.9 }
     ]
   }
 };

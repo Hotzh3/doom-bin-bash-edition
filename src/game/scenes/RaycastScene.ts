@@ -48,7 +48,8 @@ import {
   type RaycastDoor,
   type RaycastEncounterBeat,
   type RaycastEncounterPatternBinding,
-  type RaycastLevel
+  type RaycastLevel,
+  isRaycastMapPointReachable
 } from '../raycast/RaycastLevel';
 import {
   buildSyntheticBossLateralBinding,
@@ -227,6 +228,8 @@ export class RaycastScene extends Phaser.Scene {
   /** Cross-sector aggregate for finale scoring + summary (Phase 26). */
   private campaignMetrics!: RaycastCampaignMetrics;
   private carriedScoreFromEpisode = 0;
+  private levelStartScore = 0;
+  private levelStartCampaignMetrics: RaycastCampaignMetrics = createEmptyCampaignMetrics();
   private pendingWorldTwoBreachBonus = false;
   private pendingWorldThreeBreachBonus = false;
   private bossState: RaycastBossState | null = null;
@@ -323,7 +326,12 @@ export class RaycastScene extends Phaser.Scene {
   private readonly handleRetry = (): void => {
     if (!this.isRaycastSceneActive()) return;
     if (this.gamePaused) return;
-    this.scene.restart({ levelId: this.currentLevel.id, difficultyId: this.difficultyId });
+    this.scene.restart({
+      levelId: this.currentLevel.id,
+      difficultyId: this.difficultyId,
+      carryScore: this.levelStartScore,
+      carryCampaignMetrics: this.levelStartCampaignMetrics
+    });
   };
 
   private readonly handleAdvanceLevel = (): void => {
@@ -432,7 +440,12 @@ export class RaycastScene extends Phaser.Scene {
         break;
       case 'restart':
         this.closePauseMenu();
-        this.scene.restart({ levelId: this.currentLevel.id, difficultyId: this.difficultyId });
+        this.scene.restart({
+          levelId: this.currentLevel.id,
+          difficultyId: this.difficultyId,
+          carryScore: this.levelStartScore,
+          carryCampaignMetrics: this.levelStartCampaignMetrics
+        });
         break;
       case 'menu':
         this.closePauseMenu();
@@ -980,6 +993,8 @@ export class RaycastScene extends Phaser.Scene {
       this.runScore += RAYCAST_WORLD3_ENTRY_POINTS;
       this.pendingWorldThreeBreachBonus = false;
     }
+    this.levelStartScore = this.runScore;
+    this.levelStartCampaignMetrics = { ...this.campaignMetrics };
     this.carriedScoreFromEpisode = 0;
     this.playerStationaryMs = 0;
     this.lastPlayerDamageAt = this.time.now;
@@ -1301,6 +1316,10 @@ export class RaycastScene extends Phaser.Scene {
     return this.enemies.filter((enemy) => enemy.alive).length;
   }
 
+  private countReachableLivingEnemies(): number {
+    return this.enemies.filter((enemy) => enemy.alive && isRaycastMapPointReachable(this.map, this.player, enemy)).length;
+  }
+
   private countLivingEnemyKinds(): Partial<Record<EnemyKind, number>> {
     const tally: Partial<Record<EnemyKind, number>> = {};
     for (const enemy of this.enemies) {
@@ -1595,7 +1614,7 @@ export class RaycastScene extends Phaser.Scene {
         collectedKeyIds: this.currentLevel.keys.filter((key) => this.keySystem.hasKey(key.id)).map((key) => key.id),
         openDoorIds: this.currentLevel.doors.filter((door) => this.doorSystem.isOpen(door.id)).map((door) => door.id),
         activatedTriggerIds: this.currentLevel.triggers.filter((trigger) => this.triggerSystem.hasActivated(trigger.id)).map((trigger) => trigger.id),
-        livingEnemyCount: this.countLivingEnemies(),
+        livingEnemyCount: this.countReachableLivingEnemies(),
         bossDefeated: this.bossState ? !this.bossState.alive : true
       });
       if (!exitAccess.allowed) {
@@ -2279,7 +2298,7 @@ export class RaycastScene extends Phaser.Scene {
       closedDoorCount: this.currentLevel.doors.filter((door) => !this.doorSystem.isOpen(door.id)).length,
       activatedTriggerCount: this.getActivatedTriggerCount(),
       requiredTriggerCount: this.currentLevel.progression.requiredExitTriggerIds.length,
-      livingEnemyCount: this.countLivingEnemies(),
+      livingEnemyCount: this.countReachableLivingEnemies(),
       playerStationaryMs: this.playerStationaryMs,
       recentBlockedReason: this.blockedHintReason
     };
