@@ -14,6 +14,8 @@ import {
   type RaycastBossConfig
 } from '../game/raycast/RaycastBoss';
 import { addRaycastBossClearScore } from '../game/raycast/RaycastScore';
+import { RAYCAST_LEVEL_BOSS, RAYCAST_WORLD_TWO_CATALOG } from '../game/raycast/RaycastLevel';
+import { getRaycastBossVisualProfile } from '../game/raycast/RaycastBossVisual';
 
 const CONFIG: RaycastBossConfig = {
   id: 'volt-archon',
@@ -59,19 +61,28 @@ describe('raycast boss', () => {
     expect(boss.arenaTwist).toBe('none');
   });
 
-  it('switches into aggressive phase when boss drops to half health', () => {
+  it('transitions through phase 1 -> 2 -> 3 by health ratio bands', () => {
     const boss = createRaycastBossState(CONFIG, 0);
-    boss.health = 71;
+    boss.health = 81;
     syncRaycastBossPhase(boss);
     expect(boss.phase).toBe(1);
-    boss.health = 60;
-    syncRaycastBossPhase(boss);
-    expect(boss.phase).toBe(1);
-    boss.health = 59;
+    boss.health = 80;
     syncRaycastBossPhase(boss);
     expect(boss.phase).toBe(2);
-    expect(getRaycastBossPhaseLabel(boss)).toContain('PHASE 2');
-    expect(getRaycastBossPhaseLabel(boss)).toContain('ION BRACKET');
+    boss.health = 79;
+    syncRaycastBossPhase(boss);
+    expect(boss.phase).toBe(2);
+    boss.health = 41;
+    syncRaycastBossPhase(boss);
+    expect(boss.phase).toBe(2);
+    boss.health = 40;
+    syncRaycastBossPhase(boss);
+    expect(boss.phase).toBe(3);
+    boss.health = 39;
+    syncRaycastBossPhase(boss);
+    expect(boss.phase).toBe(3);
+    expect(getRaycastBossPhaseLabel({ ...boss, phase: 2 })).toContain('ION BRACKET');
+    expect(getRaycastBossPhaseLabel(boss)).toContain('PHASE 3');
   });
 
   it('applies weapon damage along pellet rays against boss disk', () => {
@@ -173,6 +184,34 @@ describe('raycast boss', () => {
     tickRaycastBossVolleys(boss, { x: 2.5, y: 7.5, alive: true, stationaryMs: 1200 }, 7000);
     const p2camp = tickRaycastBossVolleys(boss, { x: 2.5, y: 7.5, alive: true, stationaryMs: 1200 }, boss.pendingVolleyAt + 1);
     expect(p2camp.length).toBe(8);
+
+    boss.phase = 3;
+    boss.nextVolleyReadyAt = 0;
+    boss.pendingVolleyAt = 0;
+    tickRaycastBossVolleys(boss, { x: 2.5, y: 7.5, alive: true, stationaryMs: 1200 }, 7500);
+    const p3camp = tickRaycastBossVolleys(boss, { x: 2.5, y: 7.5, alive: true, stationaryMs: 1200 }, boss.pendingVolleyAt + 1);
+    expect(p3camp.length).toBeGreaterThan(p2camp.length);
+  });
+
+  it('keeps World 2 boss config distinct and harder than World 1 boss', () => {
+    const world2Boss = RAYCAST_WORLD_TWO_CATALOG.find((level) => level.id === 'bloom-warden-pit')?.bossConfig;
+    const world1Boss = RAYCAST_LEVEL_BOSS.bossConfig;
+    expect(world2Boss).toBeDefined();
+    expect(world1Boss).toBeDefined();
+    expect(world2Boss?.behavior).toBe('bloom-warden');
+    expect(world2Boss?.displayName).not.toBe(world1Boss?.displayName);
+    expect((world2Boss?.maxHealth ?? 0)).toBeGreaterThan(world1Boss?.maxHealth ?? 0);
+    expect((world2Boss?.hitRadius ?? 0)).toBeGreaterThan(world1Boss?.hitRadius ?? 0);
+  });
+
+  it('uses oversized layered boss visuals distinct from regular enemy billboards', () => {
+    const p1 = getRaycastBossVisualProfile({ behavior: 'volt-archon', phase: 1, hitFlashUntil: 0 }, 0);
+    const p3 = getRaycastBossVisualProfile({ behavior: 'bloom-warden', phase: 3, hitFlashUntil: 0 }, 0);
+    expect(p1.silhouetteScale).toBeGreaterThan(1.1);
+    expect(p1.ringCount).toBeGreaterThanOrEqual(2);
+    expect(p3.silhouetteScale).toBeGreaterThan(p1.silhouetteScale);
+    expect(p3.ringCount).toBeGreaterThan(p1.ringCount);
+    expect(p3.particleCount).toBeGreaterThan(p1.particleCount);
   });
 
   it('keeps exit ray from player to boss unblocked on boss map', () => {

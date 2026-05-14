@@ -309,7 +309,7 @@ export class RaycastScene extends Phaser.Scene {
   private finalHintText!: Phaser.GameObjects.Text;
   private weaponOverlayFlashUntil = 0;
   private bossTelegraphActive = false;
-  private lastBossPhase: 1 | 2 | null = null;
+  private lastBossPhase: 1 | 2 | 3 | null = null;
   private lastCombatMessage: string = RAYCAST_ATMOSPHERE.messages.intro;
   private hudCss!: RaycastHudCssBundle;
   private combatMessageUntil = 0;
@@ -1419,11 +1419,13 @@ export class RaycastScene extends Phaser.Scene {
       );
       const bossHud = getRaycastBossHudLines(this.currentLevel.bossConfig?.displayName ?? 'Volt Archon');
       if (this.lastBossPhase !== this.bossState.phase) {
-        if (this.bossState.phase === 2) {
+        if (this.bossState.phase >= 2) {
           this.audioFeedback.play('bossPhaseShift', 1, this.time.now);
-          this.pulseFeedback(0xff5b6f, 0.11, 220);
-          this.cameras.main.shake(132, 0.00195);
-          this.setCombatMessage(bossHud.phase2Overdrive);
+          this.pulseFeedback(this.bossState.phase === 3 ? 0xff2f41 : 0xff5b6f, this.bossState.phase === 3 ? 0.13 : 0.11, 220);
+          this.cameras.main.shake(this.bossState.phase === 3 ? 160 : 132, this.bossState.phase === 3 ? 0.0022 : 0.00195);
+          this.setCombatMessage(
+            this.bossState.phase === 3 ? `${bossHud.phase2Overdrive.replace('PHASE 2', 'PHASE 3')} // FINAL` : bossHud.phase2Overdrive
+          );
         }
         this.lastBossPhase = this.bossState.phase;
       }
@@ -2500,10 +2502,10 @@ export class RaycastScene extends Phaser.Scene {
     this.bossNameText.setText(`BOSS // ${boss.displayName.toUpperCase()}`);
     this.bossPhaseText
       .setText(`${getRaycastBossPhaseLabel(boss)}  //  ${Math.ceil(ratio * 100)}%`)
-      .setColor(telegraphing ? '#ffcf7c' : boss.phase === 2 ? '#ff9ca8' : '#ffe7b8');
+      .setColor(telegraphing ? '#ffcf7c' : boss.phase === 3 ? '#ff6a7c' : boss.phase === 2 ? '#ff9ca8' : '#ffe7b8');
     this.bossBarFill
       .setSize(430 * ratio, 10)
-      .setFillStyle(telegraphing ? 0xff8833 : boss.phase === 2 ? 0xff5b6f : 0xb84fff, 1);
+      .setFillStyle(telegraphing ? 0xff8833 : boss.phase === 3 ? 0xff3145 : boss.phase === 2 ? 0xff5b6f : 0xb84fff, 1);
   }
 
   private updateFocusedEnemyHud(): void {
