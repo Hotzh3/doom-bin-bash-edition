@@ -20,6 +20,7 @@ export class RaycastPlayerController {
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private keys!: Record<string, Phaser.Input.Keyboard.Key>;
   private pointerListenersRegistered = false;
+  private moveSpeedMultiplier = 1;
 
   constructor(
     private readonly scene: Phaser.Scene,
@@ -35,15 +36,26 @@ export class RaycastPlayerController {
   }
 
   update(deltaMs: number): void {
+    const moveConfig =
+      this.moveSpeedMultiplier === 1
+        ? this.config
+        : {
+            ...this.config,
+            maxSpeed: this.config.maxSpeed * this.moveSpeedMultiplier,
+            forwardSpeed: this.config.forwardSpeed * this.moveSpeedMultiplier,
+            backwardSpeed: this.config.backwardSpeed * this.moveSpeedMultiplier,
+            strafeSpeed: this.config.strafeSpeed * this.moveSpeedMultiplier
+          };
     const deltaSeconds = deltaMs / 1000;
-    const turnInput = Number(this.cursors.right.isDown || this.keys.E.isDown) - Number(this.cursors.left.isDown || this.keys.Q.isDown);
-    this.state.angle += turnInput * this.config.turnSpeed * deltaSeconds;
+    const turnInput =
+      Number(this.cursors.right.isDown || this.keys.E.isDown) - Number(this.cursors.left.isDown || this.keys.Q.isDown);
+    this.state.angle += turnInput * moveConfig.turnSpeed * deltaSeconds;
 
     const forwardInput = Number(this.keys.W.isDown) - Number(this.keys.S.isDown);
     const strafeInput = Number(this.keys.D.isDown) - Number(this.keys.A.isDown);
-    const movementInput = getCameraRelativeInput(forwardInput, strafeInput, this.state.angle, this.config);
-    this.state.velocity = updateRaycastVelocity(this.state.velocity, movementInput, deltaMs, this.config);
-    const movedState = moveWithWallSlide(this.map, this.state, deltaMs, this.config);
+    const movementInput = getCameraRelativeInput(forwardInput, strafeInput, this.state.angle, moveConfig);
+    this.state.velocity = updateRaycastVelocity(this.state.velocity, movementInput, deltaMs, moveConfig);
+    const movedState = moveWithWallSlide(this.map, this.state, deltaMs, moveConfig);
 
     this.state.x = movedState.x;
     this.state.y = movedState.y;
@@ -52,6 +64,10 @@ export class RaycastPlayerController {
 
   destroy(): void {
     this.cleanupPointerControls();
+  }
+
+  setMoveSpeedMultiplier(multiplier: number): void {
+    this.moveSpeedMultiplier = Number.isFinite(multiplier) ? Math.max(0.6, multiplier) : 1;
   }
 
   private readonly handlePointerDown = (): void => {

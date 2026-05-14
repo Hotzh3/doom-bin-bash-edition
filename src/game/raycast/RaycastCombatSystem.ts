@@ -66,6 +66,10 @@ export class RaycastCombatSystem {
     this.playerDamageMultiplier = Number.isFinite(multiplier) ? Math.max(0.1, multiplier) : 1;
   }
 
+  setWeaponFireRateMultiplier(multiplier: number): void {
+    this.weapons.setFireRateMultiplier(multiplier);
+  }
+
   fire(player: RaycastPlayerState, enemies: RaycastEnemy[], map: RaycastMap, time: number): RaycastCombatResult {
     const result = this.weapons.fire({
       ownerTeam: 'P1',

@@ -220,4 +220,27 @@ describe('raycast enemy system', () => {
     expect(damage).toBe(0);
     expect(projectile.alive).toBe(false);
   });
+
+  it('applies runtime speed and projectile modifiers from sector events', () => {
+    const fastEnemy = createRaycastEnemy({ id: 'fast', kind: 'GRUNT', x: 1.5, y: 7.5 });
+    const slowProjectileEnemy = createRaycastEnemy({ id: 'ranged-slow', kind: 'RANGED', x: 1.5, y: 7.8 });
+
+    updateRaycastEnemies(RAYCAST_MAP, [fastEnemy], { x: 1.5, y: 10.5, alive: true }, 1000, 250, {
+      speedMultiplier: 1.2
+    });
+    const movedDistance = fastEnemy.y - 7.5;
+    expect(movedDistance).toBeGreaterThan(0.2);
+
+    updateRaycastEnemies(RAYCAST_MAP, [slowProjectileEnemy], { x: 1.5, y: 10.4, alive: true }, 2000, 16, {
+      projectileSpeedMultiplier: 0.85
+    });
+    const result = updateRaycastEnemies(RAYCAST_MAP, [slowProjectileEnemy], { x: 1.5, y: 10.4, alive: true }, 2440, 16, {
+      projectileSpeedMultiplier: 0.85
+    });
+
+    expect(result.spawnedProjectiles).toHaveLength(1);
+    const projectile = result.spawnedProjectiles[0];
+    const baseSpeed = (getEnemyConfig('RANGED', 'raycast').projectileSpeed ?? 0) / 100;
+    expect(Math.hypot(projectile.vx, projectile.vy)).toBeCloseTo(baseSpeed * 0.85);
+  });
 });

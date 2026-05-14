@@ -8,6 +8,7 @@ const MUZZLE_DISTANCE = 22;
 export class WeaponSystem {
   private currentWeapon: WeaponKind = 'PISTOL';
   private readonly lastFireAt = new Map<WeaponKind, number>();
+  private fireRateMultiplier = 1;
 
   constructor(private readonly profile: BalanceProfile = 'arena') {}
 
@@ -31,7 +32,12 @@ export class WeaponSystem {
   canFire(time: number): boolean {
     const config = getWeaponConfig(this.currentWeapon, this.profile);
     const lastFire = this.lastFireAt.get(this.currentWeapon) ?? Number.NEGATIVE_INFINITY;
-    return time - lastFire >= config.cooldownMs;
+    const effectiveCooldown = config.cooldownMs / Math.max(0.1, this.fireRateMultiplier);
+    return time - lastFire >= effectiveCooldown;
+  }
+
+  setFireRateMultiplier(multiplier: number): void {
+    this.fireRateMultiplier = Number.isFinite(multiplier) ? Math.max(0.1, multiplier) : 1;
   }
 
   fire(input: WeaponFireInput): WeaponFireResult | null {
