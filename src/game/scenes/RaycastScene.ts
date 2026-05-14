@@ -129,6 +129,7 @@ import {
   createRaycastDifficultyDirectorConfig,
   DEFAULT_RAYCAST_DIFFICULTY_ID,
   getRaycastDifficultyHealthPickup,
+  getRaycastDifficultyPassiveHealConfig,
   getRaycastDifficultyPreset,
   RAYCAST_DIFFICULTY_REGISTRY_KEY,
   scaleRaycastIncomingDamage,
@@ -163,7 +164,8 @@ import {
 import {
   computeEnemySwarmHealScale,
   computePassiveHealCombatScale,
-  DEFAULT_RAYCAST_PASSIVE_HEAL_CONFIG,
+  formatRaycastPassiveRegenHudLabel,
+  getRaycastPassiveRegenHudState,
   tickRaycastPassiveHeal
 } from '../raycast/RaycastPassiveHeal';
 import {
@@ -249,6 +251,7 @@ export class RaycastScene extends Phaser.Scene {
   private gamePaused = false;
   private pauseSelectionIndex = 0;
   private passiveRegenHudActive = false;
+  private passiveRegenHudLabel: string | null = null;
   private passiveHealFractionalCarry = 0;
   private audioMasterVolume = 1;
   private billboardSig = '';
@@ -926,7 +929,9 @@ export class RaycastScene extends Phaser.Scene {
       getRaycastDifficultyPreset(this.difficultyId).shortLabel
     );
     if (this.passiveRegenHudActive) {
-      statusLine += '  |  REGEN';
+      statusLine += `  |  ${this.passiveRegenHudLabel ?? 'REGEN'}`;
+    } else if (this.passiveRegenHudLabel) {
+      statusLine += `  |  ${this.passiveRegenHudLabel}`;
     }
     this.healthText.setText(statusLine);
     this.weaponText.setText(
@@ -1022,6 +1027,7 @@ export class RaycastScene extends Phaser.Scene {
     this.gamePaused = false;
     this.pauseSelectionIndex = 0;
     this.passiveRegenHudActive = false;
+    this.passiveRegenHudLabel = null;
     this.passiveHealFractionalCarry = 0;
     this.billboardSig = '';
     this.cachedBillboards = [];
@@ -1375,18 +1381,30 @@ export class RaycastScene extends Phaser.Scene {
     if (!this.playerAlive || this.levelComplete) return;
     const directorScale = computePassiveHealCombatScale(this.lastDirectorState, this.directorIntensity);
     const swarm = computeEnemySwarmHealScale(this.countLivingEnemies());
-    const combatScale = directorScale * swarm;
+    const bossScale = this.bossState?.alive ? 0.45 : 1;
+    const combatScale = directorScale * swarm * bossScale;
+    const config = getRaycastDifficultyPassiveHealConfig(this.difficultyId);
     const result = tickRaycastPassiveHeal({
       health: this.playerHealth,
       nowMs: this.time.now,
       lastDamageAtMs: this.lastPlayerDamageAt,
       deltaMs: delta,
-      config: DEFAULT_RAYCAST_PASSIVE_HEAL_CONFIG,
+      config,
       combatScale,
       fractionalCarry: this.passiveHealFractionalCarry
     });
     this.playerHealth = result.nextHealth;
     this.passiveRegenHudActive = result.isRegenerating;
+    this.passiveRegenHudLabel = formatRaycastPassiveRegenHudLabel(
+      getRaycastPassiveRegenHudState({
+        health: this.playerHealth,
+        nowMs: this.time.now,
+        lastDamageAtMs: this.lastPlayerDamageAt,
+        config,
+        combatScale,
+        isRegenerating: result.isRegenerating
+      })
+    );
     this.passiveHealFractionalCarry = result.nextFractionalCarry;
   }
 
@@ -1484,6 +1502,7 @@ export class RaycastScene extends Phaser.Scene {
       this.runBossDamageTaken += appliedDamage;
     }
     this.lastPlayerDamageAt = this.time.now;
+    this.passiveHealFractionalCarry = 0;
     const shakeDur = Phaser.Math.Clamp(88 + appliedDamage * 2.4, 96, 168);
     const shakeMag = Phaser.Math.Clamp(0.00275 + appliedDamage * 0.000065, 0.00275, 0.0045);
     this.cameras.main.shake(shakeDur, shakeMag);

@@ -1,5 +1,6 @@
 import { DEFAULT_DIRECTOR_CONFIG, type DirectorConfig } from '../systems/DirectorConfig';
 import type { RaycastHealthPickup } from './RaycastItems';
+import type { RaycastPassiveHealConfig } from './RaycastPassiveHeal';
 
 export type RaycastDifficultyId = 'assist' | 'standard' | 'hard';
 
@@ -15,6 +16,9 @@ export interface RaycastDifficultyPreset {
   directorSpawnBudgetMultiplier: number;
   directorSpawnCooldownMultiplier: number;
   directorOpeningSpawnOffset: number;
+  passiveHealDelayMs: number;
+  passiveHealPerSecond: number;
+  passiveHealMaxHealth: number;
 }
 
 export const RAYCAST_DIFFICULTY_PRESETS: RaycastDifficultyPreset[] = [
@@ -29,7 +33,10 @@ export const RAYCAST_DIFFICULTY_PRESETS: RaycastDifficultyPreset[] = [
     directorEnemyCapMultiplier: 0.8,
     directorSpawnBudgetMultiplier: 0.85,
     directorSpawnCooldownMultiplier: 1.2,
-    directorOpeningSpawnOffset: -1
+    directorOpeningSpawnOffset: -1,
+    passiveHealDelayMs: 4200,
+    passiveHealPerSecond: 2.4,
+    passiveHealMaxHealth: 75
   },
   {
     id: 'standard',
@@ -42,7 +49,10 @@ export const RAYCAST_DIFFICULTY_PRESETS: RaycastDifficultyPreset[] = [
     directorEnemyCapMultiplier: 1,
     directorSpawnBudgetMultiplier: 1,
     directorSpawnCooldownMultiplier: 1,
-    directorOpeningSpawnOffset: 0
+    directorOpeningSpawnOffset: 0,
+    passiveHealDelayMs: 5200,
+    passiveHealPerSecond: 1.8,
+    passiveHealMaxHealth: 70
   },
   {
     id: 'hard',
@@ -55,7 +65,10 @@ export const RAYCAST_DIFFICULTY_PRESETS: RaycastDifficultyPreset[] = [
     directorEnemyCapMultiplier: 1.15,
     directorSpawnBudgetMultiplier: 1.15,
     directorSpawnCooldownMultiplier: 0.88,
-    directorOpeningSpawnOffset: 0
+    directorOpeningSpawnOffset: 0,
+    passiveHealDelayMs: 7200,
+    passiveHealPerSecond: 1.1,
+    passiveHealMaxHealth: 55
   }
 ];
 
@@ -95,6 +108,17 @@ export function getRaycastDifficultyHealthPickup(
   const preset = getRaycastDifficultyPreset(difficultyId);
   return {
     restoreAmount: clampInt(Math.round(Math.max(0, pickup.restoreAmount) * preset.healthPickupMultiplier), 1, 100)
+  };
+}
+
+export function getRaycastDifficultyPassiveHealConfig(
+  difficultyId: string | null | undefined
+): RaycastPassiveHealConfig {
+  const preset = getRaycastDifficultyPreset(difficultyId);
+  return {
+    delayAfterDamageMs: preset.passiveHealDelayMs,
+    healPerSecond: preset.passiveHealPerSecond,
+    maxHealth: preset.passiveHealMaxHealth
   };
 }
 
