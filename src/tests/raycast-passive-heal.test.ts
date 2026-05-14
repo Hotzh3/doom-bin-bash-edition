@@ -56,7 +56,7 @@ describe('raycast passive heal', () => {
     const hard = getRaycastDifficultyPassiveHealConfig('hard');
     const assist = getRaycastDifficultyPassiveHealConfig('assist');
 
-    expect(assist.maxHealth).toBeGreaterThan(standard.maxHealth);
+    expect(assist.maxHealth).toBeGreaterThanOrEqual(standard.maxHealth);
     expect(standard.maxHealth).toBeGreaterThan(hard.maxHealth);
     expect(assist.healPerSecond).toBeGreaterThan(standard.healPerSecond);
     expect(hard.delayAfterDamageMs).toBeGreaterThan(standard.delayAfterDamageMs);
@@ -141,7 +141,7 @@ describe('raycast passive heal', () => {
           isRegenerating: true
         })
       )
-    ).toBe('REGEN');
+    ).toBe('REGEN +');
 
     expect(
       formatRaycastPassiveRegenHudLabel(

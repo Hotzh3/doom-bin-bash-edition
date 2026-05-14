@@ -86,13 +86,18 @@ export function buildRaycastRunSummary(input: RaycastRunSummaryInput): string[] 
       ? `BEST ${formatScoreInt(input.highScore)}`
       : null;
 
+  const sectorAccuracy =
+    input.pelletsFired && input.pelletsFired > 0
+      ? Math.round((Math.max(0, input.pelletsHitHostile ?? 0) / input.pelletsFired) * 100)
+      : null;
+
   const coreBlock = [
     scoreBlock,
     highOnly,
     rankFormatted,
     `TIME ${formatRunDuration(input.elapsedMs)}`,
-    `HOSTILES ${input.enemiesKilled}`,
-    `SECRETS ${input.secretsFound}/${input.secretTotal}  |  TOKENS ${input.tokensFound}/${input.tokenTotal}`
+    sectorAccuracy !== null ? `ACCURACY ${sectorAccuracy}%` : null,
+    `SECRETS ${input.secretsFound}/${input.secretTotal}`
   ].filter((line): line is string => line !== null);
 
   return coreBlock;

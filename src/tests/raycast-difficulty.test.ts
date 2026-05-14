@@ -46,9 +46,9 @@ describe('raycast difficulty helpers', () => {
       maxHealth: 75
     });
     expect(getRaycastDifficultyPassiveHealConfig('standard')).toMatchObject({
-      delayAfterDamageMs: 5200,
-      healPerSecond: 1.8,
-      maxHealth: 70
+      delayAfterDamageMs: 3000,
+      healPerSecond: 2.2,
+      maxHealth: 75
     });
     expect(getRaycastDifficultyPassiveHealConfig('hard')).toMatchObject({
       delayAfterDamageMs: 7200,

@@ -79,7 +79,7 @@ export function getRaycastPassiveRegenHudState(input: {
 }
 
 export function formatRaycastPassiveRegenHudLabel(state: RaycastPassiveRegenHudState): string | null {
-  if (state === 'active') return 'REGEN';
+  if (state === 'active') return 'REGEN +';
   if (state === 'blocked') return 'REGEN LOCK';
   if (state === 'waiting') return 'REGEN WAIT';
   return null;

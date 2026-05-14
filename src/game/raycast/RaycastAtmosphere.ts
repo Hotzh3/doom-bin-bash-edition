@@ -47,7 +47,7 @@ export const RAYCAST_ATMOSPHERE = {
     4: 1.0
   },
   messages: {
-    intro: 'TERMINAL CORRUPTION HELL ARENA',
+    intro: 'DOOM BIN BASH EDITION',
     idle: 'SYSTEM WATCHES',
     locked: 'ACCESS DENIED',
     key: 'ACCESS TOKEN CAPTURED',
@@ -201,8 +201,9 @@ export function getRaycastCombatMessageForSegment(
   return base;
 }
 
-export function getRaycastIntroMessageForSegment(segment: RaycastWorldSegmentId): string {
-  return getRaycastCombatMessageForSegment(segment, 'intro');
+export function getRaycastIntroMessageForSegment(segment?: RaycastWorldSegmentId): string {
+  void segment;
+  return RAYCAST_ATMOSPHERE.messages.intro;
 }
 
 export function getRaycastExitMessageForSegment(segment: RaycastWorldSegmentId): string {
@@ -212,6 +213,7 @@ export function getRaycastExitMessageForSegment(segment: RaycastWorldSegmentId):
 /** Boss-specific combat strip lines (HUD); keyed by level `bossConfig.displayName`. */
 export interface RaycastBossHudLines {
   phase2Overdrive: string;
+  phase3Overdrive: string;
   telegraphLocked: string;
   volleyInbound: string;
   hullStressed: string;
@@ -223,6 +225,7 @@ export function getRaycastBossHudLines(displayName: string): RaycastBossHudLines
   if (lower.includes('ash judge')) {
     return {
       phase2Overdrive: 'ASH HALO OVERDRIVE // PHASE 2',
+      phase3Overdrive: 'ASH VERDICT MAELSTROM // PHASE 3',
       telegraphLocked: 'JUDGE TELEGRAPH LOCKED',
       volleyInbound: 'EMBER SPIRE VOLLEY INBOUND',
       hullStressed: 'JUDGE HULL STRESSED',
@@ -232,6 +235,7 @@ export function getRaycastBossHudLines(displayName: string): RaycastBossHudLines
   if (lower.includes('bloom')) {
     return {
       phase2Overdrive: 'BLOOM OVERDRIVE // PHASE 2',
+      phase3Overdrive: 'BLOOM THORN MAELSTROM // PHASE 3',
       telegraphLocked: 'BLOOM TELEGRAPH LOCKED',
       volleyInbound: 'BLOOM VOLLEY INBOUND',
       hullStressed: 'WARDEN HULL STRESSED',
@@ -240,6 +244,7 @@ export function getRaycastBossHudLines(displayName: string): RaycastBossHudLines
   }
   return {
     phase2Overdrive: 'ARCHON CORE OVERDRIVE // PHASE 2',
+    phase3Overdrive: 'ARCHON ARC STORM // PHASE 3',
     telegraphLocked: 'ARCHON TELEGRAPH LOCKED',
     volleyInbound: 'ARCHON VOLLEY INBOUND',
     hullStressed: 'ARCHON HULL STRESSED',

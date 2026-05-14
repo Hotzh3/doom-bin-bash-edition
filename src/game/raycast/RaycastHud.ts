@@ -188,12 +188,12 @@ export function buildRaycastHudLayout(width: number, height: number): RaycastHud
   const healthBarWidth = 168;
   const healthBarTrackHeight = 10;
   const healthBarFillHeight = 6;
-  const minimapFrameWidth = compactTopRightCluster ? 156 : 178;
-  const minimapFrameHeight = compactTopRightCluster ? 122 : 138;
-  const minimapPanelWidth = compactTopRightCluster ? 144 : 164;
-  const minimapPanelHeight = compactTopRightCluster ? 104 : 120;
+  const minimapFrameWidth = compactTopRightCluster ? 194 : 232;
+  const minimapFrameHeight = compactTopRightCluster ? 152 : 182;
+  const minimapPanelWidth = compactTopRightCluster ? 178 : 212;
+  const minimapPanelHeight = compactTopRightCluster ? 132 : 158;
   const minimapFrameX = width - 16 - minimapFrameWidth * 0.5;
-  const minimapFrameTop = compactTopRightCluster ? 118 : 106;
+  const minimapFrameTop = compactTopRightCluster ? 126 : 114;
   const minimapTitleHeight = 20;
   const minimapTitleGap = compactTopRightCluster ? 12 : 6;
 
@@ -209,7 +209,7 @@ export function buildRaycastHudLayout(width: number, height: number): RaycastHud
     healthBarFillHeight,
     minimapTitleX: minimapFrameX,
     minimapTitleY: minimapFrameTop - minimapTitleGap - minimapTitleHeight * 0.5,
-    minimapTitleWidth: compactTopRightCluster ? 88 : 96,
+    minimapTitleWidth: compactTopRightCluster ? 108 : 122,
     minimapTitleHeight,
     minimapFrameX,
     minimapFrameY: minimapFrameTop + minimapFrameHeight * 0.5,
