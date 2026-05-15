@@ -11,7 +11,9 @@ import {
   buildRaycastScoreHudLine,
   buildRaycastPlayerHealthLine,
   formatRaycastObjectiveLabel,
-  getRaycastHealthVisualState
+  getRaycastHealthVisualState,
+  formatRaycastHudAmmunitionCount,
+  shouldSuppressRaycastCenterHudBanner
 } from '../game/raycast/RaycastHud';
 
 describe('raycast HUD', () => {
@@ -32,15 +34,21 @@ describe('raycast HUD', () => {
       objective: 'EXIT'
     });
 
-    expect(hud).toBe('HP 82/100 | WPN Shotgun | MODE STD | TOK 1/1 | SEC 0/1 | OBJ EXIT');
-    expect(hud.length).toBeLessThan(96);
+    expect(hud).toBe(
+      'HP 82/100 | MUNICIÓN ∞/∞ | ARMA Shotgun | MOD STD | FICHAS 1/1 | SEC 0/1 | OBJ EXIT'
+    );
+    expect(hud.length).toBeLessThan(130);
   });
 
   it('splits the readable hub into status and progress lines', () => {
-    expect(buildRaycastHudStatusLine(82, 100, 'Shotgun')).toBe('HP 82/100 STABLE  |  WPN Shotgun');
-    expect(buildRaycastHudStatusLine(82, 100, 'Shotgun', 'AST')).toBe('HP 82/100 STABLE  |  WPN Shotgun  |  MODE AST');
-    expect(buildRaycastHudStatusLine(82, 100, '', undefined)).toBe('HP 82/100 STABLE');
-    expect(buildRaycastHudProgressLine(1, 2, 0, 1, 'Reach Exit')).toBe('TOKENS 1/2  |  SECRETS 0/1  |  OBJECTIVE EXIT');
+    expect(buildRaycastHudStatusLine(82, 100, 'Shotgun')).toBe(
+      'HP 82/100 STABLE  |  MUNICIÓN ∞/∞  |  ARMA Shotgun'
+    );
+    expect(buildRaycastHudStatusLine(82, 100, 'Shotgun', 'AST')).toBe(
+      'HP 82/100 STABLE  |  MUNICIÓN ∞/∞  |  ARMA Shotgun  |  MOD AST'
+    );
+    expect(buildRaycastHudStatusLine(82, 100, '', undefined)).toBe('HP 82/100 STABLE  |  MUNICIÓN ∞/∞');
+    expect(buildRaycastHudProgressLine(1, 2, 0, 1)).toBe('FICHAS 1/2  |  SECRETOS 0/1');
   });
 
   it('marks critical health without expanding the HUD too much', () => {
@@ -57,10 +65,10 @@ describe('raycast HUD', () => {
     });
 
     expect(hud).toContain('HP 18/100 CRIT');
-    expect(hud).toContain('MODE HRD');
+    expect(hud).toContain('MOD HRD');
     expect(hud).toContain('OBJ TOKEN');
     expect(hud).toContain('MSG CRITICAL BODY STATE');
-    expect(hud.length).toBeLessThan(108);
+    expect(hud.length).toBeLessThan(150);
   });
 
   it('keeps normal HUD free from debug internals', () => {
@@ -129,6 +137,46 @@ describe('raycast HUD', () => {
     expect(buildRaycastFocusedEnemyLine({ kind: 'BRUTE', health: 120, maxHealth: 190, isWindingUp: false })).toContain(
       'BRUTE·DEN'
     );
+  });
+
+  it('shows a single HUD ammo read in the primary status strip', () => {
+    const line = buildRaycastHudStatusLine(90, 100, 'Pistol', 'STD');
+    expect(line.match(/MUNICIÓN/g)?.length).toBe(1);
+    expect(line).toContain(`MUNICIÓN ${formatRaycastHudAmmunitionCount()}/${formatRaycastHudAmmunitionCount()}`);
+    expect(line).not.toMatch(/WPN\b/);
+  });
+
+  it('embeds live ammo counts once when provided', () => {
+    const line = buildRaycastHudStatusLine(80, 120, 'Rifle', 'HRD', { current: 4, capacity: 8, reloading: false });
+    expect(line.match(/MUNICIÓN/g)?.length).toBe(1);
+    expect(line).toContain('MUNICIÓN 4/8');
+  });
+
+  it('suppresses center HUD banner during active gameplay', () => {
+    expect(
+      shouldSuppressRaycastCenterHudBanner({
+        playerAlive: true,
+        levelComplete: false,
+        gamePaused: false,
+        endScreenVisible: false
+      })
+    ).toBe(true);
+    expect(
+      shouldSuppressRaycastCenterHudBanner({
+        playerAlive: true,
+        levelComplete: false,
+        gamePaused: true,
+        endScreenVisible: false
+      })
+    ).toBe(true);
+    expect(
+      shouldSuppressRaycastCenterHudBanner({
+        playerAlive: false,
+        levelComplete: false,
+        gamePaused: false,
+        endScreenVisible: false
+      })
+    ).toBe(false);
   });
 
   it('builds a compact minimap legend line for key markers', () => {

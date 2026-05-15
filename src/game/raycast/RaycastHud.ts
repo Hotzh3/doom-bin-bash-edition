@@ -117,16 +117,29 @@ export function formatRaycastObjectiveLabel(objective: string): string {
   return normalized;
 }
 
+/** Infinity glyph when no concrete ammo slice is injected into the status builder. */
+export function formatRaycastHudAmmunitionCount(): string {
+  return '∞';
+}
+
+export interface RaycastHudStatusAmmo {
+  current: number;
+  capacity: number;
+  reloading: boolean;
+}
+
 export function buildRaycastHudLine(state: RaycastHudState): string {
   const healthLabel = buildRaycastPlayerHealthLine({ health: state.health })
     .replace(' CRITICAL', ' CRIT')
     .replace(' STABLE', '')
     .replace(' LOW', ' LOW');
+  const ammo = formatRaycastHudAmmunitionCount();
   return [
     healthLabel,
-    `WPN ${state.weaponLabel}`,
-    state.difficultyLabel ? `MODE ${state.difficultyLabel}` : null,
-    `TOK ${state.keyCount}/${state.keyTotal}`,
+    `MUNICIÓN ${ammo}/${ammo}`,
+    `ARMA ${state.weaponLabel}`,
+    state.difficultyLabel ? `MOD ${state.difficultyLabel}` : null,
+    `FICHAS ${state.keyCount}/${state.keyTotal}`,
     `SEC ${state.secretCount}/${state.secretTotal}`,
     `OBJ ${formatRaycastObjectiveLabel(state.objective)}`,
     state.criticalMessage ? `MSG ${state.criticalMessage}` : null
@@ -153,28 +166,40 @@ export interface RaycastHudSummaryState {
   criticalMessage?: string;
 }
 
-export function buildRaycastHudStatusLine(health: number, maxHealth: number, weaponLabel: string, difficultyLabel?: string): string {
+export function buildRaycastHudStatusLine(
+  health: number,
+  maxHealth: number,
+  weaponLabel: string,
+  difficultyLabel?: string,
+  ammo?: RaycastHudStatusAmmo
+): string {
+  const ammoStr = ammo
+    ? `${ammo.current}/${ammo.capacity}${ammo.reloading ? ' RECARGANDO' : ''}`
+    : `${formatRaycastHudAmmunitionCount()}/${formatRaycastHudAmmunitionCount()}`;
   return [
     buildRaycastPlayerHealthLine({ health, maxHealth }),
-    weaponLabel.trim().length > 0 ? `WPN ${weaponLabel}` : null,
-    difficultyLabel ? `MODE ${difficultyLabel}` : null
+    `MUNICIÓN ${ammoStr}`,
+    weaponLabel.trim().length > 0 ? `ARMA ${weaponLabel}` : null,
+    difficultyLabel ? `MOD ${difficultyLabel}` : null
   ]
     .filter((part): part is string => part !== null)
     .join('  |  ');
 }
 
-export function buildRaycastHudProgressLine(
-  keyCount: number,
-  keyTotal: number,
-  secretCount: number,
-  secretTotal: number,
-  objective: string
-): string {
-  return [
-    `TOKENS ${keyCount}/${keyTotal}`,
-    `SECRETS ${secretCount}/${secretTotal}`,
-    `OBJECTIVE ${formatRaycastObjectiveLabel(objective)}`
-  ].join('  |  ');
+/** Secondary HUD strip (warm tone) — tokens/secrets only; objective lives in pause menu. */
+export function buildRaycastHudProgressLine(keyCount: number, keyTotal: number, secretCount: number, secretTotal: number): string {
+  return [`FICHAS ${keyCount}/${keyTotal}`, `SECRETOS ${secretCount}/${secretTotal}`].join('  |  ');
+}
+
+/** Hide center headline stack during gameplay; banners stay for overlays/menus elsewhere. */
+export function shouldSuppressRaycastCenterHudBanner(input: {
+  playerAlive: boolean;
+  levelComplete: boolean;
+  gamePaused: boolean;
+  endScreenVisible: boolean;
+}): boolean {
+  if (input.gamePaused || input.endScreenVisible) return true;
+  return Boolean(input.playerAlive && !input.levelComplete);
 }
 
 export function buildRaycastMinimapLegendLine(minimapToggleKey = 'M'): string {
@@ -234,13 +259,7 @@ export function buildRaycastDebugLine(state: RaycastDebugHudState): string {
 export function buildRaycastHudSummary(state: RaycastHudSummaryState): string[] {
   const lines = [
     buildRaycastHudStatusLine(state.health, 100, state.weaponLabel, state.difficultyLabel),
-    buildRaycastHudProgressLine(
-      state.keyCount,
-      state.keyTotal,
-      state.secretCount,
-      state.secretTotal,
-      state.objective
-    )
+    buildRaycastHudProgressLine(state.keyCount, state.keyTotal, state.secretCount, state.secretTotal)
   ];
 
   if (state.criticalMessage) {

@@ -3,24 +3,24 @@
  */
 import {
   RAYCAST_MAP_BOSS,
-  RAYCAST_MAP_LEVEL_7,
-  RAYCAST_MAP_LEVEL_8,
+  RAYCAST_MAP_LEVEL_1,
+  RAYCAST_MAP_LEVEL_5,
   RAYCAST_PLAYER_START_BOSS,
-  RAYCAST_PLAYER_START_LEVEL_7,
-  RAYCAST_PLAYER_START_LEVEL_8
+  RAYCAST_PLAYER_START_LEVEL_1,
+  RAYCAST_PLAYER_START_LEVEL_5
 } from './RaycastMap';
 import type { RaycastLevel } from './RaycastLevel';
 
 const FRACTURE_DIRECTOR = {
   enabled: true as const,
   config: {
-    maxEnemiesAlive: 6,
-    maxTotalSpawns: 13,
+    maxEnemiesAlive: 5,
+    maxTotalSpawns: 11,
     openingSpawnCount: 0,
-    baseSpawnCooldownMs: 4200,
-    buildUpSpawnCooldownMs: 3150,
-    ambushSpawnCooldownMs: 1660,
-    highIntensitySpawnCooldownMs: 2720,
+    baseSpawnCooldownMs: 4600,
+    buildUpSpawnCooldownMs: 3500,
+    ambushSpawnCooldownMs: 1880,
+    highIntensitySpawnCooldownMs: 3050,
     recoveryDurationMs: 5400,
     ambushDurationMs: 6400,
     highIntensityDurationMs: 9200,
@@ -33,7 +33,7 @@ const FRACTURE_DIRECTOR = {
   },
   spawnPoints: [
     { id: 'm-start', zoneId: 'm-start', x: 3.5, y: 11.5, minPlayerDistance: 2.0 },
-    { id: 'm-hall', zoneId: 'm-hall', x: 11.5, y: 9.5, minPlayerDistance: 1.9 },
+    { id: 'm-hall', zoneId: 'm-hall', x: 9.5, y: 8.5, minPlayerDistance: 1.9 },
     { id: 'm-arena', zoneId: 'm-arena', x: 14.5, y: 11.5, minPlayerDistance: 2.1 },
     { id: 'm-east', zoneId: 'm-east', x: 22.5, y: 10.5, minPlayerDistance: 2.0 },
     { id: 'm-drain', zoneId: 'm-drain', x: 10.5, y: 14.5, minPlayerDistance: 2.0 }
@@ -46,16 +46,16 @@ export const RAYCAST_LEVEL_WORLD3_EMBER_RAMP: RaycastLevel = {
   name: 'Ember Meridian — Cinder Ramp',
   episodeTheme: 'meridian-ramp',
   worldSegment: 'world3',
-  map: RAYCAST_MAP_LEVEL_8,
-  playerStart: RAYCAST_PLAYER_START_LEVEL_8,
+  map: RAYCAST_MAP_LEVEL_1,
+  playerStart: RAYCAST_PLAYER_START_LEVEL_1,
   zones: [
     { id: 'm-start', x: 2.5, y: 12.3, width: 3.2, height: 1.4, visualTheme: 'ash-conduit' },
     { id: 'm-hall', x: 3.0, y: 9.2, width: 4.8, height: 5.2, visualTheme: 'ember-vault' },
     { id: 'm-key', x: 4.5, y: 3.8, width: 3.4, height: 2.8, visualTheme: 'ash-conduit', landmark: 'key' },
     { id: 'm-gate', x: 8.0, y: 7.5, width: 2.0, height: 1.8, visualTheme: 'warning-amber', landmark: 'gate' },
-    { id: 'm-arena', x: 14.8, y: 9.6, width: 4.2, height: 5.2, visualTheme: 'ember-vault', landmark: 'ritual' },
+    { id: 'm-arena', x: 14.8, y: 9.6, width: 4.2, height: 5.2, visualTheme: 'ember-vault', landmark: 'ambush' },
     { id: 'm-secret', x: 6.1, y: 12.3, width: 2.6, height: 1.4, visualTheme: 'void-stone', landmark: 'secret' },
-    { id: 'm-drain', x: 9.5, y: 15.5, width: 5.4, height: 2.2, visualTheme: 'ash-conduit', landmark: 'machinery' },
+    { id: 'm-drain', x: 9.5, y: 15.5, width: 5.4, height: 2.2, visualTheme: 'ash-conduit', landmark: 'ambush' },
     { id: 'm-exit', x: 16.2, y: 2.2, width: 1.8, height: 2.4, visualTheme: 'exit-portal', landmark: 'exit' }
   ],
   keys: [
@@ -116,7 +116,7 @@ export const RAYCAST_LEVEL_WORLD3_EMBER_RAMP: RaycastLevel = {
         { x: 10.5, y: 7.5, kind: 'SCRAMBLER' },
         { x: 13.5, y: 9.5, kind: 'GRUNT' },
         { x: 13.5, y: 7.5, kind: 'RANGED' },
-        { x: 12.5, y: 9.5, kind: 'SCRAMBLER' }
+        { x: 9.5, y: 8.5, kind: 'SCRAMBLER' }
       ]
     },
     {
@@ -245,8 +245,8 @@ export const RAYCAST_LEVEL_WORLD3_GATE_CUT: RaycastLevel = {
   name: 'Ember Meridian — Gate Cut',
   episodeTheme: 'meridian-gate',
   worldSegment: 'world3',
-  map: RAYCAST_MAP_LEVEL_7,
-  playerStart: RAYCAST_PLAYER_START_LEVEL_7,
+  map: RAYCAST_MAP_LEVEL_5,
+  playerStart: RAYCAST_PLAYER_START_LEVEL_5,
   zones: [
     { id: 'mg-start', x: 1.5, y: 11.5, width: 5.5, height: 5.0, visualTheme: 'ash-conduit' },
     { id: 'mg-sump', x: 1.0, y: 8.5, width: 6.0, height: 3.2, visualTheme: 'ember-vault' },
@@ -299,7 +299,7 @@ export const RAYCAST_LEVEL_WORLD3_GATE_CUT: RaycastLevel = {
         { x: 10.5, y: 9.5, kind: 'RANGED' },
         { x: 11.5, y: 6.5, kind: 'SCRAMBLER' },
         { x: 10.5, y: 10.5, kind: 'SCRAMBLER' },
-        { x: 12.5, y: 9.5, kind: 'BRUTE' }
+        { x: 8.5, y: 7.5, kind: 'BRUTE' }
       ]
     },
     {
@@ -429,8 +429,8 @@ export const RAYCAST_LEVEL_WORLD3_GATE_CUT: RaycastLevel = {
     },
     spawnPoints: [
       { id: 'mg-sp-a', zoneId: 'mg-start', x: 3.5, y: 11.5, minPlayerDistance: 2.0 },
-      { id: 'mg-sp-b', zoneId: 'mg-ring', x: 14.5, y: 5.5, minPlayerDistance: 2.0 },
-      { id: 'mg-sp-c', zoneId: 'mg-threshold', x: 12.5, y: 9.5, minPlayerDistance: 1.9 }
+      { id: 'mg-sp-b', zoneId: 'mg-ring', x: 10.5, y: 9.5, minPlayerDistance: 2.0 },
+      { id: 'mg-sp-c', zoneId: 'mg-threshold', x: 9.5, y: 9.5, minPlayerDistance: 1.9 }
     ]
   }
 };
@@ -444,7 +444,7 @@ export const RAYCAST_LEVEL_WORLD3_ASH_JUDGE: RaycastLevel = {
   map: RAYCAST_MAP_BOSS,
   playerStart: RAYCAST_PLAYER_START_BOSS,
   zones: [
-    { id: 'aj-arena', x: 1.0, y: 1.0, width: 13.0, height: 13.0, visualTheme: 'ember-vault', landmark: 'core' },
+    { id: 'aj-arena', x: 1.0, y: 1.0, width: 13.0, height: 13.0, visualTheme: 'ember-vault', landmark: 'ambush' },
     { id: 'aj-exit', x: 11.0, y: 6.0, width: 3.0, height: 3.0, visualTheme: 'ash-conduit', landmark: 'exit' }
   ],
   keys: [],
@@ -512,8 +512,8 @@ export const RAYCAST_LEVEL_WORLD3_ASH_JUDGE: RaycastLevel = {
     displayName: 'Ash Judge',
     x: 7.5,
     y: 7.5,
-    maxHealth: 1080,
-    hitRadius: 0.82,
+    maxHealth: 430,
+    hitRadius: 0.52,
     behavior: 'ash-judge'
   },
   director: {
