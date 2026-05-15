@@ -29,11 +29,12 @@ export const RAYCAST_PAUSE_MENU_ACTIONS: RaycastPauseMenuAction[] = [
   'debug'
 ];
 
-const COL_W = 28;
+const DEFAULT_COL_CHARS = 34;
 
-function padCol(text: string, width: number): string {
-  const t = text.length > width ? `${text.slice(0, width - 1)}…` : text;
-  return t + ' '.repeat(Math.max(0, width - t.length));
+export function truncatePauseField(text: string, maxChars: number): string {
+  const t = text.replace(/\s+/g, ' ').trim();
+  if (t.length <= maxChars) return t;
+  return `${t.slice(0, Math.max(1, maxChars - 1))}…`;
 }
 
 export interface RaycastPauseMenuMxModel {
@@ -51,47 +52,38 @@ export interface RaycastPauseMenuMxModel {
   modifiersLine: string;
 }
 
+/**
+ * Texto del menú de pausa: dos columnas (PARTIDA | OBJETIVO), controles en una línea, lista de menú.
+ * Pensado para panel central estrecho; truncado por columna.
+ */
 export function formatRaycastPauseMenuMxBody(
   model: RaycastPauseMenuMxModel,
   opts?: { columnChars?: number }
 ): string {
-  const colW = opts?.columnChars ?? COL_W;
-  const joiner = '  │  ';
-  const cRun = [
-    'RUN',
-    `Mundo / Nivel · ${model.worldLine}`,
-    `Dificultad · ${model.difficultyLabel}`,
-    `Puntaje · ${model.score}`,
-    `Mejor puntaje · ${model.highScore}`
-  ];
-  const cObj = [
-    'OBJETIVO',
-    `Misión · ${model.missionLine}`,
-    `Objetivo · ${model.objectiveLine}`,
-    `Pista · ${model.hintLine}`
-  ];
-  const cPro = ['PROGRESO', model.tokensLine, model.secretsLine, model.modifiersLine];
-  const cCtl = [
-    'CONTROLES',
-    'WASD · mover',
-    'Mouse · mirar',
-    '1 / 2 / 3 · armas',
-    'R · recargar',
-    'T · reiniciar nivel',
-    'ESC · pausa'
-  ];
+  const w = opts?.columnChars ?? DEFAULT_COL_CHARS;
+  const L = (s: string) => truncatePauseField(s, w);
+  const col = (left: string, right: string) => `${left.padEnd(w)} │ ${right}`;
 
-  const rowCount = Math.max(cRun.length, cObj.length, cPro.length, cCtl.length);
-  const grid: string[] = [];
-  for (let i = 0; i < rowCount; i += 1) {
-    grid.push(
-      [
-        padCol(cRun[i] ?? '', colW),
-        padCol(cObj[i] ?? '', colW),
-        padCol(cPro[i] ?? '', colW),
-        padCol(cCtl[i] ?? '', colW)
-      ].join(joiner)
-    );
+  const leftBlock = [
+    '// PARTIDA',
+    L(`Mundo · ${model.worldLine}`),
+    L(`Dificultad · ${model.difficultyLabel}`),
+    L(`Puntaje · ${model.score}`),
+    L(`Mejor puntaje · ${model.highScore}`),
+    L(model.tokensLine),
+    L(model.secretsLine)
+  ];
+  const rightBlock = [
+    '// OBJETIVO',
+    L(`Misión · ${model.missionLine}`),
+    L(`Objetivo · ${model.objectiveLine}`),
+    L(`Pista · ${model.hintLine}`),
+    L(`Modificadores · ${model.modifiersLine}`)
+  ];
+  const n = Math.max(leftBlock.length, rightBlock.length);
+  const pairLines: string[] = [];
+  for (let i = 0; i < n; i += 1) {
+    pairLines.push(col(leftBlock[i] ?? '', rightBlock[i] ?? ''));
   }
 
   const menuLines = RAYCAST_PAUSE_MENU_LABELS.map((label, i) => {
@@ -100,14 +92,16 @@ export function formatRaycastPauseMenuMxBody(
   });
 
   return [
-    '// PAUSA — ENTRADA BLOQUEADA',
     `VOLUMEN MAESTRO ${model.volumePct}%`,
     '',
-    ...grid,
+    ...pairLines,
+    '',
+    'CONTROLES',
+    'WASD mover | Mouse mirar | 1/2/3 armas | R recargar | T reiniciar nivel | ESC pausa',
     '',
     '// MENÚ',
     ...menuLines,
     '',
-    '// ↑ / ↓ · menú    ENTER · aplicar    ESC · cerrar'
+    '↑ / ↓ elegir · ENTER aplicar · ESC cerrar'
   ].join('\n');
 }
