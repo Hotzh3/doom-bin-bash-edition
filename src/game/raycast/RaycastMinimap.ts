@@ -84,27 +84,40 @@ export function buildStaticRaycastMinimapCells(state: Pick<RaycastMinimapState, 
   return cells;
 }
 
+function isSecretZoneRevealed(
+  level: RaycastLevel,
+  zone: { x: number; y: number; width: number; height: number },
+  collectedSecretIds: Set<string>
+): boolean {
+  const cx = zone.x + zone.width * 0.5;
+  const cy = zone.y + zone.height * 0.5;
+  const gate = Math.hypot(zone.width, zone.height) * 0.55 + 1.35;
+  return level.secrets.some((secret) => {
+    if (!collectedSecretIds.has(secret.id)) return false;
+    const dx = secret.x - cx;
+    const dy = secret.y - cy;
+    return Math.hypot(dx, dy) <= gate + (secret.radius ?? 0);
+  });
+}
+
 export function buildRaycastMinimapModel(state: RaycastMinimapState): RaycastMinimapModel {
   const collectedKeyIds = new Set(state.collectedKeyIds);
   const openDoorIds = new Set(state.openDoorIds);
   const collectedSecretIds = new Set(state.collectedSecretIds);
   const cells = state.staticCells ?? buildStaticRaycastMinimapCells(state);
-
   const landmarkMarkers: RaycastMinimapMarker[] = state.level.zones
-    .filter((zone) => zone.landmark && zone.landmark !== 'none')
-    .map((zone) => {
-      const landmark = zone.landmark!;
-      const centerX = zone.x + zone.width * 0.5;
-      const centerY = zone.y + zone.height * 0.5;
-      const isSecret = landmark === 'secret';
-      return {
-        kind: 'landmark' as const,
-        x: centerX,
-        y: centerY,
-        label: buildRaycastLandmarkMarkerLabel(zone.id, landmark),
-        active: !isSecret || collectedSecretIds.size > 0
-      };
-    });
+    .filter((zone) => zone.landmark)
+    .filter((zone) => {
+      if (zone.landmark !== 'secret') return true;
+      return isSecretZoneRevealed(state.level, zone, collectedSecretIds);
+    })
+    .map((zone) => ({
+      kind: 'landmark' as const,
+      x: zone.x + zone.width * 0.5,
+      y: zone.y + zone.height * 0.5,
+      label: buildRaycastLandmarkMarkerLabel(zone.id, zone.landmark!),
+      active: true
+    }));
 
   const markers: RaycastMinimapMarker[] = [
     {

@@ -2,12 +2,12 @@
 
 export const RAYCAST_PAUSE_MENU_LABELS = [
   'Reanudar',
-  'Reiniciar Nivel',
-  'Menú Principal',
-  'Subir Volumen',
-  'Bajar Volumen',
-  'Mostrar/Ocultar Minimap',
-  'Mostrar/Ocultar HUD Debug'
+  'Reiniciar nivel',
+  'Menú principal',
+  'Subir volumen',
+  'Bajar volumen',
+  'Alternar minimapa',
+  'Alternar HUD debug'
 ] as const;
 
 export type RaycastPauseMenuAction =
@@ -29,41 +29,76 @@ export const RAYCAST_PAUSE_MENU_ACTIONS: RaycastPauseMenuAction[] = [
   'debug'
 ];
 
-export interface RaycastPauseMenuRunInfo {
-  mission: string;
-  objective: string;
-  hint: string;
-  difficulty: string;
-  levelWorld: string;
-  score: number;
-  highScore: number;
-  tokens: string;
-  secrets: string;
-  modifiers: string;
+const COL_W = 28;
+
+function padCol(text: string, width: number): string {
+  const t = text.length > width ? `${text.slice(0, width - 1)}…` : text;
+  return t + ' '.repeat(Math.max(0, width - t.length));
 }
 
-export function formatRaycastPauseMenuBody(volumePct: number, selectionIndex: number, info: RaycastPauseMenuRunInfo): string {
-  const lines = RAYCAST_PAUSE_MENU_LABELS.map((label, i) => {
-    const prefix = i === selectionIndex ? '> ' : '  ';
+export interface RaycastPauseMenuMxModel {
+  volumePct: number;
+  selectionIndex: number;
+  worldLine: string;
+  difficultyLabel: string;
+  score: number;
+  highScore: number;
+  missionLine: string;
+  objectiveLine: string;
+  hintLine: string;
+  tokensLine: string;
+  secretsLine: string;
+  modifiersLine: string;
+}
+
+export function formatRaycastPauseMenuMxBody(model: RaycastPauseMenuMxModel): string {
+  const cRun = [
+    'RUN',
+    `Mundo / Nivel · ${model.worldLine}`,
+    `Dificultad · ${model.difficultyLabel}`,
+    `Puntaje · ${model.score}`,
+    `Mejor puntaje · ${model.highScore}`,
+    ''
+  ];
+  const cObj = ['OBJETIVO', `Misión · ${model.missionLine}`, `Objetivo · ${model.objectiveLine}`, `Pista · ${model.hintLine}`, '', ''];
+  const cPro = ['PROGRESO', model.tokensLine, model.secretsLine, model.modifiersLine, '', ''];
+  const cCtl = [
+    'CONTROLES',
+    'WASD · mover',
+    'Mouse · mirar',
+    '1 / 2 / 3 · armas',
+    'R · recargar',
+    'T · reiniciar nivel',
+    'ESC · pausa'
+  ];
+
+  const rowCount = 6;
+  const grid: string[] = [];
+  for (let i = 0; i < rowCount; i += 1) {
+    grid.push(
+      [
+        padCol(cRun[i] ?? '', COL_W),
+        padCol(cObj[i] ?? '', COL_W),
+        padCol(cPro[i] ?? '', COL_W),
+        padCol(cCtl[i] ?? '', COL_W)
+      ].join('  ')
+    );
+  }
+
+  const menuLines = RAYCAST_PAUSE_MENU_LABELS.map((label, i) => {
+    const prefix = i === model.selectionIndex ? '> ' : '  ';
     return `${prefix}${label}`;
   });
+
   return [
-    '// SISTEMA EN PAUSA — ENTRADA BLOQUEADA',
-    `MISIÓN: ${info.mission}`,
-    `OBJETIVO ACTUAL: ${info.objective}`,
-    `PISTA: ${info.hint}`,
-    `DIFICULTAD: ${info.difficulty}`,
-    `NIVEL/MUNDO: ${info.levelWorld}`,
-    `PUNTAJE: ${Math.max(0, Math.floor(info.score))}`,
-    `MEJOR PUNTAJE: ${Math.max(0, Math.floor(info.highScore))}`,
-    `TOKENS: ${info.tokens}`,
-    `SECRETOS: ${info.secrets}`,
-    `MODIFICADORES ACTIVOS: ${info.modifiers}`,
-    'CONTROLES: WASD MOVER | MOUSE MIRAR | 1/2/3 ARMAS | R RECARGAR | ESC PAUSA',
-    `VOLUMEN MAESTRO ${volumePct}%`,
+    '// PAUSA — ENTRADA BLOQUEADA',
+    `VOLUMEN MAESTRO ${model.volumePct}%`,
     '',
-    ...lines,
+    ...grid,
     '',
-    '// ARRIBA/ABAJO seleccionar · ENTER confirmar · ESC reanudar'
+    '// MENÚ',
+    ...menuLines,
+    '',
+    '// ↑/↓ elegir · ENTER confirmar · ESC continuar'
   ].join('\n');
 }

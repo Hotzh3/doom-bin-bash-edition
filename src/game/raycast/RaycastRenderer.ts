@@ -290,6 +290,7 @@ export class RaycastRenderer {
           height * 0.5 - size * 0.89
         );
       }
+      projection.screenX = savedEnemyX;
     }
   }
 

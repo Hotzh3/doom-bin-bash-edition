@@ -8,7 +8,8 @@ import {
 } from '../raycast/RaycastDifficulty';
 import { buildMainMenuLayout, getMainMenuCopy } from '../raycast/RaycastPresentation';
 import { RAYCAST_CSS, RAYCAST_PALETTE } from '../raycast/RaycastPalette';
-import { resolveRaycastBossShortcutLevelId } from '../raycast/RaycastBossShortcuts';
+import { createEmptyCampaignMetrics } from '../raycast/RaycastScore';
+import { getRaycastBossLevelId, type RaycastBossShortcutSlot } from '../raycast/RaycastBossShortcuts';
 
 const MENU_BACKGROUND = RAYCAST_PALETTE.voidBlack;
 const MENU_CYAN = RAYCAST_PALETTE.plasmaBright;
@@ -20,7 +21,6 @@ export class MenuScene extends Phaser.Scene {
   private inputListenersRegistered = false;
   private audioFeedback!: AudioFeedbackSystem;
   private difficultyHintText!: Phaser.GameObjects.Text;
-  private lastDevShortcutAt = 0;
 
   private readonly handleStartRaycast = (): void => {
     this.playFeedbackEvent('difficultyStart');
@@ -28,21 +28,35 @@ export class MenuScene extends Phaser.Scene {
     this.scene.start('PrologueScene', { difficultyId });
   };
 
+  private startRaycastBoss(slot: RaycastBossShortcutSlot): void {
+    const difficultyId = getRaycastDifficultyPreset(this.registry.get(RAYCAST_DIFFICULTY_REGISTRY_KEY)).id;
+    this.scene.start('RaycastScene', {
+      levelId: getRaycastBossLevelId(slot),
+      difficultyId,
+      carryScore: 0,
+      carryCampaignMetrics: createEmptyCampaignMetrics(),
+      rewardTier: 0,
+      runModifierId: null
+    });
+  }
+
+  private readonly handleBossMenuOne = (): void => {
+    this.startRaycastBoss(1);
+  };
+
+  private readonly handleBossMenuTwo = (): void => {
+    this.startRaycastBoss(2);
+  };
+
+  private readonly handleBossMenuThree = (): void => {
+    this.startRaycastBoss(3);
+  };
+
   private readonly handleCycleDifficulty = (): void => {
     const next = cycleRaycastDifficulty(this.registry.get(RAYCAST_DIFFICULTY_REGISTRY_KEY));
     this.registry.set(RAYCAST_DIFFICULTY_REGISTRY_KEY, next.id);
     this.difficultyHintText.setText(this.buildDifficultyMenuLine());
     this.playFeedbackEvent('difficultySelect');
-  };
-
-  private readonly handleDevBossShortcut = (event: KeyboardEvent): void => {
-    const levelId = resolveRaycastBossShortcutLevelId(event);
-    if (!levelId) return;
-    const now = this.time.now;
-    if (now - this.lastDevShortcutAt < 140) return;
-    this.lastDevShortcutAt = now;
-    const difficultyId = getRaycastDifficultyPreset(this.registry.get(RAYCAST_DIFFICULTY_REGISTRY_KEY)).id;
-    this.scene.start('RaycastScene', { levelId, difficultyId });
   };
 
   private buildDifficultyMenuLine(): string {
@@ -166,7 +180,9 @@ export class MenuScene extends Phaser.Scene {
     kb?.once('keydown-a', this.handleStartRaycast);
     kb?.on('keydown-D', this.handleCycleDifficulty);
     kb?.on('keydown-d', this.handleCycleDifficulty);
-    kb?.on('keydown', this.handleDevBossShortcut);
+    kb?.on('keydown-FOUR', this.handleBossMenuOne);
+    kb?.on('keydown-FIVE', this.handleBossMenuTwo);
+    kb?.on('keydown-SIX', this.handleBossMenuThree);
     this.inputListenersRegistered = true;
   }
 
@@ -177,7 +193,9 @@ export class MenuScene extends Phaser.Scene {
     kb?.off('keydown-a', this.handleStartRaycast);
     kb?.off('keydown-D', this.handleCycleDifficulty);
     kb?.off('keydown-d', this.handleCycleDifficulty);
-    kb?.off('keydown', this.handleDevBossShortcut);
+    kb?.off('keydown-FOUR', this.handleBossMenuOne);
+    kb?.off('keydown-FIVE', this.handleBossMenuTwo);
+    kb?.off('keydown-SIX', this.handleBossMenuThree);
     this.inputListenersRegistered = false;
   }
 

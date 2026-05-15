@@ -33,7 +33,7 @@ describe('raycast presentation helpers', () => {
       levelName: 'Lower Relay'
     });
 
-    expect(banner).toContain('CINDER FORGE STRATUM');
+    expect(banner).toContain('EP 1 // CINDER FORGE STRATUM');
     expect(banner).toContain('LVL 2/2 LOWER RELAY');
     expect(banner).not.toContain('MOVE WASD');
   });

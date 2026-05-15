@@ -8,7 +8,8 @@ import {
   RUN_MODIFIER_ROULETTE,
   type RunModifierId
 } from '../raycast/RunModifierRoulette';
-import { resolveRaycastBossShortcutLevelId } from '../raycast/RaycastBossShortcuts';
+import { createEmptyCampaignMetrics } from '../raycast/RaycastScore';
+import { getRaycastBossLevelId, type RaycastBossShortcutSlot } from '../raycast/RaycastBossShortcuts';
 
 const BG = RAYCAST_PALETTE.voidBlack;
 const BODY_COLOR = RAYCAST_CSS.bodyText;
@@ -37,11 +38,28 @@ export class PrologueScene extends Phaser.Scene {
     this.scene.start('MenuScene');
   };
 
-  private readonly handleBossShortcut = (event: KeyboardEvent): void => {
-    const levelId = resolveRaycastBossShortcutLevelId(event);
-    if (!levelId) return;
+  private jumpToBossFromPrologue(slot: RaycastBossShortcutSlot): void {
     this.cleanupInputListeners();
-    this.scene.start('RaycastScene', { levelId, difficultyId: this.difficultyId, runModifierId: this.runModifierId });
+    this.scene.start('RaycastScene', {
+      levelId: getRaycastBossLevelId(slot),
+      difficultyId: this.difficultyId,
+      carryScore: 0,
+      carryCampaignMetrics: createEmptyCampaignMetrics(),
+      rewardTier: 0,
+      runModifierId: this.runModifierId
+    });
+  }
+
+  private readonly handlePrologueBossOne = (): void => {
+    this.jumpToBossFromPrologue(1);
+  };
+
+  private readonly handlePrologueBossTwo = (): void => {
+    this.jumpToBossFromPrologue(2);
+  };
+
+  private readonly handlePrologueBossThree = (): void => {
+    this.jumpToBossFromPrologue(3);
   };
 
   constructor() {
@@ -190,7 +208,9 @@ export class PrologueScene extends Phaser.Scene {
     kb?.on('keydown-r', this.handleRollModifier);
     kb?.on('keydown-N', this.handleClearModifier);
     kb?.on('keydown-n', this.handleClearModifier);
-    kb?.on('keydown', this.handleBossShortcut);
+    kb?.on('keydown-FOUR', this.handlePrologueBossOne);
+    kb?.on('keydown-FIVE', this.handlePrologueBossTwo);
+    kb?.on('keydown-SIX', this.handlePrologueBossThree);
 
     kb?.once('keydown-ESC', this.handleBackToMenu);
 
@@ -211,7 +231,9 @@ export class PrologueScene extends Phaser.Scene {
     kb?.off('keydown-r', this.handleRollModifier);
     kb?.off('keydown-N', this.handleClearModifier);
     kb?.off('keydown-n', this.handleClearModifier);
-    kb?.off('keydown', this.handleBossShortcut);
+    kb?.off('keydown-FOUR', this.handlePrologueBossOne);
+    kb?.off('keydown-FIVE', this.handlePrologueBossTwo);
+    kb?.off('keydown-SIX', this.handlePrologueBossThree);
     kb?.off('keydown-ESC', this.handleBackToMenu);
 
     this.inputListenersRegistered = false;
