@@ -158,12 +158,16 @@ export function damageRaycastBoss(
 ): boolean {
   if (!state.alive || amount <= 0) return false;
   const phaseBefore = state.phase;
+  const chunkThreshold = Math.max(1, Math.ceil(state.maxHealth * 0.14));
+  const heavyHit = state.health > amount && amount >= chunkThreshold;
   state.health = Math.max(0, state.health - amount);
-  state.hitFlashUntil = time + 230;
+  const impactHeavy = state.health > 0 && heavyHit;
+  state.hitFlashUntil = time + 230 + (impactHeavy ? 118 : 0);
   syncRaycastBossPhase(state);
   if (knockback && state.health > 0) {
     const resist = 0.27;
-    const push = Math.min(0.048, 0.008 + amount * 0.00032) * resist;
+    const pushMul = impactHeavy ? 1.48 : 1;
+    const push = Math.min(0.048, 0.008 + amount * 0.00032) * resist * pushMul;
     const dx = state.x - knockback.fromX;
     const dy = state.y - knockback.fromY;
     const len = Math.hypot(dx, dy) || 1;

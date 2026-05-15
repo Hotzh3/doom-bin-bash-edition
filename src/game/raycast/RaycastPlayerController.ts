@@ -5,7 +5,8 @@ import {
   getCameraRelativeInput,
   moveWithWallSlide,
   RAYCAST_MOVEMENT,
-  updateRaycastVelocity
+  updateRaycastVelocity,
+  type RaycastMovementConfig
 } from './RaycastMovement';
 import type { MovementVector } from '../systems/MovementSystem';
 
@@ -26,7 +27,8 @@ export class RaycastPlayerController {
     private readonly scene: Phaser.Scene,
     private readonly map: RaycastMap,
     private readonly state: RaycastPlayerState,
-    private readonly config = RAYCAST_MOVEMENT
+    private readonly config: RaycastMovementConfig = RAYCAST_MOVEMENT,
+    private readonly getMouseSensitivityMul?: () => number
   ) {}
 
   create(): void {
@@ -78,7 +80,11 @@ export class RaycastPlayerController {
 
   private readonly handlePointerMove = (pointer: Phaser.Input.Pointer): void => {
     if (document.pointerLockElement !== this.scene.game.canvas) return;
-    this.state.angle = applyRaycastMouseTurn(this.state.angle, pointer.movementX, this.config);
+    const mul = this.getMouseSensitivityMul?.() ?? 1;
+    this.state.angle = applyRaycastMouseTurn(this.state.angle, pointer.movementX, {
+      ...this.config,
+      mouseTurnSensitivity: this.config.mouseTurnSensitivity * mul
+    });
   };
 
   private registerPointerControls(): void {

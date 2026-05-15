@@ -286,15 +286,21 @@ describe('raycast presentation helpers', () => {
     const copy = getMainMenuCopy();
 
     expect(copy.title).toBe('DOOM BIN BASH EDITION');
-    expect(copy.press3d).toBe('A / ENTER: INICIAR');
+    expect(copy.press3d).toBe('A / CLICK — INICIAR SECTOR 3D');
+    expect(copy.subtitle).toContain('RAYCAST');
+    expect(copy.footer).toBe('Made by Hotzh3');
   });
 
   it('keeps the main menu layout ordered title then start option', () => {
     const layout = buildMainMenuLayout(960, 540);
 
     expect(layout.centerX).toBe(480);
-    expect(layout.titleY).toBeLessThan(layout.option3dY);
+    expect(layout.titleY).toBeLessThan(layout.subtitleY);
+    expect(layout.subtitleY).toBeLessThan(layout.option3dY);
+    expect(layout.option3dY).toBeLessThan(layout.difficultyY);
+    expect(layout.difficultyY).toBeLessThan(layout.settingsY);
     expect(layout.titleFrameCenterY).toBeLessThan(layout.titleY);
+    expect(layout.footerY).toBeGreaterThan(0);
   });
 
   it('keeps main menu vertical ordering on compact viewports', () => {

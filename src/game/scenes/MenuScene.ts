@@ -9,6 +9,7 @@ import {
 import { buildMainMenuLayout, getMainMenuCopy } from '../raycast/RaycastPresentation';
 import { RAYCAST_CSS, RAYCAST_PALETTE } from '../raycast/RaycastPalette';
 import { createEmptyCampaignMetrics } from '../raycast/RaycastScore';
+import { ensureSessionSettings } from '../sessionSettings';
 import { getRaycastBossLevelId, type RaycastBossShortcutSlot } from '../raycast/RaycastBossShortcuts';
 
 const MENU_BACKGROUND = RAYCAST_PALETTE.voidBlack;
@@ -16,6 +17,7 @@ const MENU_CYAN = RAYCAST_PALETTE.plasmaBright;
 const MENU_CYAN_SOFT = RAYCAST_CSS.accentText;
 const MENU_EMBER = RAYCAST_PALETTE.amberWarn;
 const MENU_ROSE = RAYCAST_PALETTE.telegraphRose;
+const MENU_SETTINGS = '#f06f9a';
 
 export class MenuScene extends Phaser.Scene {
   private inputListenersRegistered = false;
@@ -52,6 +54,10 @@ export class MenuScene extends Phaser.Scene {
     this.startRaycastBoss(3);
   };
 
+  private readonly handleOpenSettings = (): void => {
+    this.scene.start('SettingsScene');
+  };
+
   private readonly handleCycleDifficulty = (): void => {
     const next = cycleRaycastDifficulty(this.registry.get(RAYCAST_DIFFICULTY_REGISTRY_KEY));
     this.registry.set(RAYCAST_DIFFICULTY_REGISTRY_KEY, next.id);
@@ -69,6 +75,7 @@ export class MenuScene extends Phaser.Scene {
   }
 
   create(): void {
+    ensureSessionSettings(this.registry);
     const width = this.scale.width;
     const height = this.scale.height;
     const copy = getMainMenuCopy();
@@ -94,6 +101,19 @@ export class MenuScene extends Phaser.Scene {
       .setOrigin(0.5)
       .setDepth(8);
 
+    this.add
+      .text(layout.centerX, layout.subtitleY, copy.subtitle, {
+        fontFamily: 'monospace',
+        fontSize: width <= 720 ? '11px' : '13px',
+        fontStyle: '700',
+        color: '#9aa8bc',
+        align: 'center',
+        wordWrap: { width: width - 48 }
+      })
+      .setOrigin(0.5)
+      .setDepth(8)
+      .setAlpha(0.9);
+
     const line3d = this.add
       .text(layout.centerX, layout.option3dY, copy.press3d, {
         fontFamily: 'monospace',
@@ -110,8 +130,36 @@ export class MenuScene extends Phaser.Scene {
     line3d.on(Phaser.Input.Events.POINTER_OVER, () => line3d.setColor('#ffffff'));
     line3d.on(Phaser.Input.Events.POINTER_OUT, () => line3d.setColor(MENU_CYAN_SOFT));
 
+    const settingsLine = this.add
+      .text(layout.centerX, layout.settingsY, copy.settingsPrompt, {
+        fontFamily: 'monospace',
+        fontSize: '13px',
+        fontStyle: '700',
+        color: MENU_SETTINGS,
+        align: 'center'
+      })
+      .setOrigin(0.5)
+      .setDepth(8)
+      .setAlpha(0.92)
+      .setInteractive({ useHandCursor: true })
+      .on(Phaser.Input.Events.POINTER_DOWN, this.handleOpenSettings);
+    settingsLine.on(Phaser.Input.Events.POINTER_OVER, () => settingsLine.setColor('#ffd0e8'));
+    settingsLine.on(Phaser.Input.Events.POINTER_OUT, () => settingsLine.setColor(MENU_SETTINGS));
+
+    this.add
+      .text(layout.centerX, layout.footerY, copy.footer, {
+        fontFamily: 'monospace',
+        fontSize: '10px',
+        fontStyle: '700',
+        color: '#5c6a7c',
+        align: 'center'
+      })
+      .setOrigin(0.5, 1)
+      .setDepth(8)
+      .setAlpha(0.85);
+
     this.difficultyHintText = this.add
-      .text(layout.centerX, layout.option3dY + 46, this.buildDifficultyMenuLine(), {
+      .text(layout.centerX, layout.difficultyY, this.buildDifficultyMenuLine(), {
         fontFamily: 'monospace',
         fontSize: '13px',
         fontStyle: '700',
@@ -122,7 +170,7 @@ export class MenuScene extends Phaser.Scene {
       .setDepth(8)
       .setAlpha(0.92);
 
-    this.cameras.main.fadeIn(420, 0, 0, 0);
+    this.cameras.main.fadeIn(520, 0, 0, 0);
 
     this.registerInputListeners();
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.cleanupInputListeners, this);
@@ -183,6 +231,8 @@ export class MenuScene extends Phaser.Scene {
     kb?.on('keydown-FOUR', this.handleBossMenuOne);
     kb?.on('keydown-FIVE', this.handleBossMenuTwo);
     kb?.on('keydown-SIX', this.handleBossMenuThree);
+    kb?.on('keydown-S', this.handleOpenSettings);
+    kb?.on('keydown-s', this.handleOpenSettings);
     this.inputListenersRegistered = true;
   }
 
@@ -196,6 +246,8 @@ export class MenuScene extends Phaser.Scene {
     kb?.off('keydown-FOUR', this.handleBossMenuOne);
     kb?.off('keydown-FIVE', this.handleBossMenuTwo);
     kb?.off('keydown-SIX', this.handleBossMenuThree);
+    kb?.off('keydown-S', this.handleOpenSettings);
+    kb?.off('keydown-s', this.handleOpenSettings);
     this.inputListenersRegistered = false;
   }
 

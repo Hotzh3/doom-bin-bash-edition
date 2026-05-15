@@ -194,6 +194,15 @@ describe('raycast combat', () => {
     expect([...shot.killedEnemyKinds].sort()).toEqual(['GRUNT', 'GRUNT']);
   });
 
+  it('flags a chunky non-lethal hit as crit', () => {
+    const combat = new RaycastCombatSystem();
+    const enemy = createEnemy({ health: 44, maxHealth: 44, x: 2.8, y: 9.4 });
+    const shot = combat.fire(player, [enemy], RAYCAST_MAP, 1000);
+    expect(shot.anyCrit).toBe(true);
+    expect(shot.killed).toBe(false);
+    expect(enemy.alive).toBe(true);
+  });
+
   it('applies hit stagger that is longer for shotgun than pistol', () => {
     const pistolCombat = new RaycastCombatSystem();
     const pistolTarget = createEnemy({ id: 'pistol-target', health: 200, x: 2.8, y: 9.4, kind: 'GRUNT' });

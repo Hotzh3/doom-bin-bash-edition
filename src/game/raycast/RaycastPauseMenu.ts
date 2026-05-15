@@ -51,17 +51,26 @@ export interface RaycastPauseMenuMxModel {
   modifiersLine: string;
 }
 
-export function formatRaycastPauseMenuMxBody(model: RaycastPauseMenuMxModel): string {
+export function formatRaycastPauseMenuMxBody(
+  model: RaycastPauseMenuMxModel,
+  opts?: { columnChars?: number }
+): string {
+  const colW = opts?.columnChars ?? COL_W;
+  const joiner = '  │  ';
   const cRun = [
     'RUN',
     `Mundo / Nivel · ${model.worldLine}`,
     `Dificultad · ${model.difficultyLabel}`,
     `Puntaje · ${model.score}`,
-    `Mejor puntaje · ${model.highScore}`,
-    ''
+    `Mejor puntaje · ${model.highScore}`
   ];
-  const cObj = ['OBJETIVO', `Misión · ${model.missionLine}`, `Objetivo · ${model.objectiveLine}`, `Pista · ${model.hintLine}`, '', ''];
-  const cPro = ['PROGRESO', model.tokensLine, model.secretsLine, model.modifiersLine, '', ''];
+  const cObj = [
+    'OBJETIVO',
+    `Misión · ${model.missionLine}`,
+    `Objetivo · ${model.objectiveLine}`,
+    `Pista · ${model.hintLine}`
+  ];
+  const cPro = ['PROGRESO', model.tokensLine, model.secretsLine, model.modifiersLine];
   const cCtl = [
     'CONTROLES',
     'WASD · mover',
@@ -72,16 +81,16 @@ export function formatRaycastPauseMenuMxBody(model: RaycastPauseMenuMxModel): st
     'ESC · pausa'
   ];
 
-  const rowCount = 6;
+  const rowCount = Math.max(cRun.length, cObj.length, cPro.length, cCtl.length);
   const grid: string[] = [];
   for (let i = 0; i < rowCount; i += 1) {
     grid.push(
       [
-        padCol(cRun[i] ?? '', COL_W),
-        padCol(cObj[i] ?? '', COL_W),
-        padCol(cPro[i] ?? '', COL_W),
-        padCol(cCtl[i] ?? '', COL_W)
-      ].join('  ')
+        padCol(cRun[i] ?? '', colW),
+        padCol(cObj[i] ?? '', colW),
+        padCol(cPro[i] ?? '', colW),
+        padCol(cCtl[i] ?? '', colW)
+      ].join(joiner)
     );
   }
 
@@ -99,6 +108,6 @@ export function formatRaycastPauseMenuMxBody(model: RaycastPauseMenuMxModel): st
     '// MENÚ',
     ...menuLines,
     '',
-    '// ↑/↓ elegir · ENTER confirmar · ESC continuar'
+    '// ↑ / ↓ · menú    ENTER · aplicar    ESC · cerrar'
   ].join('\n');
 }

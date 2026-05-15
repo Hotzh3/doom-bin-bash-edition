@@ -7,6 +7,7 @@ export type AudioFeedbackCue =
   | 'shootShotgun'
   | 'shootLauncher'
   | 'hit'
+  | 'hitCrit'
   | 'kill'
   | 'death'
   | 'wallImpact'
@@ -84,18 +85,26 @@ export const AUDIO_FEEDBACK_CONFIG: Record<AudioFeedbackCue, AudioFeedbackConfig
   },
   hit: {
     layers: [
-      { frequency: 340, endFrequency: 118, duration: 0.058, volume: 0.032, type: 'sawtooth' },
-      { frequency: 740, endFrequency: 280, duration: 0.038, volume: 0.014, type: 'triangle', delay: 0.0015 },
-      { frequency: 1800, endFrequency: 620, duration: 0.028, volume: 0.0065, type: 'sine', delay: 0.012 }
+      { frequency: 340, endFrequency: 118, duration: 0.058, volume: 0.029, type: 'sawtooth' },
+      { frequency: 740, endFrequency: 280, duration: 0.038, volume: 0.012, type: 'triangle', delay: 0.0015 },
+      { frequency: 1800, endFrequency: 620, duration: 0.028, volume: 0.0058, type: 'sine', delay: 0.012 }
     ],
     throttleMs: 35
   },
+  hitCrit: {
+    layers: [
+      { frequency: 580, endFrequency: 210, duration: 0.048, volume: 0.034, type: 'square' },
+      { frequency: 1120, endFrequency: 460, duration: 0.036, volume: 0.015, type: 'triangle', delay: 0.002 },
+      { frequency: 2480, endFrequency: 920, duration: 0.024, volume: 0.0062, type: 'sine', delay: 0.009 }
+    ],
+    throttleMs: 38
+  },
   kill: {
     layers: [
-      { frequency: 280, endFrequency: 48, duration: 0.22, volume: 0.058, type: 'triangle' },
-      { frequency: 480, endFrequency: 118, duration: 0.15, volume: 0.022, type: 'sawtooth', delay: 0.018 },
-      { frequency: 980, endFrequency: 240, duration: 0.085, volume: 0.012, type: 'sine', delay: 0.048 },
-      { frequency: 2200, endFrequency: 880, duration: 0.04, volume: 0.0055, type: 'triangle', delay: 0.028 }
+      { frequency: 300, endFrequency: 52, duration: 0.2, volume: 0.052, type: 'triangle' },
+      { frequency: 520, endFrequency: 128, duration: 0.142, volume: 0.02, type: 'sawtooth', delay: 0.016 },
+      { frequency: 1020, endFrequency: 260, duration: 0.078, volume: 0.011, type: 'sine', delay: 0.042 },
+      { frequency: 2280, endFrequency: 820, duration: 0.038, volume: 0.0052, type: 'triangle', delay: 0.024 }
     ],
     throttleMs: 70
   },
@@ -380,13 +389,16 @@ export class AudioFeedbackSystem {
     return this.masterVolume;
   }
 
-  play(cue: AudioFeedbackCue, intensity = 1, nowMs = performance.now()): void {
+  play(cue: AudioFeedbackCue, intensity = 1, nowMs = performance.now(), opts?: { pitchMul?: number }): void {
     const context = this.getAudioContext();
     if (!context) return;
 
     const config = AUDIO_FEEDBACK_CONFIG[cue];
     if (shouldThrottleAudioCue(cue, nowMs, this.lastPlayedAt.get(cue))) return;
     this.lastPlayedAt.set(cue, nowMs);
+
+    const pitchMul = opts?.pitchMul ?? 1;
+    const pm = Number.isFinite(pitchMul) ? Math.max(0.82, Math.min(1.18, pitchMul)) : 1;
 
     try {
       void context.resume().catch(() => undefined);
@@ -395,12 +407,14 @@ export class AudioFeedbackSystem {
         const gain = context.createGain();
         const startTime = context.currentTime + (layer.delay ?? 0);
         const endTime = startTime + layer.duration;
-        const layerVolume = Math.max(0.0001, Math.min(0.08, layer.volume * intensity * this.masterVolume));
+        const layerVolume = Math.max(0.0001, Math.min(0.065, layer.volume * intensity * this.masterVolume));
 
         oscillator.type = layer.type;
-        oscillator.frequency.setValueAtTime(layer.frequency, startTime);
-        if (layer.endFrequency) {
-          oscillator.frequency.exponentialRampToValueAtTime(layer.endFrequency, endTime);
+        const f0 = layer.frequency * pm;
+        const f1 = layer.endFrequency !== undefined ? layer.endFrequency * pm : undefined;
+        oscillator.frequency.setValueAtTime(f0, startTime);
+        if (f1 !== undefined) {
+          oscillator.frequency.exponentialRampToValueAtTime(Math.max(1, f1), endTime);
         }
 
         gain.gain.setValueAtTime(0.0001, startTime);
