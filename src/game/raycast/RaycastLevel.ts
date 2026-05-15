@@ -1,7 +1,6 @@
 import { isPointInsideRect, type KeyPickup, type LevelTrigger, type LockedDoor, type RectArea, type SecretPickup } from '../level/arenaLayout';
 import type { RaycastSetpieceCue } from './RaycastSetpiece';
 import type { DirectorConfig } from '../systems/DirectorConfig';
-import type { DirectorState } from '../systems/DirectorState';
 import type { EncounterPatternId } from '../systems/EncounterPattern';
 import type { SpawnPoint } from '../systems/GameDirector';
 import type { EnemyKind } from '../types/game';
@@ -114,6 +113,15 @@ export interface RaycastEncounterBeat {
   setpieceCue?: RaycastSetpieceCue;
 }
 
+export interface RaycastEncounterPatternBinding {
+  id: string;
+  zoneId: string;
+  patternId: EncounterPatternId;
+  cooldownMs: number;
+  directorStates?: ('CALM' | 'WARNING' | 'PRESSURE' | 'AMBUSH' | 'RECOVERY')[];
+  maxPlayerHealthToSkip?: number;
+}
+
 export interface RaycastLevel {
   id: string;
   name: string;
@@ -130,6 +138,7 @@ export interface RaycastLevel {
   exits: RaycastExit[];
   initialSpawns: RaycastEnemySpawn[];
   encounterBeats: RaycastEncounterBeat[];
+  encounterPatternBindings?: RaycastEncounterPatternBinding[];
   /** Sector-flavored OBJECTIVE line — canonical objective codes unchanged for logic/tests. */
   hudObjectiveLabels?: RaycastHudObjectiveLabels;
   progression: {

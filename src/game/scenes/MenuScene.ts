@@ -8,6 +8,8 @@ import {
 } from '../raycast/RaycastDifficulty';
 import { buildMainMenuLayout, getMainMenuCopy } from '../raycast/RaycastPresentation';
 import { RAYCAST_CSS, RAYCAST_PALETTE } from '../raycast/RaycastPalette';
+import { createEmptyCampaignMetrics } from '../raycast/RaycastScore';
+import { getRaycastBossLevelId, type RaycastBossShortcutSlot } from '../raycast/RaycastBossShortcuts';
 
 const MENU_BACKGROUND = RAYCAST_PALETTE.voidBlack;
 const MENU_CYAN = RAYCAST_PALETTE.plasmaBright;
@@ -29,6 +31,28 @@ export class MenuScene extends Phaser.Scene {
     this.playFeedbackEvent('difficultyStart');
     const difficultyId = getRaycastDifficultyPreset(this.registry.get(RAYCAST_DIFFICULTY_REGISTRY_KEY)).id;
     this.scene.start('PrologueScene', { mode: 'raycast', difficultyId });
+  };
+
+  private startRaycastBoss(slot: RaycastBossShortcutSlot): void {
+    const difficultyId = getRaycastDifficultyPreset(this.registry.get(RAYCAST_DIFFICULTY_REGISTRY_KEY)).id;
+    this.scene.start('RaycastScene', {
+      levelId: getRaycastBossLevelId(slot),
+      difficultyId,
+      carryScore: 0,
+      carryCampaignMetrics: createEmptyCampaignMetrics()
+    });
+  }
+
+  private readonly handleBossMenuOne = (): void => {
+    this.startRaycastBoss(1);
+  };
+
+  private readonly handleBossMenuTwo = (): void => {
+    this.startRaycastBoss(2);
+  };
+
+  private readonly handleBossMenuThree = (): void => {
+    this.startRaycastBoss(3);
   };
 
   private readonly handleCycleDifficulty = (): void => {
@@ -176,6 +200,9 @@ export class MenuScene extends Phaser.Scene {
     kb?.once('keydown-b', this.handleStartArena);
     kb?.on('keydown-D', this.handleCycleDifficulty);
     kb?.on('keydown-d', this.handleCycleDifficulty);
+    kb?.on('keydown-FOUR', this.handleBossMenuOne);
+    kb?.on('keydown-FIVE', this.handleBossMenuTwo);
+    kb?.on('keydown-SIX', this.handleBossMenuThree);
     this.inputListenersRegistered = true;
   }
 
@@ -188,6 +215,9 @@ export class MenuScene extends Phaser.Scene {
     kb?.off('keydown-b', this.handleStartArena);
     kb?.off('keydown-D', this.handleCycleDifficulty);
     kb?.off('keydown-d', this.handleCycleDifficulty);
+    kb?.off('keydown-FOUR', this.handleBossMenuOne);
+    kb?.off('keydown-FIVE', this.handleBossMenuTwo);
+    kb?.off('keydown-SIX', this.handleBossMenuThree);
     this.inputListenersRegistered = false;
   }
 

@@ -20,7 +20,7 @@ import {
 import { RAYCAST_LEVEL, type RaycastLevel } from './RaycastLevel';
 import { RAYCAST_RENDERER_CONFIG } from './RaycastRendererConfig';
 import { RAYCAST_PALETTE } from './RaycastPalette';
-import { RAYCAST_DEATH_BURST_MS } from './RaycastCombatSystem';
+import { RAYCAST_DEATH_BURST_MS, RAYCAST_HIT_FLASH_MS } from './RaycastCombatSystem';
 import type { RaycastBossState } from './RaycastBoss';
 import { getRaycastBossVisualProfile } from './RaycastBossVisual';
 import {
@@ -279,6 +279,7 @@ export class RaycastRenderer {
           height * 0.5 - size * 0.89
         );
       }
+      projection.screenX = savedEnemyX;
     }
   }
 

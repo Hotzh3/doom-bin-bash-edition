@@ -2,6 +2,8 @@ import Phaser from 'phaser';
 import { getRaycastDifficultyPreset, RAYCAST_DIFFICULTY_REGISTRY_KEY, type RaycastDifficultyId } from '../raycast/RaycastDifficulty';
 import { getPrologueCopy, type PrologueGameMode } from '../raycast/RaycastPresentation';
 import { RAYCAST_CSS, RAYCAST_PALETTE } from '../raycast/RaycastPalette';
+import { createEmptyCampaignMetrics } from '../raycast/RaycastScore';
+import { getRaycastBossLevelId, type RaycastBossShortcutSlot } from '../raycast/RaycastBossShortcuts';
 
 const BG = RAYCAST_PALETTE.voidBlack;
 const BODY_COLOR = RAYCAST_CSS.bodyText;
@@ -31,6 +33,31 @@ export class PrologueScene extends Phaser.Scene {
   private readonly handleBackToMenu = (): void => {
     this.cleanupInputListeners();
     this.scene.start('MenuScene');
+  };
+
+  private jumpToBossFromPrologue(slot: RaycastBossShortcutSlot): void {
+    this.cleanupInputListeners();
+    this.scene.start('RaycastScene', {
+      levelId: getRaycastBossLevelId(slot),
+      difficultyId: this.difficultyId,
+      carryScore: 0,
+      carryCampaignMetrics: createEmptyCampaignMetrics()
+    });
+  }
+
+  private readonly handlePrologueBossOne = (): void => {
+    if (this.mode !== 'raycast') return;
+    this.jumpToBossFromPrologue(1);
+  };
+
+  private readonly handlePrologueBossTwo = (): void => {
+    if (this.mode !== 'raycast') return;
+    this.jumpToBossFromPrologue(2);
+  };
+
+  private readonly handlePrologueBossThree = (): void => {
+    if (this.mode !== 'raycast') return;
+    this.jumpToBossFromPrologue(3);
   };
 
   constructor() {
@@ -120,6 +147,10 @@ export class PrologueScene extends Phaser.Scene {
 
     kb?.once('keydown-ESC', this.handleBackToMenu);
 
+    kb?.on('keydown-FOUR', this.handlePrologueBossOne);
+    kb?.on('keydown-FIVE', this.handlePrologueBossTwo);
+    kb?.on('keydown-SIX', this.handlePrologueBossThree);
+
     this.inputListenersRegistered = true;
   }
 
@@ -136,6 +167,10 @@ export class PrologueScene extends Phaser.Scene {
     kb?.off('keydown-B', this.handleContinueArena);
     kb?.off('keydown-b', this.handleContinueArena);
     kb?.off('keydown-ESC', this.handleBackToMenu);
+
+    kb?.off('keydown-FOUR', this.handlePrologueBossOne);
+    kb?.off('keydown-FIVE', this.handlePrologueBossTwo);
+    kb?.off('keydown-SIX', this.handlePrologueBossThree);
 
     this.inputListenersRegistered = false;
   }

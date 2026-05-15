@@ -26,18 +26,7 @@ export function addRaycastKillScore(currentScore: number, killedKinds: EnemyKind
 }
 
 /** Episode boss clear bonus (flat points). */
-export const RAYCAST_BOSS_CLEAR_POINTS = RAYCAST_SCORE_TUNING.bonuses.bossClear;
-
-/** Entering World 2 after Episode 1 boss — one-time carry bonus per run transition. */
-export const RAYCAST_WORLD2_ENTRY_POINTS = RAYCAST_SCORE_TUNING.bonuses.world2Entry;
-
-/** Clearing the final World 2 sector (full mini-arc). */
-export const RAYCAST_FULL_ARC_CLEAR_BONUS = RAYCAST_SCORE_TUNING.bonuses.fullArcClear;
-
-/** Discovering a hidden sector node — meaningful but bounded vs kill farming. */
-export const RAYCAST_SECRET_DISCOVER_POINTS = RAYCAST_SCORE_TUNING.bonuses.secretDiscover;
-export const RAYCAST_SECTOR_PERFORMANCE_BONUS_CAP = RAYCAST_SCORE_TUNING.performance.sectorPerformanceBonusCap;
-export const RAYCAST_CAMPAIGN_COMPLETION_BONUS_CAP = RAYCAST_SCORE_TUNING.campaign.completionBonusCap;
+export const RAYCAST_BOSS_CLEAR_POINTS = 700;
 
 /** Entering World 2 after Episode 1 boss — one-time carry bonus per run transition. */
 export const RAYCAST_WORLD2_ENTRY_POINTS = 520;
@@ -47,6 +36,8 @@ export const RAYCAST_FULL_ARC_CLEAR_BONUS = 1100;
 
 /** Discovering a hidden sector node — meaningful but bounded vs kill farming. */
 export const RAYCAST_SECRET_DISCOVER_POINTS = 380;
+export const RAYCAST_SECTOR_PERFORMANCE_BONUS_CAP = 600;
+export const RAYCAST_CAMPAIGN_COMPLETION_BONUS_CAP = 1200;
 
 export function addRaycastBossClearScore(currentScore: number): number {
   return currentScore + RAYCAST_BOSS_CLEAR_POINTS;
@@ -150,12 +141,6 @@ const PERFORMANCE_BOSS_CLEAN_SLOPE = 2.15;
 const PERFORMANCE_BOSS_CLEAN_SOFT_CEILING = 52;
 const PERFORMANCE_MIN_PELLETS_FOR_ACCURACY = 8;
 const PERFORMANCE_MIN_BOSS_PELLETS = 5;
-
-/** Hard cap so skill bonus stays secondary to kills/secrets/boss flat bonuses. */
-export const RAYCAST_SECTOR_PERFORMANCE_BONUS_CAP = 600;
-
-/** One-shot bonus when the final sector resolves (`episodeComplete`). */
-export const RAYCAST_CAMPAIGN_COMPLETION_BONUS_CAP = 1200;
 
 /** Generous full-run par — rewards routing without mandating speedrun tech. */
 const CAMPAIGN_PACE_PAR_MS = 48 * 60 * 1000;

@@ -14,8 +14,6 @@ import {
   type RaycastBossConfig
 } from '../game/raycast/RaycastBoss';
 import { addRaycastBossClearScore } from '../game/raycast/RaycastScore';
-import { RAYCAST_LEVEL_BOSS, RAYCAST_WORLD_THREE_CATALOG, RAYCAST_WORLD_TWO_CATALOG } from '../game/raycast/RaycastLevel';
-import { getRaycastBossVisualProfile } from '../game/raycast/RaycastBossVisual';
 
 const CONFIG: RaycastBossConfig = {
   id: 'volt-archon',
@@ -132,7 +130,7 @@ describe('raycast boss', () => {
     const killed = damageRaycastBoss(boss, 25, 100);
     expect(killed).toBe(true);
     expect(boss.alive).toBe(false);
-    expect(addRaycastBossClearScore(100)).toBe(100 + 2500);
+    expect(addRaycastBossClearScore(100)).toBe(100 + 700);
   });
 
   it('labels Bloom Warden phases distinctly', () => {
