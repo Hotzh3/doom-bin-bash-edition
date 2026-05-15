@@ -8,6 +8,7 @@ import {
 } from '../raycast/RaycastDifficulty';
 import { buildMainMenuLayout, getMainMenuCopy } from '../raycast/RaycastPresentation';
 import { RAYCAST_CSS, RAYCAST_PALETTE } from '../raycast/RaycastPalette';
+import { RAYCAST_LEVEL_BOSS, RAYCAST_WORLD_THREE_CATALOG, RAYCAST_WORLD_TWO_CATALOG } from '../raycast/RaycastLevel';
 
 const MENU_BACKGROUND = RAYCAST_PALETTE.voidBlack;
 const MENU_CYAN = RAYCAST_PALETTE.plasmaBright;
@@ -20,6 +21,7 @@ export class MenuScene extends Phaser.Scene {
   private inputListenersRegistered = false;
   private audioFeedback!: AudioFeedbackSystem;
   private difficultyHintText!: Phaser.GameObjects.Text;
+  private lastDevShortcutAt = 0;
 
   private readonly handleStartArena = (): void => {
     this.scene.start('PrologueScene', { mode: 'arena' });
@@ -36,6 +38,30 @@ export class MenuScene extends Phaser.Scene {
     this.registry.set(RAYCAST_DIFFICULTY_REGISTRY_KEY, next.id);
     this.difficultyHintText.setText(this.buildDifficultyMenuLine());
     this.playFeedbackEvent('difficultySelect');
+  };
+
+  private readonly handleDevBossShortcut = (event: KeyboardEvent): void => {
+    if (!import.meta.env.DEV) return;
+    if (!event.shiftKey || event.repeat) return;
+    const now = this.time.now;
+    if (now - this.lastDevShortcutAt < 140) return;
+    this.lastDevShortcutAt = now;
+    const difficultyId = getRaycastDifficultyPreset(this.registry.get(RAYCAST_DIFFICULTY_REGISTRY_KEY)).id;
+    if (event.code === 'Digit4') {
+      this.scene.start('RaycastScene', { levelId: RAYCAST_LEVEL_BOSS.id, difficultyId });
+      return;
+    }
+    if (event.code === 'Digit5') {
+      const world2Boss = RAYCAST_WORLD_TWO_CATALOG.find((level) => level.id === 'bloom-warden-pit');
+      if (!world2Boss) return;
+      this.scene.start('RaycastScene', { levelId: world2Boss.id, difficultyId });
+      return;
+    }
+    if (event.code === 'Digit6') {
+      const world3Boss = RAYCAST_WORLD_THREE_CATALOG[RAYCAST_WORLD_THREE_CATALOG.length - 1];
+      if (!world3Boss) return;
+      this.scene.start('RaycastScene', { levelId: world3Boss.id, difficultyId });
+    }
   };
 
   private buildDifficultyMenuLine(): string {
@@ -176,6 +202,7 @@ export class MenuScene extends Phaser.Scene {
     kb?.once('keydown-b', this.handleStartArena);
     kb?.on('keydown-D', this.handleCycleDifficulty);
     kb?.on('keydown-d', this.handleCycleDifficulty);
+    kb?.on('keydown', this.handleDevBossShortcut);
     this.inputListenersRegistered = true;
   }
 
@@ -188,6 +215,7 @@ export class MenuScene extends Phaser.Scene {
     kb?.off('keydown-b', this.handleStartArena);
     kb?.off('keydown-D', this.handleCycleDifficulty);
     kb?.off('keydown-d', this.handleCycleDifficulty);
+    kb?.off('keydown', this.handleDevBossShortcut);
     this.inputListenersRegistered = false;
   }
 
