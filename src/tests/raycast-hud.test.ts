@@ -39,6 +39,7 @@ describe('raycast HUD', () => {
   it('splits the readable hub into status and progress lines', () => {
     expect(buildRaycastHudStatusLine(82, 100, 'Shotgun')).toBe('HP 82/100 STABLE  |  WPN Shotgun');
     expect(buildRaycastHudStatusLine(82, 100, 'Shotgun', 'AST')).toBe('HP 82/100 STABLE  |  WPN Shotgun  |  MODE AST');
+    expect(buildRaycastHudStatusLine(82, 100, '', undefined)).toBe('HP 82/100 STABLE');
     expect(buildRaycastHudProgressLine(1, 2, 0, 1, 'Reach Exit')).toBe('TOKENS 1/2  |  SECRETS 0/1  |  OBJECTIVE EXIT');
   });
 
