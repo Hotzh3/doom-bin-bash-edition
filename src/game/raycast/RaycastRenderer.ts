@@ -1,4 +1,9 @@
 import Phaser from 'phaser';
+import {
+  RAYCAST_ENEMY_TEXTURE_KEYS,
+  raycastTextureExists,
+  type RaycastEnemySpriteState
+} from './raycastAssetHooks';
 import { castRay, type RaycastHit, type RaycastMap } from './RaycastMap';
 import {
   getRaycastEnemySpawnTelegraphProgress,
@@ -81,9 +86,11 @@ export class RaycastRenderer {
   private readonly enemyProjectionScratch: EnemyProjection[] = [];
   private readonly projectileProjectionScratch: ProjectileProjection[] = [];
   private readonly billboardProjectionScratch: BillboardProjection[] = [];
+  private readonly enemySpritePool: Phaser.GameObjects.Image[] = [];
+  private activeEnemySpriteCount = 0;
 
   constructor(
-    scene: Phaser.Scene,
+    private readonly scene: Phaser.Scene,
     private readonly map: RaycastMap,
     private readonly level: RaycastLevel = RAYCAST_LEVEL,
     private readonly config = RAYCAST_RENDERER_CONFIG
@@ -167,6 +174,7 @@ export class RaycastRenderer {
     time: number,
     atmosphere: RaycastAtmosphereRenderOptions = getAtmosphereForDirector(null, 0)
   ): void {
+    this.activeEnemySpriteCount = 0;
     const list = this.enemyProjectionScratch;
     let n = 0;
     for (let i = 0; i < enemies.length; i += 1) {
@@ -186,9 +194,21 @@ export class RaycastRenderer {
       if (projection.distance > (this.depthBuffer[column] ?? Number.POSITIVE_INFINITY) + 0.05) continue;
 
       if (!projection.enemy.alive) {
-        this.drawEnemyDeathBurst(projection, height, time, atmosphere);
-        continue;
-      }
+        const visibility = calculateEnemyVisibility(projection.distance, atmosphere);
+        const didDrawDefeatedSprite = this.drawEnemySpriteIfAvailable(
+          projection,
+          height,
+          visibility,
+          time,
+          'defeated'
+        );
+
+        if (!didDrawDefeatedSprite) {
+          this.drawEnemyDeathBurst(projection, height, time, atmosphere);
+        }
+
+  continue;
+}
 
       const hitStaggerX =
         projection.enemy.hitFlashUntil > time
@@ -261,8 +281,15 @@ export class RaycastRenderer {
       const sx = projection.screenX + hitStaggerX;
       const savedEnemyX = projection.screenX;
       projection.screenX = sx;
-      this.graphics.fillStyle(enemyStyle.outlineColor, RAYCAST_ENEMY_BILLBOARD_READABILITY.outlineAlpha * visibility);
-      this.graphics.fillEllipse(sx, height * 0.5 + size * 0.08, size * 1.28, size * 1.42);
+      const currentSpriteState = this.getEnemySpriteState(projection, time);
+      const currentSpriteTextureKey = this.getEnemyTextureKey(projection.enemy.kind, currentSpriteState);
+      const willDrawEnemySprite =
+        currentSpriteTextureKey !== null && raycastTextureExists(this.scene, currentSpriteTextureKey);
+
+      if (!willDrawEnemySprite) {
+        this.graphics.fillStyle(enemyStyle.outlineColor, RAYCAST_ENEMY_BILLBOARD_READABILITY.outlineAlpha * visibility);
+        this.graphics.fillEllipse(sx, height * 0.5 + size * 0.08, size * 1.28, size * 1.42);
+      }
       if ((projection.enemy.shieldPulseUntil ?? 0) > time) {
         this.graphics.lineStyle(3, 0x8fd8ff, 0.62 * visibility);
         this.graphics.strokeEllipse(sx, height * 0.5 + size * 0.08, size * 1.38, size * 1.46);
@@ -271,10 +298,16 @@ export class RaycastRenderer {
         this.graphics.fillStyle(enemyStyle.windupColor, (0.18 + windupProgress * 0.14 + pulse * 0.08) * visibility);
         this.graphics.fillCircle(sx, height * 0.5, size * (0.46 + windupProgress * 0.08));
       }
+
       this.graphics.fillStyle(color, RAYCAST_ENEMY_BILLBOARD_READABILITY.fillAlpha * visibility);
       const savedSilhouetteSize = projection.size;
       projection.size = size;
-      this.drawEnemySilhouette(projection, height, color, visibility, enemyStyle, telegraphMix);
+      const didDrawSprite = this.drawEnemySpriteIfAvailable(projection, height, visibility, time);
+
+      if (!didDrawSprite) {
+        this.drawEnemySilhouette(projection, height, color, visibility, enemyStyle, telegraphMix);
+      }
+
       projection.size = savedSilhouetteSize;
       projection.screenX = savedEnemyX;
       if (isWindingUp) {
@@ -292,6 +325,7 @@ export class RaycastRenderer {
       }
       projection.screenX = savedEnemyX;
     }
+    this.hideUnusedEnemySprites();
   }
 
   renderBoss(
@@ -1020,6 +1054,78 @@ export class RaycastRenderer {
     }
   }
 
+    private drawEnemySpriteIfAvailable(
+    projection: EnemyProjection,
+    height: number,
+    visibility: number,
+    time: number,
+    forcedState?: RaycastEnemySpriteState
+  ): boolean {
+    const state = forcedState ?? this.getEnemySpriteState(projection, time);
+    const textureKey = this.getEnemyTextureKey(projection.enemy.kind, state);
+
+    if (!textureKey) return false;
+    if (!raycastTextureExists(this.scene, textureKey)) return false;
+
+    const image = this.getEnemySpriteFromPool();
+
+    image
+      .setTexture(textureKey)
+      .setVisible(true)
+      .setAlpha(Phaser.Math.Clamp(visibility, 0, 1))
+      .setPosition(projection.screenX, height * 0.5)
+      .setDisplaySize(projection.size * 1.15, projection.size * 1.4)
+      .setDepth(20);
+
+    return true;
+  }
+
+  private getEnemySpriteState(projection: EnemyProjection, time: number): RaycastEnemySpriteState {
+    const enemy = projection.enemy;
+
+    if (!enemy.alive) return 'defeated';
+
+    if (enemy.hitFlashUntil > time) {
+      return 'damaged';
+    }
+
+    if (isRaycastEnemyWindingUp(enemy, time)) {
+      return 'attack';
+    }
+
+    const animationOffset = Math.floor(enemy.x * 97 + enemy.y * 53);
+    const walkFrame = Math.floor((time + animationOffset) / 220) % 2;
+
+    return walkFrame === 0 ? 'walk1' : 'walk2';
+  }
+
+  private getEnemyTextureKey(
+    enemyKind: RaycastEnemy['kind'],
+    state: RaycastEnemySpriteState
+  ): string | null {
+    return RAYCAST_ENEMY_TEXTURE_KEYS[enemyKind]?.[state] ?? null;
+  }
+
+  private getEnemySpriteFromPool(): Phaser.GameObjects.Image {
+    const index = this.activeEnemySpriteCount;
+    this.activeEnemySpriteCount += 1;
+
+    if (!this.enemySpritePool[index]) {
+      const image = this.scene.add.image(0, 0, RAYCAST_ENEMY_TEXTURE_KEYS.GRUNT.idle);
+      image.setVisible(false);
+      image.setOrigin(0.5, 0.5);
+      image.setDepth(20);
+      this.enemySpritePool[index] = image;
+    }
+
+    return this.enemySpritePool[index];
+  }
+
+  private hideUnusedEnemySprites(): void {
+    for (let i = this.activeEnemySpriteCount; i < this.enemySpritePool.length; i += 1) {
+      this.enemySpritePool[i].setVisible(false);
+    }
+  }
   private drawEnemySilhouette(
     projection: EnemyProjection,
     height: number,
