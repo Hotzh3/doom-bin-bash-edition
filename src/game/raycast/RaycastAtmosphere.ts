@@ -47,7 +47,7 @@ export const RAYCAST_ATMOSPHERE = {
     4: 1.0
   },
   messages: {
-    intro: 'TERMINAL CORRUPTION HELL ARENA',
+    intro: 'DOOM BIN BASH EDITION',
     idle: 'SYSTEM WATCHES',
     locked: 'ACCESS DENIED',
     key: 'ACCESS TOKEN CAPTURED',

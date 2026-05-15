@@ -2,11 +2,14 @@ import { describe, expect, it } from 'vitest';
 import { RAYCAST_LEVEL } from '../game/raycast/RaycastLevel';
 import { RAYCAST_LEVEL_WORLD2_FRACTURE } from '../game/raycast/RaycastWorldTwoLevels';
 import {
+  RAYCAST_ENEMY_BILLBOARD_READABILITY,
+  enforceRaycastEnemyBillboardReadability,
   getBillboardColor,
   getRaycastCellVariant,
   getRaycastEnemyVisualStyle,
   getRaycastGroundVisualStyle,
   getRaycastWallVisualStyle,
+  getRaycastLandmarkColumnShadeBoost,
   getRaycastZoneTheme,
   getRaycastZoneVisual,
   sampleRaycastGroundBand,
@@ -15,6 +18,12 @@ import {
 } from '../game/raycast/RaycastVisualTheme';
 
 describe('raycast visual theme', () => {
+  const rgb = (color: number): { r: number; g: number; b: number } => ({
+    r: (color >> 16) & 0xff,
+    g: (color >> 8) & 0xff,
+    b: color & 0xff
+  });
+
   it('resolves zone visuals from authored level regions', () => {
     const zone = getRaycastZoneVisual(RAYCAST_LEVEL.zones, 5.4, 4.2);
 
@@ -103,6 +112,35 @@ describe('raycast visual theme', () => {
     });
   });
 
+  it('maps authored setpiece landmarks to hazard and bridge wall grammars', () => {
+    const reactorSurface = {
+      zoneId: 'x',
+      theme: getRaycastZoneTheme('toxic-green'),
+      landmark: 'reactor' as const,
+      cellX: 4,
+      cellY: 9,
+      variant: 0.33
+    };
+    const bridgeSurface = {
+      zoneId: 'y',
+      theme: getRaycastZoneTheme('ion-shaft'),
+      landmark: 'bridge' as const,
+      cellX: 2,
+      cellY: 3,
+      variant: 0.5
+    };
+    expect(getRaycastWallVisualStyle(1, reactorSurface)).toMatchObject({
+      pattern: 'hazard-strips',
+      pulseSignal: true
+    });
+    expect(getRaycastWallVisualStyle(1, bridgeSurface)).toMatchObject({
+      pattern: 'terminal-panels',
+      pulseSignal: false,
+      panelStride: 24
+    });
+    expect(getRaycastLandmarkColumnShadeBoost('core')).toBeGreaterThan(getRaycastLandmarkColumnShadeBoost('bridge'));
+  });
+
   it('selects ground pattern families from landmark and zone theme context', () => {
     const startGround = getRaycastGroundVisualStyle({
       theme: getRaycastZoneTheme('corrupted-metal'),
@@ -132,11 +170,12 @@ describe('raycast visual theme', () => {
     const bruteStyle = getRaycastEnemyVisualStyle('BRUTE', 0xffa64d);
     const stalkerStyle = getRaycastEnemyVisualStyle('STALKER', 0x54e898);
     const rangedStyle = getRaycastEnemyVisualStyle('RANGED', 0x5cefef);
+    const scramblerStyle = getRaycastEnemyVisualStyle('SCRAMBLER', 0xff9058);
 
     expect(gruntStyle).toMatchObject({
       silhouette: 'raider',
       role: 'pressure',
-      hornStyle: 'none'
+      hornStyle: 'tusk'
     });
     expect(bruteStyle).toMatchObject({
       silhouette: 'juggernaut',
@@ -153,8 +192,30 @@ describe('raycast visual theme', () => {
       role: 'artillery',
       hornStyle: 'antenna'
     });
+    expect(scramblerStyle).toMatchObject({
+      silhouette: 'raider',
+      role: 'flanker',
+      hornStyle: 'glitch-spikes'
+    });
     expect(bruteStyle.coreColor).not.toBe(gruntStyle.coreColor);
     expect(stalkerStyle.windupColor).not.toBe(rangedStyle.windupColor);
+  });
+
+  it('keeps every raycast enemy kind above the minimum billboard readability floor', () => {
+    for (const kind of ENEMY_KINDS) {
+      const config = getEnemyConfig(kind, 'raycast');
+      const style = getRaycastEnemyVisualStyle(kind, config.color);
+      const readability = enforceRaycastEnemyBillboardReadability(0.18, 3);
+
+      expect(style.silhouette).toBeTruthy();
+      expect(style.outlineColor).not.toBe(config.color);
+      expect(style.accentColor).not.toBe(style.outlineColor);
+      expect(style.eyeColor).not.toBe(style.outlineColor);
+      expect(readability.visibility).toBeGreaterThanOrEqual(RAYCAST_ENEMY_BILLBOARD_READABILITY.minVisibility);
+      expect(readability.size).toBeGreaterThanOrEqual(RAYCAST_ENEMY_BILLBOARD_READABILITY.minProjectedSize);
+      expect(RAYCAST_ENEMY_BILLBOARD_READABILITY.outlineAlpha).toBeGreaterThanOrEqual(0.85);
+      expect(RAYCAST_ENEMY_BILLBOARD_READABILITY.fillAlpha).toBeGreaterThanOrEqual(0.95);
+    }
   });
 
   it('defines unmistakable billboard colors for stateful interactables', () => {
@@ -165,11 +226,48 @@ describe('raycast visual theme', () => {
     expect(getBillboardColor('exit', false)).toBe(0x48b0c8);
   });
 
+  it('keeps each world palette family distinct without affecting functional interactable colors', () => {
+    const w1Metal = getRaycastZoneTheme('corrupted-metal');
+    const w1Void = getRaycastZoneTheme('void-stone');
+    const w2Basalt = getRaycastZoneTheme('basalt-rift');
+    const w2Ion = getRaycastZoneTheme('ion-shaft');
+    const w3Ash = getRaycastZoneTheme('ash-conduit');
+    const w3Vault = getRaycastZoneTheme('ember-vault');
+
+    expect(rgb(w1Metal.accentColor).g).toBeGreaterThan(rgb(w1Metal.accentColor).r);
+    expect(rgb(w1Void.signalColor).g).toBeGreaterThan(rgb(w1Void.signalColor).b);
+
+    expect(rgb(w2Basalt.patternColor).b).toBeGreaterThan(rgb(w2Basalt.patternColor).g);
+    expect(rgb(w2Ion.signalColor).b).toBeGreaterThan(rgb(w2Ion.signalColor).r);
+    expect(w2Basalt.accentColor).not.toBe(w1Metal.accentColor);
+
+    expect(rgb(w3Ash.accentColor).r).toBeGreaterThan(rgb(w3Ash.accentColor).b);
+    expect(rgb(w3Vault.patternColor).r).toBeGreaterThan(rgb(w3Vault.patternColor).g);
+    expect(w3Vault.accentColor).not.toBe(w2Basalt.accentColor);
+
+    expect(getBillboardColor('token')).toBe(0x72f298);
+    expect(getBillboardColor('health')).toBe(0xff7098);
+    expect(getBillboardColor('exit', false)).toBe(0x48b0c8);
+  });
+
+  it('keeps World 3 authored sectors on ember-specific visual themes', () => {
+    const themes = [...RAYCAST_LEVEL_WORLD3_EMBER_RAMP.zones, ...RAYCAST_LEVEL_WORLD3_GATE_CUT.zones].map(
+      (zone) => zone.visualTheme
+    );
+
+    expect(themes).toContain('ash-conduit');
+    expect(themes).toContain('ember-vault');
+    expect(themes).not.toContain('basalt-rift');
+    expect(themes).not.toContain('toxic-green');
+  });
+
   it('exposes the authored zone palette accents', () => {
-    expect(getRaycastZoneTheme('corrupted-metal').accentColor).toBe(0x556080);
-    expect(getRaycastZoneTheme('void-stone').accentColor).toBe(0x5a4a68);
-    expect(getRaycastZoneTheme('warning-amber').accentColor).toBe(0xc86828);
+    expect(getRaycastZoneTheme('corrupted-metal').accentColor).toBe(0x1d4a34);
+    expect(getRaycastZoneTheme('void-stone').accentColor).toBe(0x183a30);
+    expect(getRaycastZoneTheme('warning-amber').accentColor).toBe(0x7a3a18);
     expect(getRaycastZoneTheme('toxic-green').accentColor).toBe(0x1c8050);
     expect(getRaycastZoneTheme('exit-portal').accentColor).toBe(0x2898a8);
+    expect(getRaycastZoneTheme('basalt-rift').accentColor).toBe(0x07112c);
+    expect(getRaycastZoneTheme('ember-vault').accentColor).toBe(0x641404);
   });
 });

@@ -110,8 +110,8 @@ describe('raycast HUD', () => {
 
   it('returns stable low and critical health visuals for HUD styling', () => {
     expect(getRaycastHealthVisualState(90)).toMatchObject({ tone: 'stable', ratio: 0.9, color: '#58f2e4' });
-    expect(getRaycastHealthVisualState(50)).toMatchObject({ tone: 'low', ratio: 0.5, color: '#ff9a38' });
-    expect(getRaycastHealthVisualState(25)).toMatchObject({ tone: 'critical', ratio: 0.25, color: '#ff3358' });
+    expect(getRaycastHealthVisualState(50)).toMatchObject({ tone: 'low', ratio: 0.5, color: '#ff8f2e' });
+    expect(getRaycastHealthVisualState(25)).toMatchObject({ tone: 'critical', ratio: 0.25, color: '#ff1f48' });
   });
 
   it('builds a focused target line with enemy health and windup state', () => {
@@ -140,16 +140,23 @@ describe('raycast HUD', () => {
     const minimapFrameTop = layout.minimapFrameY - layout.minimapFrameHeight * 0.5;
 
     expect(layout.healthBarX + layout.healthBarWidth).toBe(944);
-    expect(layout.minimapTitleX).toBe(880);
+    expect(layout.minimapTitleX).toBe(847);
+    expect(layout.minimapFrameWidth).toBe(194);
+    expect(layout.minimapPanelWidth).toBe(178);
     expect(minimapTitleTop).toBeGreaterThan(healthBarBottom);
     expect(minimapFrameTop).toBeGreaterThan(healthBarBottom);
   });
 
   it('keeps the larger default minimap treatment on roomier viewports', () => {
     const layout = buildRaycastHudLayout(1280, 720);
+    const healthBarBottom = layout.healthBarY + layout.healthBarTrackHeight * 0.5;
+    const minimapTitleTop = layout.minimapTitleY - layout.minimapTitleHeight * 0.5;
+    const minimapFrameTop = layout.minimapFrameY - layout.minimapFrameHeight * 0.5;
 
-    expect(layout.minimapFrameWidth).toBe(144);
-    expect(layout.minimapPanelWidth).toBe(132);
-    expect(layout.minimapTitleY).toBe(50);
+    expect(layout.minimapFrameWidth).toBe(232);
+    expect(layout.minimapPanelWidth).toBe(212);
+    expect(layout.minimapTitleY).toBe(98);
+    expect(minimapTitleTop).toBeGreaterThan(healthBarBottom);
+    expect(minimapFrameTop).toBeGreaterThan(healthBarBottom);
   });
 });

@@ -3,6 +3,7 @@ import {
   createRaycastDifficultyDirectorConfig,
   cycleRaycastDifficulty,
   getRaycastDifficultyHealthPickup,
+  getRaycastDifficultyPassiveHealConfig,
   getRaycastDifficultyPreset,
   scaleRaycastIncomingDamage
 } from '../game/raycast/RaycastDifficulty';
@@ -36,6 +37,24 @@ describe('raycast difficulty helpers', () => {
     expect(getRaycastDifficultyHealthPickup({ restoreAmount: 20 }, 'assist')).toEqual({ restoreAmount: 25 });
     expect(getRaycastDifficultyHealthPickup({ restoreAmount: 20 }, 'standard')).toEqual({ restoreAmount: 20 });
     expect(getRaycastDifficultyHealthPickup({ restoreAmount: 20 }, 'hard')).toEqual({ restoreAmount: 18 });
+  });
+
+  it('tunes passive regen conservatively by difficulty', () => {
+    expect(getRaycastDifficultyPassiveHealConfig('assist')).toMatchObject({
+      delayAfterDamageMs: 4200,
+      healPerSecond: 2.4,
+      maxHealth: 75
+    });
+    expect(getRaycastDifficultyPassiveHealConfig('standard')).toMatchObject({
+      delayAfterDamageMs: 3000,
+      healPerSecond: 2.2,
+      maxHealth: 75
+    });
+    expect(getRaycastDifficultyPassiveHealConfig('hard')).toMatchObject({
+      delayAfterDamageMs: 7200,
+      healPerSecond: 1.1,
+      maxHealth: 55
+    });
   });
 
   it('scales director caps, budget, and cooldowns conservatively', () => {

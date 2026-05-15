@@ -2,7 +2,17 @@ name: CI
 
 on:
   push:
+    branches:
+      - main
   pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   test:
@@ -29,3 +39,15 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      - name: Security audit (high/critical)
+        run: npm audit --audit-level=high
+
+      - name: Upload dist artifact (main only)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-dist-${{ github.sha }}
+          path: dist
+          if-no-files-found: error
+          retention-days: 7

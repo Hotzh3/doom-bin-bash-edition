@@ -56,6 +56,13 @@ export interface RaycastPriorityMessage {
   tone: 'critical' | 'warning' | 'info' | 'routine';
 }
 
+export interface RaycastLevelStartObjectiveInput {
+  objective: string;
+  hasBoss?: boolean;
+  keyTotal?: number;
+  livingEnemyCount?: number;
+}
+
 /** Strings and vertical placement for the boot MenuScene (title + two mode lines). */
 export interface MainMenuCopy {
   title: string;
@@ -233,6 +240,22 @@ export function buildRaycastPriorityMessage(input: RaycastPriorityMessageInput):
     text: input.hint,
     tone: 'routine'
   };
+}
+
+export function buildRaycastLevelStartObjectiveMessage(input: RaycastLevelStartObjectiveInput): string {
+  const objective = input.objective.trim().toUpperCase();
+  if (input.hasBoss) return 'OBJECTIVE // DEFEAT BOSS, THEN EXFIL.';
+  if (objective === 'FIND KEY' || objective === 'FIND TOKEN') return 'OBJECTIVE // RECOVER TOKEN, OPEN ROUTE.';
+  if (objective === 'OPEN DOOR' || objective === 'OPEN GATE') return 'OBJECTIVE // OPEN GATE, PUSH FOR EXFIL.';
+  if (objective === 'SURVIVE AMBUSH') {
+    return (input.livingEnemyCount ?? 0) > 0
+      ? 'OBJECTIVE // CLEAR HOSTILES, THEN EXFIL.'
+      : 'OBJECTIVE // SURVIVE AMBUSH, THEN EXFIL.';
+  }
+  if (objective === 'REACH EXIT' || objective === 'EXIT READY') return 'OBJECTIVE // REACH EXFIL.';
+  return input.keyTotal && input.keyTotal > 0
+    ? 'OBJECTIVE // FIND TOKEN, THEN EXFIL.'
+    : 'OBJECTIVE // PUSH TO EXFIL.';
 }
 
 export function getMainMenuCopy(): MainMenuCopy {

@@ -36,8 +36,7 @@ No copied gameplay assets, maps, proprietary data, or reverse-engineered impleme
 ## Quick start
 
 ```bash
-npm ci
-npm run dev
+docker compose up --build
 ```
 
 Open the Vite URL (usually `http://localhost:5173`). From the menu: **`A`** or **“Press A: 3D Mode”** starts the raycast path (prologue → episode). **`B`** opens the 2D arena. **`D`** cycles raycast difficulty.
@@ -57,9 +56,7 @@ Open the Vite URL (usually `http://localhost:5173`). From the menu: **`A`** or *
 ## Verification
 
 ```bash
-npm run test
-npm run lint
-npm run build
+curl -I http://127.0.0.1:5173
 ```
 
 ---

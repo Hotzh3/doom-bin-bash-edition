@@ -8,11 +8,14 @@ import {
   damageRaycastBoss,
   getRaycastBossPhaseLabel,
   syncRaycastBossPhase,
+  tickRaycastBossArenaTwist,
   tickRaycastBossMovement,
   tickRaycastBossVolleys,
   type RaycastBossConfig
 } from '../game/raycast/RaycastBoss';
 import { addRaycastBossClearScore } from '../game/raycast/RaycastScore';
+import { RAYCAST_LEVEL_BOSS, RAYCAST_WORLD_THREE_CATALOG, RAYCAST_WORLD_TWO_CATALOG } from '../game/raycast/RaycastLevel';
+import { getRaycastBossVisualProfile } from '../game/raycast/RaycastBossVisual';
 
 const CONFIG: RaycastBossConfig = {
   id: 'volt-archon',
@@ -30,17 +33,40 @@ describe('raycast boss', () => {
     expect(boss.alive).toBe(true);
     expect(boss.health).toBe(120);
     expect(boss.phase).toBe(1);
+    expect(boss.arenaTwist).toBe('none');
   });
 
-  it('switches into aggressive phase when boss drops to half health', () => {
+  it('starts a telegraphed arena twist when crossing into phase 2', () => {
+    const boss = createRaycastBossState(CONFIG, 500);
+    damageRaycastBoss(boss, 61, 1000);
+    expect(boss.phase).toBe(2);
+    expect(boss.arenaTwist).toBe('ion_veil');
+    expect(boss.arenaTwistUntil).toBeGreaterThan(1000);
+  });
+
+  it('picks lateral lane twist for Bloom Warden on phase 2 entry', () => {
+    const boss = createRaycastBossState(
+      { ...CONFIG, id: 'bloom', displayName: 'Bloom Warden', behavior: 'bloom-warden' },
+      0
+    );
+    damageRaycastBoss(boss, 61, 200);
+    expect(boss.arenaTwist).toBe('lateral_lane');
+  });
+
+  it('clears arena twist after the twist window expires', () => {
     const boss = createRaycastBossState(CONFIG, 0);
-    boss.health = 71;
+    damageRaycastBoss(boss, 61, 0);
+    const until = boss.arenaTwistUntil;
+    tickRaycastBossArenaTwist(boss, until + 50);
+    expect(boss.arenaTwist).toBe('none');
+  });
+
+  it('transitions through phase 1 -> 2 -> 3 by health ratio bands', () => {
+    const boss = createRaycastBossState(CONFIG, 0);
+    boss.health = 81;
     syncRaycastBossPhase(boss);
     expect(boss.phase).toBe(1);
-    boss.health = 60;
-    syncRaycastBossPhase(boss);
-    expect(boss.phase).toBe(1);
-    boss.health = 59;
+    boss.health = 80;
     syncRaycastBossPhase(boss);
     expect(boss.phase).toBe(2);
     expect(getRaycastBossPhaseLabel(boss)).toContain('PHASE 2');

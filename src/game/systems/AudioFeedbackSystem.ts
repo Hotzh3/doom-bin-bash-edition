@@ -130,8 +130,10 @@ export const AUDIO_FEEDBACK_CONFIG: Record<AudioFeedbackCue, AudioFeedbackConfig
   },
   pickup: {
     layers: [
-      { frequency: 420, endFrequency: 760, duration: 0.1, volume: 0.026, type: 'triangle' }
-    ]
+      { frequency: 380, endFrequency: 720, duration: 0.085, volume: 0.024, type: 'triangle' },
+      { frequency: 920, endFrequency: 1420, duration: 0.065, volume: 0.014, type: 'sine', delay: 0.02 }
+    ],
+    throttleMs: 55
   },
   pickupHealth: {
     layers: [
@@ -294,6 +296,9 @@ export function getWeaponAudioPlan(weapon: WeaponKind): AudioFeedbackPlan {
 }
 
 export function getDirectorEventAudioPlan(eventType: DirectorEventType): AudioFeedbackPlan {
+  if (eventType === 'ENCOUNTER_PATTERN') {
+    return { cue: 'directorWarning', intensity: 0.94 };
+  }
   if (eventType === 'PREPARE_AMBUSH' || eventType === 'SPAWN_PRESSURE') {
     return { cue: 'directorAmbush', intensity: 1 };
   }

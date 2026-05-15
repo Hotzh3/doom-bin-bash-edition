@@ -22,6 +22,7 @@ import { RAYCAST_RENDERER_CONFIG } from './RaycastRendererConfig';
 import { RAYCAST_PALETTE } from './RaycastPalette';
 import { RAYCAST_DEATH_BURST_MS } from './RaycastCombatSystem';
 import type { RaycastBossState } from './RaycastBoss';
+import { getRaycastBossVisualProfile } from './RaycastBossVisual';
 import {
   getBillboardColor,
   getRaycastCellVariant,
@@ -32,7 +33,10 @@ import {
   getRaycastZoneTheme,
   getRaycastZoneVisual,
   getRaycastWallVisualStyle,
-  sampleRaycastSurfaceContext
+  getRaycastLandmarkColumnShadeBoost,
+  sampleRaycastSurfaceContext,
+  enforceRaycastEnemyBillboardReadability,
+  RAYCAST_ENEMY_BILLBOARD_READABILITY
 } from './RaycastVisualTheme';
 export { RAYCAST_RENDERER_CONFIG, type RaycastRendererConfig } from './RaycastRendererConfig';
 
@@ -129,7 +133,8 @@ export class RaycastRenderer {
       const sectorShade = RAYCAST_ATMOSPHERE.sectorDarkness[hit.wallType as keyof typeof RAYCAST_ATMOSPHERE.sectorDarkness] ?? 1;
       const surface = sampleRaycastSurfaceContext(this.level.zones, hit.hitX, hit.hitY, hit.rayAngle);
       const shade = Phaser.Math.Clamp(
-        calculateFogShade(hit.correctedDistance, atmosphere) * sectorShade * (0.92 + surface.variant * 0.12),
+        calculateFogShade(hit.correctedDistance, atmosphere) * sectorShade * (0.92 + surface.variant * 0.12) +
+          getRaycastLandmarkColumnShadeBoost(surface.landmark),
         atmosphere.ambientDarkness,
         1
       );
@@ -177,8 +182,16 @@ export class RaycastRenderer {
 
       if (!projection.enemy.alive) {
         this.drawEnemyDeathBurst(projection, height, time, atmosphere);
-        return;
+        continue;
       }
+
+      const hitStaggerX =
+        projection.enemy.hitFlashUntil > time
+          ? Math.sin(time * 0.11) *
+            projection.size *
+            0.12 *
+            Math.min(1, (projection.enemy.hitFlashUntil - time) / RAYCAST_HIT_FLASH_MS)
+          : 0;
 
       if (isRaycastEnemyTelegraphing(projection.enemy, time)) {
         const progress = getRaycastEnemySpawnTelegraphProgress(projection.enemy, time);
@@ -188,39 +201,40 @@ export class RaycastRenderer {
         const haloRadius = projection.size * (0.72 + progress * 0.2 + pulse * 0.1);
         const alpha = (0.42 + pulse * 0.18) * visibility;
         this.graphics.fillStyle(RAYCAST_PALETTE.criticalVeil, 0.52 * visibility);
+        const tx = projection.screenX + hitStaggerX;
         this.graphics.fillRect(
-          projection.screenX - projection.size * 0.6,
+          tx - projection.size * 0.6,
           height * 0.5 - projection.size * 0.7,
           projection.size * 1.2,
           projection.size * 1.4
         );
         this.graphics.fillStyle(RAYCAST_PALETTE.telegraphRose, 0.16 * visibility + progress * 0.08);
-        this.graphics.fillCircle(projection.screenX, height * 0.5, haloRadius);
+        this.graphics.fillCircle(tx, height * 0.5, haloRadius);
         this.graphics.lineStyle(4, RAYCAST_PALETTE.telegraphAmber, alpha);
-        this.graphics.strokeCircle(projection.screenX, height * 0.5, markerRadius);
+        this.graphics.strokeCircle(tx, height * 0.5, markerRadius);
         this.graphics.lineStyle(2, 0xffffff, (0.35 + pulse * 0.12) * visibility);
         this.graphics.lineBetween(
-          projection.screenX - projection.size * 0.36,
+          tx - projection.size * 0.36,
           height * 0.5,
-          projection.screenX + projection.size * 0.36,
+          tx + projection.size * 0.36,
           height * 0.5
         );
         this.graphics.lineBetween(
-          projection.screenX,
+          tx,
           height * 0.5 - projection.size * 0.36,
-          projection.screenX,
+          tx,
           height * 0.5 + projection.size * 0.36
         );
         this.graphics.fillStyle(RAYCAST_PALETTE.amberSoft, (0.55 + pulse * 0.16) * visibility);
-        this.graphics.fillRect(projection.screenX - projection.size * 0.2, height * 0.5 - projection.size * 0.9, projection.size * 0.4, 5);
+        this.graphics.fillRect(tx - projection.size * 0.2, height * 0.5 - projection.size * 0.9, projection.size * 0.4, 5);
         this.graphics.fillStyle(RAYCAST_PALETTE.telegraphRose, 0.78 * visibility);
         this.graphics.fillRect(
-          projection.screenX - projection.size * 0.28,
+          tx - projection.size * 0.28,
           height * 0.5 - projection.size * 0.52,
           projection.size * 0.56,
           projection.size * (0.72 + pulse * 0.06)
         );
-        return;
+        continue;
       }
 
       const isWindingUp = isRaycastEnemyWindingUp(projection.enemy, time);
@@ -232,13 +246,20 @@ export class RaycastRenderer {
           ? this.blendColors(0xfff5f0, projection.enemy.color, 0.42)
           : this.blendColors(projection.enemy.color, RAYCAST_PALETTE.telegraphRose, telegraphMix);
       const enemyStyle = getRaycastEnemyVisualStyle(projection.enemy.kind, projection.enemy.color);
-      const visibility = calculateEnemyVisibility(projection.distance, atmosphere);
-      const size = projection.size * (isWindingUp ? 1.04 + windupProgress * 0.08 + pulse * 0.04 : 1);
-      this.graphics.fillStyle(enemyStyle.outlineColor, 0.78 * visibility);
-      this.graphics.fillEllipse(projection.screenX, height * 0.5 + size * 0.08, size * 1.28, size * 1.42);
+      const readability = enforceRaycastEnemyBillboardReadability(
+        calculateEnemyVisibility(projection.distance, atmosphere),
+        projection.size
+      );
+      const visibility = readability.visibility;
+      const size = readability.size * (isWindingUp ? 1.04 + windupProgress * 0.08 + pulse * 0.04 : 1);
+      const sx = projection.screenX + hitStaggerX;
+      const savedEnemyX = projection.screenX;
+      projection.screenX = sx;
+      this.graphics.fillStyle(enemyStyle.outlineColor, RAYCAST_ENEMY_BILLBOARD_READABILITY.outlineAlpha * visibility);
+      this.graphics.fillEllipse(sx, height * 0.5 + size * 0.08, size * 1.28, size * 1.42);
       if (isWindingUp) {
         this.graphics.fillStyle(enemyStyle.windupColor, (0.18 + windupProgress * 0.14 + pulse * 0.08) * visibility);
-        this.graphics.fillCircle(projection.screenX, height * 0.5, size * (0.46 + windupProgress * 0.08));
+        this.graphics.fillCircle(sx, height * 0.5, size * (0.46 + windupProgress * 0.08));
       }
       this.graphics.fillStyle(color, 0.95 * visibility);
       const savedSilhouetteSize = projection.size;
@@ -247,14 +268,14 @@ export class RaycastRenderer {
       projection.size = savedSilhouetteSize;
       if (isWindingUp) {
         this.graphics.lineStyle(4, enemyStyle.accentColor, (0.78 + pulse * 0.14) * visibility);
-        this.graphics.strokeEllipse(projection.screenX, height * 0.5 + size * 0.08, size * 1.48, size * 1.56);
+        this.graphics.strokeEllipse(sx, height * 0.5 + size * 0.08, size * 1.48, size * 1.56);
         this.graphics.fillStyle(enemyStyle.windupColor, (0.5 + windupProgress * 0.2) * visibility);
-        this.graphics.fillRect(projection.screenX - size * 0.42, height * 0.5 - size * 0.92, size * 0.84, 6);
+        this.graphics.fillRect(sx - size * 0.42, height * 0.5 - size * 0.92, size * 0.84, 6);
         this.graphics.lineStyle(2, enemyStyle.eyeColor, (0.5 + pulse * 0.18) * visibility);
         this.graphics.lineBetween(
-          projection.screenX - size * 0.38,
+          sx - size * 0.38,
           height * 0.5 - size * 0.89,
-          projection.screenX + size * (windupProgress * 0.76 - 0.38),
+          sx + size * (windupProgress * 0.76 - 0.38),
           height * 0.5 - size * 0.89
         );
       }
@@ -283,7 +304,9 @@ export class RaycastRenderer {
     if (correctedDistance > (this.depthBuffer[column] ?? Number.POSITIVE_INFINITY) + 0.08) return;
 
     const visibility = calculateEnemyVisibility(correctedDistance, atmosphere);
-    const size = Phaser.Math.Clamp(height / correctedDistance / 1.12, 44, 270);
+    const baseSize = Phaser.Math.Clamp(height / correctedDistance / 1.12, 44, 270);
+    const profile = getRaycastBossVisualProfile(boss, time);
+    const size = baseSize * profile.silhouetteScale;
     const telegraph = time < boss.telegraphUntil;
     const pulse = telegraph ? 0.55 + Math.sin(time / 42) * 0.45 : 1;
     const cx = screenX;
@@ -301,10 +324,28 @@ export class RaycastRenderer {
     this.graphics.strokeEllipse(cx, cy, size * 1.12, size * 1.45);
     this.graphics.fillStyle(coreColor, 0.92 * visibility);
     this.graphics.fillEllipse(cx, cy - size * 0.05, size * 0.88, size * 1.05);
-    this.graphics.fillStyle(RAYCAST_PALETTE.plasmaBright, 0.38 * visibility);
-    this.graphics.fillCircle(cx, cy - size * 0.38, size * 0.12);
-    this.graphics.fillCircle(cx + size * 0.22, cy - size * 0.18, size * 0.09);
-    this.graphics.fillCircle(cx - size * 0.22, cy - size * 0.18, size * 0.09);
+    const finRot = time * 0.0018;
+    for (let i = 0; i < 3; i += 1) {
+      const a = finRot + (i * Math.PI * 2) / 3;
+      const tipX = cx + Math.cos(a) * size * 0.82;
+      const tipY = cy + Math.sin(a) * size * 0.62;
+      const leftX = cx + Math.cos(a + 0.42) * size * 0.42;
+      const leftY = cy + Math.sin(a + 0.42) * size * 0.36;
+      const rightX = cx + Math.cos(a - 0.42) * size * 0.42;
+      const rightY = cy + Math.sin(a - 0.42) * size * 0.36;
+      this.graphics.fillStyle(this.blendColors(profile.haloColor, 0x11151f, 0.45), (0.44 - i * 0.06) * visibility);
+      this.graphics.fillTriangle(tipX, tipY, leftX, leftY, rightX, rightY);
+    }
+    this.graphics.fillStyle(RAYCAST_PALETTE.plasmaBright, 0.3 * visibility);
+    this.graphics.fillRect(cx - size * 0.08, cy - size * 0.56, size * 0.16, size * 0.2);
+    this.graphics.fillRect(cx + size * 0.18, cy - size * 0.28, size * 0.12, size * 0.16);
+    this.graphics.fillRect(cx - size * 0.3, cy - size * 0.28, size * 0.12, size * 0.16);
+    for (let i = 0; i < profile.particleCount; i += 1) {
+      const t = (i / profile.particleCount) * Math.PI * 2 + time * (0.0014 + (i % 3) * 0.0002);
+      const pr = size * (0.72 + (i % 4) * 0.05 + Math.sin(time * 0.003 + i) * 0.03);
+      this.graphics.fillStyle(profile.haloColor, (0.1 + ((i + 2) % 5) * 0.03) * visibility);
+      this.graphics.fillCircle(cx + Math.cos(t) * pr, cy + Math.sin(t) * pr * 0.76, Math.max(2, size * 0.032));
+    }
     if (telegraph) {
       const rays = boss.phase === 2 ? 7 : 4;
       const haloAlpha = (0.24 + pulse * 0.2) * visibility;
@@ -669,10 +710,20 @@ export class RaycastRenderer {
       this.graphics.lineBetween(0, y, width, y);
     }
 
-    if (activeZone?.landmark === 'gate' || activeZone?.landmark === 'ambush') {
+    const hzLm = activeZone?.landmark;
+    if (hzLm === 'gate' || hzLm === 'ambush' || hzLm === 'reactor') {
       this.graphics.lineStyle(2, zoneTheme.signalColor, 0.12 + atmosphere.pulseAlpha * 0.35);
       this.graphics.lineBetween(width * 0.5 - 44, horizonY + 26, width * 0.5, horizonY + 8);
       this.graphics.lineBetween(width * 0.5 + 44, horizonY + 26, width * 0.5, horizonY + 8);
+    }
+    if (hzLm === 'bridge') {
+      this.graphics.lineStyle(2, zoneTheme.signalColor, 0.09 + atmosphere.pulseAlpha * 0.22);
+      this.graphics.lineBetween(width * 0.08, horizonY + 22, width * 0.92, horizonY + 22);
+      this.graphics.lineBetween(width * 0.18, horizonY + 34, width * 0.82, horizonY + 30);
+    }
+    if (hzLm === 'core') {
+      this.graphics.lineStyle(1, zoneTheme.signalColor, 0.11 + atmosphere.pulseAlpha * 0.42);
+      this.graphics.strokeCircle(width * 0.5, horizonY + 24, 40);
     }
 
     this.graphics.fillStyle(zoneTheme.signalColor, 0.028 + atmosphere.pulseAlpha * 0.04);
@@ -865,6 +916,32 @@ export class RaycastRenderer {
     if (surface.landmark === 'exit' && column % 13 === 0) {
       this.graphics.lineStyle(2, signalColor, alpha + 0.14 + pulseAlpha);
       this.graphics.strokeCircle(x + width * 0.5, y + wallHeight * 0.32, Math.max(2, width * 0.7));
+    }
+
+    if (surface.landmark === 'monolith' && column % 13 === 0) {
+      this.graphics.lineStyle(2, signalColor, alpha + 0.08);
+      this.graphics.lineBetween(x + width * 0.5, y + wallHeight * 0.1, x + width * 0.5, y + wallHeight * 0.9);
+    }
+    if (surface.landmark === 'reactor' && column % 17 === 0) {
+      this.graphics.lineStyle(1, signalColor, alpha + 0.1 + pulseAlpha * 0.5);
+      this.graphics.lineBetween(x, y + wallHeight * 0.22, x + width, y + wallHeight * 0.28);
+      this.graphics.lineBetween(x, y + wallHeight * 0.62, x + width, y + wallHeight * 0.68);
+    }
+    if (surface.landmark === 'bridge' && column % 23 === 0) {
+      this.graphics.lineStyle(1, signalColor, alpha + 0.06);
+      this.graphics.lineBetween(x, y + wallHeight * 0.47, x + width, y + wallHeight * 0.51);
+    }
+    if (surface.landmark === 'core' && column % 21 === 0) {
+      this.graphics.lineStyle(1, signalColor, alpha + 0.1 + pulseAlpha * 0.35);
+      this.graphics.strokeCircle(x + width * 0.5, y + wallHeight * 0.36, Math.max(2, width * 0.58));
+    }
+    if (surface.landmark === 'ritual' && column % 11 === 0) {
+      this.graphics.lineStyle(1, patternColor, alpha + 0.06 + pulseAlpha * 0.25);
+      this.graphics.lineBetween(x + width * 0.12, y + wallHeight * 0.74, x + width * 0.88, y + wallHeight * 0.78);
+    }
+    if (surface.landmark === 'machinery' && column % 29 === 0) {
+      this.graphics.fillStyle(secondaryColor, alpha * 0.38);
+      this.graphics.fillRect(x + width * 0.1, y + wallHeight * 0.54, width * 0.8, Math.max(1, wallHeight * 0.045));
     }
   }
 
@@ -1107,6 +1184,8 @@ export class RaycastRenderer {
         projection.size * 0.26,
         projection.size * 0.08
       );
+      this.graphics.fillStyle(0x020408, 0.42 * visibility);
+      this.graphics.fillRect(bodyLeft + projection.size * 0.12, bodyTop + projection.size * 0.88, projection.size * 0.76, projection.size * 0.08);
       return;
     }
 
@@ -1114,34 +1193,42 @@ export class RaycastRenderer {
     this.graphics.fillEllipse(projection.screenX, bodyTop + projection.size * 0.52, projection.size * 0.52, projection.size * 0.44);
     this.graphics.fillStyle(color, 0.95 * visibility);
     this.graphics.fillCircle(projection.screenX, bodyTop + projection.size * 0.17, projection.size * 0.13);
+    const leanWide = style.role === 'flanker' ? 0.14 : 0.18;
+    const leanTall = style.role === 'flanker' ? 0.4 : 0.38;
     this.graphics.fillRect(
-      projection.screenX - projection.size * 0.18,
+      projection.screenX - projection.size * leanWide,
       bodyTop + projection.size * 0.26,
-      projection.size * 0.36,
-      projection.size * 0.38
+      projection.size * (leanWide * 2),
+      projection.size * leanTall
     );
+    const coatL = style.role === 'flanker' ? 0.1 : 0.18;
+    const coatR = style.role === 'flanker' ? 0.9 : 0.82;
     this.graphics.fillTriangle(
       projection.screenX,
       bodyTop + projection.size * 0.16,
-      bodyLeft + projection.size * 0.18,
+      bodyLeft + projection.size * coatL,
       bodyTop + projection.size * 0.92,
-      bodyLeft + projection.size * 0.82,
+      bodyLeft + projection.size * coatR,
       bodyTop + projection.size * 0.92
     );
+    const armOuterL = style.role === 'flanker' ? 0.02 : 0.04;
+    const armInnerL = style.role === 'flanker' ? 0.22 : 0.24;
+    const armOuterR = style.role === 'flanker' ? 0.98 : 0.96;
+    const armInnerR = style.role === 'flanker' ? 0.78 : 0.76;
     this.graphics.fillTriangle(
-      bodyLeft + projection.size * 0.18,
+      bodyLeft + projection.size * coatL,
       bodyTop + projection.size * 0.42,
-      bodyLeft + projection.size * 0.04,
+      bodyLeft + projection.size * armOuterL,
       bodyTop + projection.size * 0.72,
-      bodyLeft + projection.size * 0.24,
+      bodyLeft + projection.size * armInnerL,
       bodyTop + projection.size * 0.54
     );
     this.graphics.fillTriangle(
-      bodyLeft + projection.size * 0.82,
+      bodyLeft + projection.size * coatR,
       bodyTop + projection.size * 0.42,
-      bodyLeft + projection.size * 0.96,
+      bodyLeft + projection.size * armOuterR,
       bodyTop + projection.size * 0.72,
-      bodyLeft + projection.size * 0.76,
+      bodyLeft + projection.size * armInnerR,
       bodyTop + projection.size * 0.54
     );
     this.graphics.fillStyle(style.coreColor, 0.5 * visibility);
@@ -1183,6 +1270,12 @@ export class RaycastRenderer {
     if (style.hornStyle === 'ram') {
       this.graphics.lineBetween(centerX - size * 0.08, headY, centerX - size * 0.26, headY - size * 0.16);
       this.graphics.lineBetween(centerX + size * 0.08, headY, centerX + size * 0.26, headY - size * 0.16);
+      return;
+    }
+
+    if (style.hornStyle === 'tusk') {
+      this.graphics.lineBetween(centerX - size * 0.2, headY + size * 0.06, centerX - size * 0.26, headY + size * 0.22);
+      this.graphics.lineBetween(centerX + size * 0.2, headY + size * 0.06, centerX + size * 0.26, headY + size * 0.22);
       return;
     }
 

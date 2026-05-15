@@ -3,8 +3,11 @@ import {
   computeEnemySwarmHealScale,
   computePassiveHealCombatScale,
   DEFAULT_RAYCAST_PASSIVE_HEAL_CONFIG,
+  formatRaycastPassiveRegenHudLabel,
+  getRaycastPassiveRegenHudState,
   tickRaycastPassiveHeal
 } from '../game/raycast/RaycastPassiveHeal';
+import { getRaycastDifficultyPassiveHealConfig } from '../game/raycast/RaycastDifficulty';
 
 describe('raycast passive heal', () => {
   it('does not heal until the delay after damage has passed', () => {
@@ -35,16 +38,28 @@ describe('raycast passive heal', () => {
     expect(result.nextFractionalCarry).toBe(0);
   });
 
-  it('respects max health', () => {
+  it('respects partial max health instead of regenerating to full', () => {
     const result = tickRaycastPassiveHeal({
-      health: 99.9,
+      health: 69,
       nowMs: 50_000,
       lastDamageAtMs: 30_000,
       deltaMs: 5000,
-      config: DEFAULT_RAYCAST_PASSIVE_HEAL_CONFIG,
+      config: { ...DEFAULT_RAYCAST_PASSIVE_HEAL_CONFIG, maxHealth: 70 },
       combatScale: 1
     });
-    expect(result.nextHealth).toBeLessThanOrEqual(100);
+    expect(result.nextHealth).toBe(70);
+    expect(result.nextHealth).toBeLessThan(100);
+  });
+
+  it('varies passive regen by difficulty', () => {
+    const standard = getRaycastDifficultyPassiveHealConfig('standard');
+    const hard = getRaycastDifficultyPassiveHealConfig('hard');
+    const assist = getRaycastDifficultyPassiveHealConfig('assist');
+
+    expect(assist.maxHealth).toBeGreaterThanOrEqual(standard.maxHealth);
+    expect(standard.maxHealth).toBeGreaterThan(hard.maxHealth);
+    expect(assist.healPerSecond).toBeGreaterThan(standard.healPerSecond);
+    expect(hard.delayAfterDamageMs).toBeGreaterThan(standard.delayAfterDamageMs);
   });
 
   it('suppresses healing during director pressure', () => {
@@ -84,5 +99,61 @@ describe('raycast passive heal', () => {
     expect(second.nextHealth).toBe(72);
     expect(second.healingThisTick).toBe(1);
     expect(second.nextFractionalCarry).toBeCloseTo(0, 5);
+  });
+
+  it('reports HUD state for waiting, blocked, active, and capped regen', () => {
+    const config = { ...DEFAULT_RAYCAST_PASSIVE_HEAL_CONFIG, maxHealth: 70 };
+
+    expect(
+      formatRaycastPassiveRegenHudLabel(
+        getRaycastPassiveRegenHudState({
+          health: 42,
+          nowMs: 12_000,
+          lastDamageAtMs: 10_000,
+          config,
+          combatScale: 1,
+          isRegenerating: false
+        })
+      )
+    ).toBe('REGEN WAIT');
+
+    expect(
+      formatRaycastPassiveRegenHudLabel(
+        getRaycastPassiveRegenHudState({
+          health: 42,
+          nowMs: 20_000,
+          lastDamageAtMs: 10_000,
+          config,
+          combatScale: 0,
+          isRegenerating: false
+        })
+      )
+    ).toBe('REGEN LOCK');
+
+    expect(
+      formatRaycastPassiveRegenHudLabel(
+        getRaycastPassiveRegenHudState({
+          health: 42,
+          nowMs: 20_000,
+          lastDamageAtMs: 10_000,
+          config,
+          combatScale: 1,
+          isRegenerating: true
+        })
+      )
+    ).toBe('REGEN +');
+
+    expect(
+      formatRaycastPassiveRegenHudLabel(
+        getRaycastPassiveRegenHudState({
+          health: 70,
+          nowMs: 20_000,
+          lastDamageAtMs: 10_000,
+          config,
+          combatScale: 1,
+          isRegenerating: false
+        })
+      )
+    ).toBeNull();
   });
 });

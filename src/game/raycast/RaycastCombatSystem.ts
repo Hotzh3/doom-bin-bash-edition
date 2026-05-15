@@ -32,6 +32,18 @@ export const RAYCAST_DEATH_BURST_MS = 330;
 const HIT_FLASH_MS = RAYCAST_HIT_FLASH_MS;
 const DEATH_BURST_MS = RAYCAST_DEATH_BURST_MS;
 const GRID_SCALE = 100;
+const STAGGER_BASE_MS: Record<WeaponKind, number> = {
+  PISTOL: 55,
+  SHOTGUN: 115,
+  LAUNCHER: 165
+};
+const STAGGER_KIND_MUL: Record<EnemyKind, number> = {
+  GRUNT: 1,
+  STALKER: 1.18,
+  RANGED: 1.14,
+  SCRAMBLER: 1.22,
+  BRUTE: 0.64
+};
 
 export class RaycastCombatSystem {
   private readonly weapons = new WeaponSystem('raycast');
@@ -128,10 +140,12 @@ export class RaycastCombatSystem {
     const target = findEnemyAlongAim(player, projectileAngle, enemies, wallDistance, weapon.aimToleranceRadians);
     if (!target) return null;
 
+    applyRaycastEnemyKnockback(target, player.x, player.y, projectile.damage, map);
     const directKilled = applyDamage(target, projectile.damage);
     target.hitFlashUntil = time + HIT_FLASH_MS;
+    applyRaycastHitStagger(target, projectile.weaponKind, time, false);
     if (directKilled) target.deathBurstUntil = time + DEATH_BURST_MS;
-    const splashImpacts = this.applyExplosionSplash(target, projectile, enemies, time);
+    const splashImpacts = this.applyExplosionSplash(target, projectile, enemies, map, time);
     const killedEnemyKinds: EnemyKind[] = [];
     if (directKilled) killedEnemyKinds.push(target.kind);
     killedEnemyKinds.push(...splashImpacts.killedKinds);
@@ -149,6 +163,7 @@ export class RaycastCombatSystem {
     originEnemy: RaycastEnemy,
     projectile: ProjectileSpawn,
     enemies: RaycastEnemy[],
+    map: RaycastMap,
     time: number
   ): { damage: number; killCount: number; hitCount: number; killedKinds: EnemyKind[] } {
     if (projectile.explosionRadius <= 0) return { damage: 0, killCount: 0, hitCount: 0, killedKinds: [] };
@@ -166,17 +181,27 @@ export class RaycastCombatSystem {
       const falloff = 1 - distance / radius;
       const splashDamage = Math.max(1, Math.round(projectile.damage * 0.62 * falloff));
       hitCount += 1;
+      applyRaycastEnemyKnockback(enemy, originEnemy.x, originEnemy.y, splashDamage, map);
       if (applyDamage(enemy, splashDamage)) {
         enemy.deathBurstUntil = time + DEATH_BURST_MS;
         killCount += 1;
         killedKinds.push(enemy.kind);
       }
+      applyRaycastHitStagger(enemy, projectile.weaponKind, time, true);
       enemy.hitFlashUntil = time + HIT_FLASH_MS;
       damage += splashDamage;
     });
 
     return { damage, killCount, hitCount, killedKinds };
   }
+}
+
+function applyRaycastHitStagger(enemy: RaycastEnemy, weaponKind: WeaponKind, time: number, splash: boolean): void {
+  const base = STAGGER_BASE_MS[weaponKind] ?? STAGGER_BASE_MS.PISTOL;
+  const kindMul = STAGGER_KIND_MUL[enemy.kind] ?? 1;
+  const splashMul = splash ? 0.58 : 1;
+  const duration = Math.round(base * kindMul * splashMul);
+  enemy.staggerUntil = Math.max(enemy.staggerUntil ?? 0, time + duration);
 }
 
 interface RaycastProjectileImpact {

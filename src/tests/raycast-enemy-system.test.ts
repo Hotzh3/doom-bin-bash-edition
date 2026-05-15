@@ -176,6 +176,20 @@ describe('raycast enemy system', () => {
     expect(cooldown.spawnedProjectiles).toHaveLength(0);
   });
 
+  it('suppresses enemy attacks while stagger is active', () => {
+    const enemy = createRaycastEnemy({ id: 'staggered-stalker', kind: 'STALKER', x: 2.5, y: 10.08 });
+    enemy.staggerUntil = 1200;
+
+    const staggerTick = updateRaycastEnemies(RAYCAST_MAP, [enemy], { x: 2.5, y: 10.4, alive: true }, 1100, 16);
+    const postStaggerWindup = updateRaycastEnemies(RAYCAST_MAP, [enemy], { x: 2.5, y: 10.4, alive: true }, 1210, 16);
+    const postStaggerHit = updateRaycastEnemies(RAYCAST_MAP, [enemy], { x: 2.5, y: 10.4, alive: true }, 1325, 16);
+
+    expect(staggerTick.meleeDamage).toBe(0);
+    expect(enemy.attackWindupUntil).toBeGreaterThanOrEqual(0);
+    expect(postStaggerWindup.meleeDamage).toBe(0);
+    expect(postStaggerHit.meleeDamage).toBeGreaterThan(0);
+  });
+
   it('ranged projectiles damage player after clear telegraph', () => {
     const enemy = createRaycastEnemy({ id: 'ranged', kind: 'RANGED', x: 1.5, y: 7.8 });
     updateRaycastEnemies(RAYCAST_MAP, [enemy], { x: 1.5, y: 10.4, alive: true }, 2000, 16);

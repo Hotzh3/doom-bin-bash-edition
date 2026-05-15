@@ -65,10 +65,10 @@ export function getRaycastHealthVisualState(
   const clampedHealth = Math.min(Math.max(health, 0), maxHealth);
   const ratio = maxHealth <= 0 ? 0 : clampedHealth / maxHealth;
   if (ratio <= 0.25) {
-    return { ratio, tone: 'critical', color: '#ff3358', accentColor: 0xff3358 };
+    return { ratio, tone: 'critical', color: '#ff1f48', accentColor: 0xff2248 };
   }
   if (ratio <= 0.5) {
-    return { ratio, tone: 'low', color: '#ff9a38', accentColor: 0xff9a38 };
+    return { ratio, tone: 'low', color: '#ff8f2e', accentColor: 0xff9420 };
   }
   return { ratio, tone: 'stable', color: '#58f2e4', accentColor: 0x58f2e4 };
 }
@@ -188,12 +188,12 @@ export function buildRaycastHudLayout(width: number, height: number): RaycastHud
   const healthBarWidth = 168;
   const healthBarTrackHeight = 10;
   const healthBarFillHeight = 6;
-  const minimapFrameWidth = compactTopRightCluster ? 128 : 144;
-  const minimapFrameHeight = compactTopRightCluster ? 100 : 116;
-  const minimapPanelWidth = compactTopRightCluster ? 116 : 132;
-  const minimapPanelHeight = compactTopRightCluster ? 82 : 98;
+  const minimapFrameWidth = compactTopRightCluster ? 194 : 232;
+  const minimapFrameHeight = compactTopRightCluster ? 152 : 182;
+  const minimapPanelWidth = compactTopRightCluster ? 178 : 212;
+  const minimapPanelHeight = compactTopRightCluster ? 132 : 158;
   const minimapFrameX = width - 16 - minimapFrameWidth * 0.5;
-  const minimapFrameTop = compactTopRightCluster ? 114 : 66;
+  const minimapFrameTop = compactTopRightCluster ? 126 : 114;
   const minimapTitleHeight = 20;
   const minimapTitleGap = compactTopRightCluster ? 12 : 6;
 
@@ -209,7 +209,7 @@ export function buildRaycastHudLayout(width: number, height: number): RaycastHud
     healthBarFillHeight,
     minimapTitleX: minimapFrameX,
     minimapTitleY: minimapFrameTop - minimapTitleGap - minimapTitleHeight * 0.5,
-    minimapTitleWidth: compactTopRightCluster ? 88 : 96,
+    minimapTitleWidth: compactTopRightCluster ? 108 : 122,
     minimapTitleHeight,
     minimapFrameX,
     minimapFrameY: minimapFrameTop + minimapFrameHeight * 0.5,

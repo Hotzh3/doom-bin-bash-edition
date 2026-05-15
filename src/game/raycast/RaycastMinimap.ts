@@ -43,7 +43,7 @@ export interface RaycastMinimapCell {
 }
 
 export interface RaycastMinimapMarker {
-  kind: 'player' | 'key' | 'door' | 'exit';
+  kind: 'player' | 'key' | 'door' | 'exit' | 'landmark';
   x: number;
   y: number;
   angle?: number;
@@ -120,7 +120,8 @@ export function buildRaycastMinimapModel(state: RaycastMinimapState): RaycastMin
       y: exit.y,
       label: exit.billboardLabel,
       active: true
-    }))
+    })),
+    ...landmarkMarkers
   ];
 
   const enemyBlips = state.enemies
@@ -136,6 +137,24 @@ export function buildRaycastMinimapModel(state: RaycastMinimapState): RaycastMin
     markers,
     enemyBlips
   };
+}
+
+function buildRaycastLandmarkMarkerLabel(zoneId: string, landmark: NonNullable<RaycastLevel['zones'][number]['landmark']>): string {
+  if (landmark === 'key') return 'KEYNODE';
+  if (landmark === 'gate') return 'GATE';
+  if (landmark === 'ambush') return `KILL-${buildZoneTag(zoneId)}`;
+  if (landmark === 'exit') return 'EXFIL';
+  if (landmark === 'secret') return `CACHE-${buildZoneTag(zoneId)}`;
+  return buildZoneTag(zoneId);
+}
+
+function buildZoneTag(zoneId: string): string {
+  return zoneId
+    .split('-')
+    .map((token) => token[0])
+    .join('')
+    .slice(0, 4)
+    .toUpperCase();
 }
 
 /** Red-family markers for minimap differentiation (enemy dots). */

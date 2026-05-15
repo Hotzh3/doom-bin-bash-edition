@@ -5,8 +5,10 @@
 export const RAYCAST_PALETTE = {
   voidBlack: 0x020206,
   floorVoid: 0x04060a,
-  /** Distance fog tint — near-black with a faint sick cast. */
-  fogVoid: 0x030508,
+  /** Distance fog tint — near-black with a faint terminal-green cast for World 1. */
+  fogVoid: 0x030806,
+  /** World 1 terminal envelope — green-black cinder cast mixed into base fog (distinct from W2 blue rift). */
+  forgeHaze: 0x030806,
   corruptVeil: 0x3e1432,
   criticalVeil: 0x520818,
   muzzleWarm: 0xffde9c,
@@ -55,14 +57,14 @@ export const RAYCAST_PALETTE = {
 
 /** CSS strings for Phaser text and DOM-adjacent HUD. */
 export const RAYCAST_CSS = {
-  hudPanel: '#04060acc',
-  debugText: '#6a9084',
-  systemText: '#52e8d4',
+  hudPanel: '#030905cc',
+  debugText: '#5f8f74',
+  systemText: '#72f2b0',
   warningText: '#ff4f68',
-  keyText: '#ffe8b8',
-  bodyText: '#d8d4cc',
-  mutedText: '#6f8f82',
-  accentText: '#58f2e4'
+  keyText: '#dfffd0',
+  bodyText: '#cce4d6',
+  mutedText: '#4f7860',
+  accentText: '#72f2b0'
 } as const;
 
 /** World 2 HUD — violet-shifted terminal glass over abyss canvas (distinct from W1 teal corruption). */
