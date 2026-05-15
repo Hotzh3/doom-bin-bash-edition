@@ -67,15 +67,22 @@ export interface RaycastLevelStartObjectiveInput {
 /** Strings and vertical placement for the boot MenuScene. */
 export interface MainMenuCopy {
   title: string;
+  subtitle: string;
   press3d: string;
+  settingsPrompt: string;
+  footer: string;
 }
 
 export interface MainMenuLayout {
   centerX: number;
   titleY: number;
+  subtitleY: number;
   option3dY: number;
+  difficultyY: number;
+  settingsY: number;
   /** Center Y for the decorative frame behind the title */
   titleFrameCenterY: number;
+  footerY: number;
 }
 
 /** Death overlay — distinct voice from sector-clear screens (still terminal / horror). */
@@ -284,7 +291,10 @@ export function buildRaycastLevelStartObjectiveMessage(input: RaycastLevelStartO
 export function getMainMenuCopy(): MainMenuCopy {
   return {
     title: 'DOOM BIN BASH EDITION',
-    press3d: 'A / ENTER: INICIAR'
+    subtitle: 'RAYCAST // PROTOCOL STRIP',
+    press3d: 'A / CLICK — INICIAR SECTOR 3D',
+    settingsPrompt: 'S — CONFIG (SESIÓN)',
+    footer: 'Made by Hotzh3'
   };
 }
 
@@ -310,15 +320,23 @@ export function getPrologueCopy(): PrologueCopy {
 export function buildMainMenuLayout(width: number, height: number): MainMenuLayout {
   const centerX = width * 0.5;
   const shortViewport = width <= 720 || height <= 405;
-  const titleY = Math.round(height * (shortViewport ? 0.4 : 0.42));
-  const titleToFirstLine = shortViewport ? 52 : 58;
+  const titleY = Math.round(height * (shortViewport ? 0.36 : 0.38));
+  const titleToFirstLine = shortViewport ? 50 : 56;
+  const subtitleY = titleY + Math.round(titleToFirstLine * 0.38);
   const option3dY = titleY + titleToFirstLine;
-  const titleFrameCenterY = titleY - Math.round(titleToFirstLine * 0.22);
+  const difficultyY = option3dY + 44;
+  const settingsY = difficultyY + 36;
+  const titleFrameCenterY = titleY - Math.round(titleToFirstLine * 0.2);
+  const footerY = Math.max(18, height - (shortViewport ? 16 : 22));
 
   return {
     centerX,
     titleY,
+    subtitleY,
     option3dY,
-    titleFrameCenterY
+    difficultyY,
+    settingsY,
+    titleFrameCenterY,
+    footerY
   };
 }

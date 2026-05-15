@@ -27,12 +27,15 @@ export function applyRaycastEnemyKnockback(
   originX: number,
   originY: number,
   damage: number,
-  map: RaycastMap
+  map: RaycastMap,
+  impactScale = 1
 ): void {
   if (damage <= 0) return;
+  const mul = Number.isFinite(impactScale) ? Math.max(0.35, Math.min(1.65, impactScale)) : 1;
   const profileScale = getEnemyConfig(enemy.kind, 'raycast').size >= 34 ? 0.92 : 1;
   const kindScale = KNOCKBACK_KIND_SCALE[enemy.kind];
-  const push = Math.min(KNOCKBACK_CAP, KNOCKBACK_BASE + damage * KNOCKBACK_PER_DAMAGE) * kindScale * profileScale;
+  const push =
+    Math.min(KNOCKBACK_CAP, KNOCKBACK_BASE + damage * KNOCKBACK_PER_DAMAGE) * kindScale * profileScale * mul;
   const dx = enemy.x - originX;
   const dy = enemy.y - originY;
   const len = Math.hypot(dx, dy) || 1;

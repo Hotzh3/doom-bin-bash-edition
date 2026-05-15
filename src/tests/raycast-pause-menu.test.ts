@@ -24,7 +24,8 @@ describe('raycast pause menu formatting', () => {
     expect(body).toContain('RUN');
     expect(body).toContain('OBJETIVO');
     expect(body).toContain('PROGRESO');
-    expect(body).toContain('CONTROLES');
+    expect(body).toContain('│');
+    expect(body).toContain('↑ / ↓ · menú');
     expect(body).toMatch(/Mundo \/ Nivel ·/);
     expect(body).toContain(`> ${RAYCAST_PAUSE_MENU_LABELS[2]}`);
     expect(body).toContain(`  ${RAYCAST_PAUSE_MENU_LABELS[0]}`);

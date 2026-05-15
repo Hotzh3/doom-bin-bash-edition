@@ -9,6 +9,7 @@ import {
   type RunModifierId
 } from '../raycast/RunModifierRoulette';
 import { createEmptyCampaignMetrics } from '../raycast/RaycastScore';
+import { ensureSessionSettings } from '../sessionSettings';
 import { getRaycastBossLevelId, type RaycastBossShortcutSlot } from '../raycast/RaycastBossShortcuts';
 
 const BG = RAYCAST_PALETTE.voidBlack;
@@ -73,6 +74,7 @@ export class PrologueScene extends Phaser.Scene {
   }
 
   create(): void {
+    ensureSessionSettings(this.registry);
     const width = this.scale.width;
     const height = this.scale.height;
     this.cameras.main.setBackgroundColor(BG);
@@ -162,7 +164,7 @@ export class PrologueScene extends Phaser.Scene {
       .setDepth(5);
 
     this.add
-      .text(width * 0.5, height - 18, '// FRAGMENTO DE SEÑAL', {
+      .text(width * 0.5, height - 18, '// FRAGMENTO DE SEÑAL  ·  Made by Hotzh3', {
         fontFamily: 'monospace',
         fontSize: '10px',
         color: ACCENT_COLOR,
@@ -187,7 +189,7 @@ export class PrologueScene extends Phaser.Scene {
       .setDepth(5)
       .setAlpha(0.94);
 
-    this.cameras.main.fadeIn(380, 0, 0, 0);
+    this.cameras.main.fadeIn(520, 0, 0, 0);
 
     this.registerInputListeners();
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.cleanupInputListeners, this);

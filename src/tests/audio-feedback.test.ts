@@ -16,6 +16,7 @@ describe('AudioFeedbackSystem config', () => {
       'shootShotgun',
       'shootLauncher',
       'hit',
+      'hitCrit',
       'kill',
       'death',
       'wallImpact',

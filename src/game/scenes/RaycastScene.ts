@@ -184,6 +184,7 @@ import {
 } from '../raycast/RaycastMasteryEnding';
 import { buildRaycastRunSummary, computeRaycastRunMasteryRankParts } from '../raycast/RaycastRunSummary';
 import { RaycastPlayerController, type RaycastPlayerState } from '../raycast/RaycastPlayerController';
+import { RAYCAST_MOVEMENT } from '../raycast/RaycastMovement';
 import { RaycastRenderer, type RaycastBillboard } from '../raycast/RaycastRenderer';
 import { appendRaycastPlaytestTelemetry } from '../raycast/RaycastTelemetry';
 import {
@@ -212,6 +213,14 @@ import {
 import { getBillboardColor } from '../raycast/RaycastVisualTheme';
 import { getRaycastBossLevelId, resolveRaycastBossShortcutLevelId, type RaycastBossShortcutSlot } from '../raycast/RaycastBossShortcuts';
 import { palette } from '../theme/palette';
+import {
+  ensureSessionSettings,
+  getMinimapDefaultVisible,
+  getMouseSensitivity,
+  getScreenshakeEnabled,
+  getSessionMasterVolume,
+  setSessionMasterVolume
+} from '../sessionSettings';
 
 interface RaycastSceneData {
   levelId?: string;
@@ -241,7 +250,7 @@ const REWARD_HEALTH_STEP = 1.2;
 const FIRE_SHAKE_DURATION_MS = 58;
 const FIRE_SHAKE_INTENSITY = 0.00105;
 const FIRE_SHAKE_INTENSITY_CAP = 0.0028;
-const FIRE_MUZZLE_ALPHA_CAP = 0.88;
+const FIRE_MUZZLE_ALPHA_CAP = 0.97;
 
 export class RaycastScene extends Phaser.Scene {
   private raycastRenderer!: RaycastRenderer;
@@ -327,6 +336,7 @@ export class RaycastScene extends Phaser.Scene {
   private pauseBackdrop!: Phaser.GameObjects.Rectangle;
   private pauseTitleText!: Phaser.GameObjects.Text;
   private pauseMenuBodyText!: Phaser.GameObjects.Text;
+  private muzzleFlashAnchorY = GAME_HEIGHT - 54;
   private debugText!: Phaser.GameObjects.Text;
   private healthText!: Phaser.GameObjects.Text;
   private targetText!: Phaser.GameObjects.Text;
@@ -642,6 +652,7 @@ export class RaycastScene extends Phaser.Scene {
 
   create(): void {
     registerRaycastOptionalAssets(this);
+    ensureSessionSettings(this.registry);
     this.resetRuntimeState();
     this.cameras.main.setBackgroundColor(
       this.getWorldSegment() === 'world2' ? '#030612' : this.getWorldSegment() === 'world3' ? '#0c0604' : '#05070c'
@@ -651,7 +662,13 @@ export class RaycastScene extends Phaser.Scene {
     this.doorSystem = new DoorSystem(this.keySystem);
     this.triggerSystem = new TriggerSystem();
     this.raycastRenderer = new RaycastRenderer(this, this.map, this.currentLevel);
-    this.controller = new RaycastPlayerController(this, this.map, this.player);
+    this.controller = new RaycastPlayerController(
+      this,
+      this.map,
+      this.player,
+      RAYCAST_MOVEMENT,
+      () => getMouseSensitivity(this.registry)
+    );
     this.controller.create();
     this.controller.setMoveSpeedMultiplier(
       (this.activeLevelEvent.effects.playerMoveMultiplier ?? 1) * (this.runModifier?.effects.moveSpeedMul ?? 1)
@@ -661,6 +678,7 @@ export class RaycastScene extends Phaser.Scene {
     this.combat.setWeaponFireRateMultiplier(
       (this.activeLevelEvent.effects.ammoCadenceMultiplier ?? 1) * (this.runModifier?.effects.fireRateMul ?? 1)
     );
+    this.audioMasterVolume = getSessionMasterVolume(this.registry);
     this.audioFeedback = new AudioFeedbackSystem();
     this.audioFeedback.setMasterVolume(this.audioMasterVolume);
     this.gameDirector = new GameDirector({
@@ -939,7 +957,7 @@ export class RaycastScene extends Phaser.Scene {
         .setVisible(false)
     );
 
-    this.muzzleFlash = this.add.rectangle(GAME_WIDTH * 0.5, GAME_HEIGHT - 54, 96, 34, palette.accent.projectile, 0);
+    this.muzzleFlash = this.add.rectangle(GAME_WIDTH * 0.5, this.muzzleFlashAnchorY, 96, 34, palette.accent.projectile, 0);
     this.muzzleFlash.setDepth(11);
     this.wallImpactFlash = this.add.circle(GAME_WIDTH * 0.5, GAME_HEIGHT * 0.5, 18, 0xffffff, 0);
     this.wallImpactFlash.setDepth(12);
@@ -1017,7 +1035,7 @@ export class RaycastScene extends Phaser.Scene {
       .setVisible(false);
 
     this.pauseBackdrop = this.add
-      .rectangle(GAME_WIDTH * 0.5, GAME_HEIGHT * 0.5, GAME_WIDTH, GAME_HEIGHT, 0x020408, 0.84)
+      .rectangle(GAME_WIDTH * 0.5, GAME_HEIGHT * 0.5, GAME_WIDTH, GAME_HEIGHT, 0x020408, 0.79)
       .setDepth(40)
       .setVisible(false);
     this.pauseTitleText = this.add
@@ -1035,11 +1053,12 @@ export class RaycastScene extends Phaser.Scene {
     this.pauseMenuBodyText = this.add
       .text(GAME_WIDTH * 0.5, GAME_HEIGHT * 0.5, '', {
         fontFamily: 'monospace',
-        fontSize: '15px',
+        fontSize: '14px',
         fontStyle: '700',
         color: this.hudCss.keyText,
         align: 'center',
-        lineSpacing: 10
+        lineSpacing: 9,
+        wordWrap: { width: GAME_WIDTH - 36 }
       })
       .setOrigin(0.5, 0.5)
       .setDepth(41)
@@ -1057,7 +1076,7 @@ export class RaycastScene extends Phaser.Scene {
       .setDepth(10);
 
     this.sceneReady = true;
-    this.cameras.main.fadeIn(380, 0, 0, 0);
+    this.cameras.main.fadeIn(460, 0, 0, 0);
     const modifierIntro = this.runModifier ? ` // MOD ${this.runModifier.label}` : '';
     this.setCombatMessage(`${this.activeLevelEvent.introText}${modifierIntro} // ${this.buildLevelStartObjectiveMessage()}`, 4700);
     this.registerInputListeners();
@@ -1197,7 +1216,7 @@ export class RaycastScene extends Phaser.Scene {
     this.directorSpawnCounter = 0;
     this.encounterPatternCooldownUntil.clear();
     this.debugHudVisible = false;
-    this.minimapVisible = true;
+    this.minimapVisible = getMinimapDefaultVisible(this.registry);
     this.helpOverlayVisible = false;
     this.enemyProjectiles = [];
     this.lastCombatMessage = getRaycastIntroMessageForSegment(this.getWorldSegment());
@@ -1428,6 +1447,11 @@ export class RaycastScene extends Phaser.Scene {
     return next;
   }
 
+  private applyCombatShake(durationMs: number, intensity: number): void {
+    if (!getScreenshakeEnabled(this.registry)) return;
+    this.cameras.main.shake(durationMs, intensity);
+  }
+
   private fireWeapon(): void {
     if (!this.canHandleRaycastInput()) return;
     if (!this.playerAlive || this.levelComplete) return;
@@ -1441,9 +1465,9 @@ export class RaycastScene extends Phaser.Scene {
 
     this.flashMuzzle();
     const weaponAudio = getWeaponAudioPlan(result.weaponKind);
-    const firePitchVar = 0.94 + ((this.time.now % 37) / 37) * 0.12;
-    this.audioFeedback.play(weaponAudio.cue, weaponAudio.intensity * firePitchVar, this.time.now);
-    this.cameras.main.shake(FIRE_SHAKE_DURATION_MS, Math.min(FIRE_SHAKE_INTENSITY_CAP, FIRE_SHAKE_INTENSITY));
+    const firePitchMul = Phaser.Math.FloatBetween(0.97, 1.04);
+    this.audioFeedback.play(weaponAudio.cue, weaponAudio.intensity, this.time.now, { pitchMul: firePitchMul });
+    this.applyCombatShake(FIRE_SHAKE_DURATION_MS, Math.min(FIRE_SHAKE_INTENSITY_CAP, FIRE_SHAKE_INTENSITY));
 
     const liveBosses = this.getLiveBosses();
     if (liveBosses.length > 0) {
@@ -1462,6 +1486,7 @@ export class RaycastScene extends Phaser.Scene {
           fromY: this.player.y,
           map: this.map
         });
+        const bossCrit = !killed && bossDamage >= Math.ceil(targetBoss.maxHealth * 0.14);
         if (killed) {
           this.runScore += this.applyEventScoreGain(addRaycastBossClearScore(0));
           this.enemiesKilled += 1;
@@ -1481,12 +1506,19 @@ export class RaycastScene extends Phaser.Scene {
           this.audioFeedback.play('episodeComplete', 1, this.time.now);
           this.pulseFeedback(0xffc36b, 0.16, 260);
           this.cameras.main.flash(160, 255, 214, 120);
-          this.cameras.main.shake(210, 0.003);
+          this.applyCombatShake(210, 0.003);
         }
-        this.audioFeedback.play(killed ? 'kill' : 'hit', (killed ? 1 : 0.9) * (0.95 + ((this.time.now % 29) / 29) * 0.1), this.time.now);
-        this.pulseCrosshair(killed ? '#ff5b6f' : '#ffffff', killed ? 118 : 92);
-        this.flashHitMarker(killed, false);
-        this.cameras.main.shake(killed ? 96 : 54, killed ? 0.00225 : 0.00135);
+        const impactPitch = Phaser.Math.FloatBetween(0.97, 1.03);
+        if (killed) {
+          this.audioFeedback.play('kill', 1.02, this.time.now, { pitchMul: impactPitch });
+        } else if (bossCrit) {
+          this.audioFeedback.play('hitCrit', 0.96, this.time.now, { pitchMul: impactPitch });
+        } else {
+          this.audioFeedback.play('hit', 0.86, this.time.now, { pitchMul: impactPitch });
+        }
+        this.pulseCrosshair(killed ? '#ff5b6f' : bossCrit ? '#8dffcf' : '#ffffff', killed ? 124 : bossCrit ? 102 : 88);
+        this.flashHitMarker(killed, false, bossCrit);
+        this.applyCombatShake(killed ? 96 : bossCrit ? 72 : 54, killed ? 0.00225 : bossCrit ? 0.00172 : 0.00132);
         this.setCombatMessage(killed ? bossHud.coreShattered : bossHud.hullStressed);
         return;
       }
@@ -1495,8 +1527,8 @@ export class RaycastScene extends Phaser.Scene {
     if (!result.hitEnemy) {
       this.flashWallImpact();
       this.pulseCrosshair(this.hudCss.accentText, 72);
-      this.pulseFeedback(RAYCAST_PALETTE.plasmaBright, 0.06, 78);
-      this.audioFeedback.play('wallImpact', 0.95, this.time.now);
+      this.pulseFeedback(RAYCAST_PALETTE.plasmaBright, 0.055, 84);
+      this.audioFeedback.play('wallImpact', 0.9, this.time.now);
       this.setCombatMessage('IMPACTO EN MURO');
       return;
     }
@@ -1508,81 +1540,102 @@ export class RaycastScene extends Phaser.Scene {
     }
     const splashImpact = result.weaponKind === 'LAUNCHER' && result.splashHitCount > 0;
     if (splashImpact) {
-      this.audioFeedback.play('splash', 1, this.time.now);
-      this.cameras.main.shake(102, 0.00285);
-      this.pulseFeedback(0xff8a3d, 0.08, 110);
+      this.audioFeedback.play('splash', 0.9, this.time.now);
+      this.applyCombatShake(102, 0.00285);
+      this.pulseFeedback(0xff8a3d, 0.075, 102);
     }
-    this.audioFeedback.play(
-      result.killed ? 'kill' : 'hit',
-      (result.killed ? 1 : 0.9) * (0.95 + ((this.time.now % 31) / 31) * 0.1),
-      this.time.now
-    );
+    const hitPitch = Phaser.Math.FloatBetween(0.96, 1.03);
+    if (result.killed) {
+      this.audioFeedback.play('kill', 1.02, this.time.now, { pitchMul: hitPitch });
+    } else if (result.anyCrit) {
+      this.audioFeedback.play('hitCrit', 0.95, this.time.now, { pitchMul: hitPitch });
+    } else {
+      this.audioFeedback.play('hit', 0.84, this.time.now, { pitchMul: hitPitch });
+    }
     if (result.killed) {
       this.cameras.main.flash(48, 255, 236, 210, false);
-      this.pulseFeedback(0xffe2c4, 0.095, 150);
+      this.pulseFeedback(0xffe2c4, 0.09, 142);
+    } else if (result.anyCrit) {
+      this.cameras.main.flash(22, 120, 255, 200, false);
+      this.pulseFeedback(0x58e0ff, 0.055, 95);
     }
-    this.pulseCrosshair(result.killed ? '#ff5b6f' : '#ffffff', result.killed ? 148 : 92);
-    this.flashHitMarker(result.killed, splashImpact);
+    const critRead = result.anyCrit && !result.killed;
+    this.pulseCrosshair(result.killed ? '#ff5b6f' : critRead ? '#7dffd4' : '#ffffff', result.killed ? 148 : critRead ? 108 : 92);
+    this.flashHitMarker(result.killed, splashImpact, critRead);
     const weapon = result.weaponKind;
     const killShake = weapon === 'SHOTGUN' ? { d: 102, i: 0.00218 } : weapon === 'LAUNCHER' ? { d: 98, i: 0.00258 } : { d: 88, i: 0.00195 };
     const hitShake = weapon === 'SHOTGUN' ? { d: 52, i: 0.00128 } : weapon === 'LAUNCHER' ? { d: 48, i: 0.00138 } : { d: 46, i: 0.00118 };
-    const s = result.killed ? killShake : hitShake;
-    this.cameras.main.shake(s.d, s.i);
+    const critShake = weapon === 'SHOTGUN' ? { d: 68, i: 0.00158 } : weapon === 'LAUNCHER' ? { d: 62, i: 0.00168 } : { d: 58, i: 0.00142 };
+    const s = result.killed ? killShake : critRead ? critShake : hitShake;
+    this.applyCombatShake(s.d, s.i);
     this.setCombatMessage(
       result.killed
         ? getRaycastCombatMessageForSegment(this.getWorldSegment(), 'kill')
         : splashImpact
           ? `SPLASH HIT x${Math.max(1, result.splashHitCount)}`
-        : result.hitCount > 1
-          ? `HOSTILE PROCESS HIT x${result.hitCount}`
-          : `HOSTILE PROCESS HIT -${result.totalDamage}`,
+          : result.hitCount > 1
+            ? `HOSTILE PROCESS HIT x${result.hitCount}`
+            : critRead
+              ? `CHUNK HIT -${result.totalDamage}`
+              : `HOSTILE PROCESS HIT -${result.totalDamage}`,
       result.killed ? 1720 : splashImpact ? 1320 : 1200
     );
   }
 
   private flashMuzzle(): void {
     const weapon = this.combat.getCurrentWeapon();
-    const width = weapon === 'SHOTGUN' ? 182 : weapon === 'LAUNCHER' ? 148 : 94;
-    const height = weapon === 'SHOTGUN' ? 58 : weapon === 'LAUNCHER' ? 54 : 30;
-    const alpha = weapon === 'SHOTGUN' ? 1 : weapon === 'LAUNCHER' ? 0.96 : 0.9;
-    const flashDuration = weapon === 'LAUNCHER' ? 226 : weapon === 'SHOTGUN' ? 136 : 70;
+    const width = weapon === 'SHOTGUN' ? 204 : weapon === 'LAUNCHER' ? 162 : 108;
+    const height = weapon === 'SHOTGUN' ? 64 : weapon === 'LAUNCHER' ? 58 : 36;
+    const alpha = weapon === 'SHOTGUN' ? 1 : weapon === 'LAUNCHER' ? 0.98 : 0.94;
+    const flashDuration = weapon === 'LAUNCHER' ? 238 : weapon === 'SHOTGUN' ? 148 : 76;
+    this.tweens.killTweensOf(this.muzzleFlash);
+    this.muzzleFlash.setY(this.muzzleFlashAnchorY + 10);
     this.muzzleFlash.setSize(width, height);
     this.muzzleFlash.setFillStyle(weapon === 'LAUNCHER' ? RAYCAST_PALETTE.plasmaBright : weapon === 'SHOTGUN' ? 0xff8a3d : RAYCAST_ATMOSPHERE.muzzleFlash);
     this.muzzleFlash.setAlpha(Math.min(FIRE_MUZZLE_ALPHA_CAP, alpha));
     this.weaponOverlayFlashUntil = this.time.now + flashDuration;
-    this.tweens.killTweensOf(this.muzzleFlash);
+    this.tweens.add({
+      targets: this.muzzleFlash,
+      y: this.muzzleFlashAnchorY,
+      duration: 92,
+      ease: 'Quad.easeOut'
+    });
     this.tweens.add({
       targets: this.muzzleFlash,
       alpha: 0,
-      duration: Math.max(48, Math.round(flashDuration * 0.72)),
+      duration: Math.max(52, Math.round(flashDuration * 0.74)),
       ease: 'Quad.easeOut'
     });
   }
 
   private flashWallImpact(): void {
-    this.wallImpactFlash.setScale(0.65);
-    this.wallImpactFlash.setAlpha(0.72);
+    this.wallImpactFlash.setScale(0.62);
+    this.wallImpactFlash.setAlpha(0.65);
     this.tweens.killTweensOf(this.wallImpactFlash);
     this.tweens.add({
       targets: this.wallImpactFlash,
       alpha: 0,
       scale: 1.8,
-      duration: 105,
+      duration: 112,
       ease: 'Quad.easeOut'
     });
   }
 
-  private flashHitMarker(killed: boolean, splash: boolean): void {
-    this.hitMarker.setText(killed ? '*' : splash ? 'xx' : 'x');
-    this.hitMarker.setColor(killed ? '#ff3358' : splash ? '#ffb36b' : '#ffffff');
-    this.hitMarker.setScale(killed ? 1.58 : 1.08);
-    this.hitMarker.setAlpha(0.97);
+  private flashHitMarker(killed: boolean, splash: boolean, crit = false): void {
+    const label = killed ? '*' : crit ? '!' : splash ? 'xx' : 'x';
+    const color = killed ? '#ff3358' : crit ? '#5dffc8' : splash ? '#ffb36b' : '#ffffff';
+    const baseScale = killed ? 1.64 : crit ? 1.42 : splash ? 1.12 : 1.06;
+    const endScale = killed ? 2.12 : crit ? 1.82 : splash ? 1.52 : 1.48;
+    this.hitMarker.setText(label);
+    this.hitMarker.setColor(color);
+    this.hitMarker.setScale(baseScale);
+    this.hitMarker.setAlpha(0.98);
     this.tweens.killTweensOf(this.hitMarker);
     this.tweens.add({
       targets: this.hitMarker,
       alpha: 0,
-      scale: killed ? 2.05 : 1.5,
-      duration: killed ? 178 : 96,
+      scale: endScale,
+      duration: killed ? 186 : crit ? 128 : splash ? 104 : 98,
       ease: 'Quad.easeOut'
     });
   }
@@ -1623,6 +1676,13 @@ export class RaycastScene extends Phaser.Scene {
     this.lastCombatMessage = message.toUpperCase();
     this.combatMessageUntil = this.time.now + holdMs;
     this.tweens.killTweensOf(this.systemText);
+    this.systemText.setAlpha(0.86);
+    this.tweens.add({
+      targets: this.systemText,
+      alpha: 1,
+      duration: 150,
+      ease: 'Quad.easeOut'
+    });
   }
 
   private switchWeapon(slot: number): void {
@@ -1697,26 +1757,30 @@ export class RaycastScene extends Phaser.Scene {
     }
 
     this.pauseMenuBodyText.setText(
-      formatRaycastPauseMenuMxBody({
-        volumePct: volPct,
-        selectionIndex: this.pauseSelectionIndex,
-        worldLine: this.pauseRunBannerLine,
-        difficultyLabel: preset.label,
-        score: this.runScore,
-        highScore: readRaycastHighScore(),
-        missionLine: 'Recupera la señal perdida y escapa del complejo.',
-        objectiveLine: objective,
-        hintLine: hint,
-        tokensLine: `Tokens · ${this.getKeyCount()}/${this.currentLevel.keys.length}`,
-        secretsLine: `Secretos · ${this.collectedSecrets.size}/${this.currentLevel.secrets.length}`,
-        modifiersLine
-      })
+      formatRaycastPauseMenuMxBody(
+        {
+          volumePct: volPct,
+          selectionIndex: this.pauseSelectionIndex,
+          worldLine: this.pauseRunBannerLine,
+          difficultyLabel: preset.label,
+          score: this.runScore,
+          highScore: readRaycastHighScore(),
+          missionLine: 'Recupera la señal perdida y escapa del complejo.',
+          objectiveLine: objective,
+          hintLine: hint,
+          tokensLine: `Tokens · ${this.getKeyCount()}/${this.currentLevel.keys.length}`,
+          secretsLine: `Secretos · ${this.collectedSecrets.size}/${this.currentLevel.secrets.length}`,
+          modifiersLine
+        },
+        { columnChars: Math.max(20, Math.min(30, Math.floor((GAME_WIDTH - 96) / 4))) }
+      )
     );
   }
 
   private adjustAudioMasterVolume(delta: number): void {
     this.audioMasterVolume = Math.max(0, Math.min(1, this.audioMasterVolume + delta));
     this.audioFeedback.setMasterVolume(this.audioMasterVolume);
+    setSessionMasterVolume(this.registry, this.audioMasterVolume);
   }
 
   private applyPassiveHeal(delta: number): void {
