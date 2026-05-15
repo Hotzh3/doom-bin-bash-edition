@@ -19,6 +19,8 @@ export interface WeaponConfig {
   spreadRadians: number;
   aimToleranceRadians: number;
   explosionRadius: number;
+  ammoCapacity: number;
+  reloadMs: number;
 }
 
 export interface WeaponFireInput {

@@ -385,6 +385,7 @@ export class RaycastScene extends Phaser.Scene {
   private blackoutPulseUntil = 0;
   private flashBlindUntil = 0;
   private lastDevShortcutAt = 0;
+  private nextBossAddSpawnAt = 0;
 
   private readonly handleExitToMenu = (): void => {
     if (!this.isRaycastSceneActive()) return;
@@ -395,6 +396,21 @@ export class RaycastScene extends Phaser.Scene {
   private readonly handleRetry = (): void => {
     if (!this.isRaycastSceneActive()) return;
     if (this.gamePaused) return;
+    if (this.playerAlive && !this.levelComplete) {
+      const started = this.combat.tryReload(this.time.now);
+      if (started) this.setCombatMessage('RECARGANDO...');
+      return;
+    }
+    this.restartCurrentLevel();
+  };
+
+  private readonly handleRestartLevel = (): void => {
+    if (!this.isRaycastSceneActive()) return;
+    if (this.gamePaused) return;
+    this.restartCurrentLevel();
+  };
+
+  private restartCurrentLevel(): void {
     this.scene.restart({
       levelId: this.currentLevel.id,
       difficultyId: this.difficultyId,
@@ -403,7 +419,7 @@ export class RaycastScene extends Phaser.Scene {
       rewardTier: this.rewardTier,
       runModifierId: this.runModifier?.id ?? null
     });
-  };
+  }
 
   private readonly handleAdvanceLevel = (): void => {
     if (!this.isRaycastSceneActive()) return;
@@ -836,7 +852,7 @@ export class RaycastScene extends Phaser.Scene {
       .setStrokeStyle(2, ionHudAccent, 0.55)
       .setDepth(11);
     this.minimapTitleText = this.add
-      .text(hudLayout.minimapTitleX, hudLayout.minimapTitleY, 'AUTOMAP M', {
+      .text(hudLayout.minimapTitleX, hudLayout.minimapTitleY, 'MINIMAPA M', {
         fontSize: '12px',
         fontStyle: '700',
         color: this.hudCss.accentText,
@@ -962,7 +978,7 @@ export class RaycastScene extends Phaser.Scene {
       .setDepth(31)
       .setVisible(false);
     this.finalHintText = this.add
-      .text(GAME_WIDTH * 0.5, GAME_HEIGHT * 0.73, 'R RESTART LEVEL  |  ESC MENU', {
+      .text(GAME_WIDTH * 0.5, GAME_HEIGHT * 0.73, 'T REINICIAR NIVEL  |  ESC MENÚ', {
         fontSize: '12px',
         fontStyle: '700',
         color: this.hudCss.keyText,
@@ -978,7 +994,7 @@ export class RaycastScene extends Phaser.Scene {
       .setDepth(40)
       .setVisible(false);
     this.pauseTitleText = this.add
-      .text(GAME_WIDTH * 0.5, 72, 'SYSTEM HALT', {
+      .text(GAME_WIDTH * 0.5, 72, 'SISTEMA EN PAUSA', {
         fontFamily: 'monospace',
         fontSize: '26px',
         fontStyle: '700',
@@ -1023,6 +1039,7 @@ export class RaycastScene extends Phaser.Scene {
   }
 
   update(_time: number, delta: number): void {
+    this.combat?.tick(this.time.now);
     if (this.playerAlive && !this.levelComplete && !this.gamePaused) {
       this.controller.update(delta);
       this.updatePlayerMetrics(delta);
@@ -1068,6 +1085,8 @@ export class RaycastScene extends Phaser.Scene {
     } else if (this.passiveRegenHudLabel) {
       statusLine += `  |  ${this.passiveRegenHudLabel}`;
     }
+    const ammoState = this.combat.getAmmoState();
+    statusLine += `  |  MUNICIÓN ${ammoState.current}/${ammoState.capacity}${this.combat.isReloading(this.time.now) ? ' RECARGANDO' : ''}`;
     this.healthText.setText(statusLine);
     this.weaponText.setText(
       buildRaycastHudProgressLine(
@@ -1080,12 +1099,12 @@ export class RaycastScene extends Phaser.Scene {
     );
     this.scoreHudText.setText(buildRaycastScoreHudLine(this.runScore, readRaycastHighScore()));
     const modifierHud = this.runModifier ? ` | MOD ${this.runModifier.label}` : '';
-    this.objectiveText.setText(`OBJECTIVE // ${objectiveHud}  |  ${this.activeLevelEvent.hudText}${modifierHud}`);
-    this.hintText.setText(`HINT // ${hint}  |  ${this.activeLevelEvent.objectiveText}`);
+    this.objectiveText.setText(`OBJETIVO // ${objectiveHud}  |  ${this.activeLevelEvent.hudText}${modifierHud}`);
+    this.hintText.setText(`PISTA // ${hint}  |  ${this.activeLevelEvent.objectiveText}`);
     this.instructionText.setText(
       this.gamePaused
         ? 'HALT // UP/DOWN  SELECT  |  ENTER CONFIRM  |  ESC RESUME'
-        : `${buildRaycastMinimapLegendLine()}  |  H/? HELP`
+        : `${buildRaycastMinimapLegendLine()}  |  R RECARGAR  |  T REINICIAR  |  H/? AYUDA`
     );
     const blinded = this.time.now < this.flashBlindUntil;
     const hudAlpha = blinded ? 0.55 : 1;
@@ -1179,6 +1198,7 @@ export class RaycastScene extends Phaser.Scene {
     this.corruptionZone = null;
     this.blackoutPulseUntil = 0;
     this.flashBlindUntil = 0;
+    this.nextBossAddSpawnAt = this.time.now + 4200;
     this.sceneReady = false;
     this.gamePaused = false;
     this.pauseSelectionIndex = 0;
@@ -1218,6 +1238,7 @@ export class RaycastScene extends Phaser.Scene {
     const keyboard = this.input.keyboard;
     keyboard?.on('keydown-ESC', this.handleEscKey);
     keyboard?.on('keydown-R', this.handleRetry);
+    keyboard?.on('keydown-T', this.handleRestartLevel);
     keyboard?.on('keydown-N', this.handleAdvanceLevel);
     keyboard?.on('keydown-W', this.handleWorldTwoPlaceholder);
     keyboard?.on('keydown-F', this.handleFireInput);
@@ -1254,6 +1275,7 @@ export class RaycastScene extends Phaser.Scene {
     const keyboard = this.input.keyboard;
     keyboard?.off('keydown-ESC', this.handleEscKey);
     keyboard?.off('keydown-R', this.handleRetry);
+    keyboard?.off('keydown-T', this.handleRestartLevel);
     keyboard?.off('keydown-N', this.handleAdvanceLevel);
     keyboard?.off('keydown-W', this.handleWorldTwoPlaceholder);
     keyboard?.off('keydown-F', this.handleFireInput);
@@ -1681,6 +1703,7 @@ export class RaycastScene extends Phaser.Scene {
 
   private updateEnemies(delta: number): void {
     const liveBosses = this.getLiveBosses();
+    this.trySpawnBossAdds(liveBosses);
     for (const boss of liveBosses) {
       tickRaycastBossMovement(boss, this.map, { x: this.player.x, y: this.player.y, alive: this.playerAlive }, delta, this.time.now);
       const bossHud = getRaycastBossHudLines(boss.displayName);
@@ -1767,6 +1790,52 @@ export class RaycastScene extends Phaser.Scene {
     );
     if (projectileDamage > 0) this.damagePlayer(projectileDamage);
     this.enemyProjectiles = this.enemyProjectiles.filter((projectile) => projectile.alive);
+    this.applyDualBossSpacing();
+  }
+
+  private trySpawnBossAdds(liveBosses: RaycastBossState[]): void {
+    if (liveBosses.length <= 0 || !this.playerAlive || this.levelComplete) return;
+    if (this.time.now < this.nextBossAddSpawnAt) return;
+    const alive = this.countLivingEnemies();
+    const targetCap = this.difficultyId === 'assist' ? 4 : this.difficultyId === 'hard' ? 10 : 7;
+    if (alive >= targetCap) {
+      this.nextBossAddSpawnAt = this.time.now + 1600;
+      return;
+    }
+    const spawnPoints = getSafeDirectorSpawnPoints(this.currentLevel, this.player, this.activeZoneId, {
+      map: this.map,
+      enemies: this.enemies
+    });
+    if (spawnPoints.length === 0) return;
+    const kinds: EnemyKind[] = this.difficultyId === 'assist' ? ['GRUNT'] : this.difficultyId === 'hard' ? ['GRUNT', 'STALKER', 'RANGED'] : ['GRUNT', 'STALKER'];
+    const kind = kinds[Math.floor((this.time.now / 97) % kinds.length)];
+    for (const point of spawnPoints) {
+      if (!isRaycastSpawnPlacementValid(this.map, point, 0.4, 0.04)) continue;
+      const spawn = { id: `boss-add-${Math.floor(this.time.now)}-${this.enemies.length}`, kind, x: point.x, y: point.y };
+      this.enemies.push(createTelegraphedRaycastEnemy(spawn, { telegraphStartedAt: this.time.now, telegraphDurationMs: DIRECTOR_SPAWN_TELEGRAPH_MS }));
+      this.nextBossAddSpawnAt = this.time.now + (this.difficultyId === 'hard' ? 3200 : this.difficultyId === 'assist' ? 5600 : 4300);
+      return;
+    }
+    this.nextBossAddSpawnAt = this.time.now + 1800;
+  }
+
+  private applyDualBossSpacing(): void {
+    const live = this.getLiveBosses();
+    if (live.length < 2) return;
+    const a = live[0];
+    const b = live[1];
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const dist = Math.hypot(dx, dy) || 0.0001;
+    const minDist = a.hitRadius + b.hitRadius + 0.95;
+    if (dist >= minDist) return;
+    const push = (minDist - dist) * 0.5;
+    const nx = dx / dist;
+    const ny = dy / dist;
+    a.x -= nx * push;
+    a.y -= ny * push;
+    b.x += nx * push;
+    b.y += ny * push;
   }
 
   private damagePlayer(amount: number): void {

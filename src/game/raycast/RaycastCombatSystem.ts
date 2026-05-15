@@ -71,6 +71,23 @@ export class RaycastCombatSystem {
     this.weapons.setFireRateMultiplier(multiplier);
   }
 
+  tick(time: number): void {
+    this.weapons.tick(time);
+  }
+
+  tryReload(time: number): boolean {
+    return this.weapons.startReload(time);
+  }
+
+  isReloading(time: number): boolean {
+    return this.weapons.isReloading(this.weapons.getCurrentWeapon(), time);
+  }
+
+  getAmmoState(): { current: number; capacity: number } {
+    const kind = this.weapons.getCurrentWeapon();
+    return { current: this.weapons.getAmmo(kind), capacity: this.weapons.getAmmoCapacity(kind) };
+  }
+
   fire(player: RaycastPlayerState, enemies: RaycastEnemy[], map: RaycastMap, time: number): RaycastCombatResult {
     const result = this.weapons.fire({
       ownerTeam: 'P1',

@@ -3,6 +3,7 @@ import type { EnemyKind } from '../types/game';
 import type { RaycastEnemyVariant } from './RaycastEnemyVariants';
 import { RAYCAST_LEVEL, type RaycastEnemySpawn, type RaycastLevel } from './RaycastLevel';
 import { buildRaycastPatrolWaypoints, hashStringToSeed, type PatrolWaypoint } from './RaycastPatrol';
+const GLOBAL_ENEMY_HEALTH_MUL = 1.15;
 
 export interface RaycastEnemy {
   id: string;
@@ -54,6 +55,7 @@ export function cloneRaycastEnemies(level: RaycastLevel = RAYCAST_LEVEL): Raycas
 
 export function createRaycastEnemy(spawn: RaycastEnemySpawn): RaycastEnemy {
   const config = getEnemyConfig(spawn.kind, 'raycast');
+  const scaledHealth = Math.max(1, Math.round(config.health * GLOBAL_ENEMY_HEALTH_MUL));
   const homeX = spawn.x;
   const homeY = spawn.y;
   return {
@@ -61,8 +63,8 @@ export function createRaycastEnemy(spawn: RaycastEnemySpawn): RaycastEnemy {
     kind: spawn.kind,
     x: homeX,
     y: homeY,
-    health: config.health,
-    maxHealth: config.health,
+    health: scaledHealth,
+    maxHealth: scaledHealth,
     alive: true,
     radius: config.size / 100,
     color: config.color,

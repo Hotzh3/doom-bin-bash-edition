@@ -17,7 +17,9 @@ const BASE_WEAPON_CONFIG: Record<WeaponKind, WeaponConfig> = {
     pelletCount: 1,
     spreadRadians: 0,
     aimToleranceRadians: 0.13,
-    explosionRadius: 0
+    explosionRadius: 0,
+    ammoCapacity: 10,
+    reloadMs: 980
   },
   SHOTGUN: {
     kind: 'SHOTGUN',
@@ -31,7 +33,9 @@ const BASE_WEAPON_CONFIG: Record<WeaponKind, WeaponConfig> = {
     pelletCount: 9,
     spreadRadians: 0.76,
     aimToleranceRadians: 0.21,
-    explosionRadius: 0
+    explosionRadius: 0,
+    ammoCapacity: 2,
+    reloadMs: 1360
   },
   LAUNCHER: {
     kind: 'LAUNCHER',
@@ -45,7 +49,9 @@ const BASE_WEAPON_CONFIG: Record<WeaponKind, WeaponConfig> = {
     pelletCount: 1,
     spreadRadians: 0,
     aimToleranceRadians: 0.12,
-    explosionRadius: 110
+    explosionRadius: 110,
+    ammoCapacity: 1,
+    reloadMs: 1120
   }
 };
 
@@ -75,14 +81,16 @@ export const RAYCAST_WEAPON_CONFIG = cloneWeaponConfigRecord({
   },
   SHOTGUN: {
     ...BASE_WEAPON_CONFIG.SHOTGUN,
-    cooldownMs: 560,
-    damage: 14,
-    spreadRadians: 0.82,
-    aimToleranceRadians: 0.22
+    cooldownMs: 680,
+    damage: 22,
+    pelletCount: 10,
+    spreadRadians: 0.92,
+    aimToleranceRadians: 0.24
   },
   LAUNCHER: {
     ...BASE_WEAPON_CONFIG.LAUNCHER,
     cooldownMs: 1120,
+    damage: 87,
     projectileSpeed: 365,
     explosionRadius: 122,
     projectileTint: RAYCAST_PALETTE.plasmaBright
