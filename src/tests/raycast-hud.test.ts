@@ -183,30 +183,28 @@ describe('raycast HUD', () => {
     expect(buildRaycastMinimapLegendLine()).toBe('MAP M  |  KEY token  LOCK gate  OPEN gate  EXIT exfil  BOSS core  PURP flash');
   });
 
-  it('separates the top-right HUD and minimap cluster at 960x540', () => {
+  it('places the minimap cluster top-left and keeps vitals top-right at 960x540', () => {
     const layout = buildRaycastHudLayout(960, 540);
-    const healthBarBottom = layout.healthBarY + layout.healthBarTrackHeight * 0.5;
-    const minimapTitleTop = layout.minimapTitleY - layout.minimapTitleHeight * 0.5;
-    const minimapFrameTop = layout.minimapFrameY - layout.minimapFrameHeight * 0.5;
+    const minimapRight = layout.minimapFrameX + layout.minimapFrameWidth * 0.5;
+    const healthBarRight = layout.healthBarX + layout.healthBarWidth;
 
-    expect(layout.healthBarX + layout.healthBarWidth).toBe(944);
-    expect(layout.minimapTitleX).toBe(834);
-    expect(layout.minimapFrameWidth).toBe(220);
-    expect(layout.minimapPanelWidth).toBe(200);
-    expect(minimapTitleTop).toBeGreaterThan(healthBarBottom);
-    expect(minimapFrameTop).toBeGreaterThan(healthBarBottom);
+    expect(healthBarRight).toBe(944);
+    expect(layout.minimapFrameX).toBe(134);
+    expect(minimapRight).toBeLessThan(healthBarRight - 40);
+    expect(layout.scoreHudTextX).toBe(944);
+    expect(layout.scoreHudTextY).toBeGreaterThan(layout.healthBarY);
+    expect(layout.minimapTitleY).toBeLessThan(layout.minimapFrameY);
   });
 
-  it('keeps the larger default minimap treatment on roomier viewports', () => {
+  it('uses a larger minimap frame on roomier viewports while staying top-left', () => {
     const layout = buildRaycastHudLayout(1280, 720);
-    const healthBarBottom = layout.healthBarY + layout.healthBarTrackHeight * 0.5;
-    const minimapTitleTop = layout.minimapTitleY - layout.minimapTitleHeight * 0.5;
-    const minimapFrameTop = layout.minimapFrameY - layout.minimapFrameHeight * 0.5;
+    const minimapRight = layout.minimapFrameX + layout.minimapFrameWidth * 0.5;
+    const healthBarRight = layout.healthBarX + layout.healthBarWidth;
 
     expect(layout.minimapFrameWidth).toBe(266);
     expect(layout.minimapPanelWidth).toBe(242);
-    expect(layout.minimapTitleY).toBe(98);
-    expect(minimapTitleTop).toBeGreaterThan(healthBarBottom);
-    expect(minimapFrameTop).toBeGreaterThan(healthBarBottom);
+    expect(layout.minimapTitleY).toBe(34);
+    expect(minimapRight).toBeLessThan(320);
+    expect(minimapRight).toBeLessThan(healthBarRight - 120);
   });
 });

@@ -251,6 +251,10 @@ const FIRE_SHAKE_DURATION_MS = 58;
 const FIRE_SHAKE_INTENSITY = 0.00105;
 const FIRE_SHAKE_INTENSITY_CAP = 0.0028;
 const FIRE_MUZZLE_ALPHA_CAP = 0.97;
+const PAUSE_PANEL_WIDTH = 620;
+const PAUSE_PANEL_HEIGHT = 428;
+const PAUSE_PANEL_CENTER_Y = GAME_HEIGHT * 0.52;
+const PAUSE_BODY_WRAP = PAUSE_PANEL_WIDTH - 36;
 
 export class RaycastScene extends Phaser.Scene {
   private raycastRenderer!: RaycastRenderer;
@@ -333,7 +337,8 @@ export class RaycastScene extends Phaser.Scene {
   private minimapStaticCellsCacheKey = '';
   private minimapStaticCells: RaycastMinimapCell[] | null = null;
   private readonly minimapLabeledMarkerScratch: RaycastMinimapMarker[] = [];
-  private pauseBackdrop!: Phaser.GameObjects.Rectangle;
+  private pauseDim!: Phaser.GameObjects.Rectangle;
+  private pausePanel!: Phaser.GameObjects.Rectangle;
   private pauseTitleText!: Phaser.GameObjects.Text;
   private pauseMenuBodyText!: Phaser.GameObjects.Text;
   private muzzleFlashAnchorY = GAME_HEIGHT - 54;
@@ -718,14 +723,15 @@ export class RaycastScene extends Phaser.Scene {
             });
 
     this.scoreHudText = this.add
-      .text(16, 34, buildRaycastScoreHudLine(this.runScore, readRaycastHighScore()), {
-        fontSize: '12px',
+      .text(hudLayout.scoreHudTextX, hudLayout.scoreHudTextY, buildRaycastScoreHudLine(this.runScore, readRaycastHighScore()), {
+        fontSize: '11px',
         fontStyle: '700',
         color: palette.accent.terminalText,
         backgroundColor: this.hudCss.hudPanel,
         padding: { x: 8, y: 4 }
       })
       .setDepth(10)
+      .setOrigin(1, 0)
       .setVisible(false);
 
     this.crosshair = this.add
@@ -1034,34 +1040,40 @@ export class RaycastScene extends Phaser.Scene {
       .setDepth(31)
       .setVisible(false);
 
-    this.pauseBackdrop = this.add
-      .rectangle(GAME_WIDTH * 0.5, GAME_HEIGHT * 0.5, GAME_WIDTH, GAME_HEIGHT, 0x020408, 0.79)
+    this.pauseDim = this.add
+      .rectangle(GAME_WIDTH * 0.5, GAME_HEIGHT * 0.5, GAME_WIDTH, GAME_HEIGHT, 0x020408, 0.52)
       .setDepth(40)
       .setVisible(false);
+    this.pausePanel = this.add
+      .rectangle(GAME_WIDTH * 0.5, PAUSE_PANEL_CENTER_Y, PAUSE_PANEL_WIDTH, PAUSE_PANEL_HEIGHT, 0x050810, 0.93)
+      .setStrokeStyle(1, 0x334858, 0.72)
+      .setDepth(41)
+      .setVisible(false);
+    const pausePanelTop = PAUSE_PANEL_CENTER_Y - PAUSE_PANEL_HEIGHT * 0.5;
     this.pauseTitleText = this.add
-      .text(GAME_WIDTH * 0.5, 72, 'SISTEMA EN PAUSA', {
+      .text(GAME_WIDTH * 0.5, pausePanelTop + 14, 'SISTEMA EN PAUSA', {
         fontFamily: 'monospace',
-        fontSize: '26px',
+        fontSize: '20px',
         fontStyle: '700',
         color: this.hudCss.systemText,
         stroke: '#020408',
-        strokeThickness: 6
+        strokeThickness: 5
       })
       .setOrigin(0.5, 0)
-      .setDepth(41)
+      .setDepth(42)
       .setVisible(false);
     this.pauseMenuBodyText = this.add
-      .text(GAME_WIDTH * 0.5, GAME_HEIGHT * 0.5, '', {
+      .text(GAME_WIDTH * 0.5 - PAUSE_BODY_WRAP * 0.5, pausePanelTop + 48, '', {
         fontFamily: 'monospace',
-        fontSize: '14px',
+        fontSize: '11px',
         fontStyle: '700',
         color: this.hudCss.keyText,
-        align: 'center',
-        lineSpacing: 9,
-        wordWrap: { width: GAME_WIDTH - 36 }
+        align: 'left',
+        lineSpacing: 5,
+        wordWrap: { width: PAUSE_BODY_WRAP }
       })
-      .setOrigin(0.5, 0.5)
-      .setDepth(41)
+      .setOrigin(0, 0)
+      .setDepth(42)
       .setVisible(false);
 
     this.debugText = this.add
@@ -1715,6 +1727,39 @@ export class RaycastScene extends Phaser.Scene {
     this.minimapTitleText?.setVisible(this.minimapVisible);
     this.minimapGraphics?.setVisible(this.minimapVisible);
     this.minimapMarkerLabels.forEach((label) => label.setVisible(false));
+    if (this.gamePaused) this.applyPauseMinimapPresentation();
+  }
+
+  private applyPauseMinimapPresentation(): void {
+    if (!this.minimapVisible) {
+      this.minimapFrame?.setVisible(false);
+      this.minimapTitleText?.setVisible(false);
+      this.minimapGraphics?.setVisible(false);
+      this.minimapMarkerLabels.forEach((label) => label.setVisible(false));
+      return;
+    }
+    this.minimapFrame?.setVisible(true);
+    this.minimapTitleText?.setVisible(true);
+    this.minimapGraphics?.setVisible(true);
+    this.minimapFrame?.setAlpha(0.08);
+    this.minimapTitleText?.setAlpha(0.08);
+    this.minimapGraphics?.setAlpha(0.08);
+  }
+
+  private restoreGameplayMinimapPresentation(): void {
+    if (!this.minimapVisible) {
+      this.minimapFrame?.setVisible(false);
+      this.minimapTitleText?.setVisible(false);
+      this.minimapGraphics?.setVisible(false);
+      this.minimapMarkerLabels.forEach((label) => label.setVisible(false));
+      return;
+    }
+    this.minimapFrame?.setVisible(true);
+    this.minimapTitleText?.setVisible(true);
+    this.minimapGraphics?.setVisible(true);
+    this.minimapFrame?.setAlpha(0.76);
+    this.minimapTitleText?.setAlpha(1);
+    this.minimapGraphics?.setAlpha(1);
   }
 
   private applyDebugHudToggle(): void {
@@ -1725,18 +1770,22 @@ export class RaycastScene extends Phaser.Scene {
   private openPauseMenu(): void {
     this.gamePaused = true;
     this.pauseSelectionIndex = 0;
-    this.pauseBackdrop.setVisible(true);
+    this.pauseDim.setVisible(true);
+    this.pausePanel.setVisible(true);
     this.pauseTitleText.setVisible(true);
     this.pauseMenuBodyText.setVisible(true);
+    this.applyPauseMinimapPresentation();
     this.refreshPauseMenuBody();
     this.audioFeedback.play('uiSoftDeny', 0.62, this.time.now);
   }
 
   private closePauseMenu(): void {
     this.gamePaused = false;
-    this.pauseBackdrop.setVisible(false);
+    this.pauseDim.setVisible(false);
+    this.pausePanel.setVisible(false);
     this.pauseTitleText.setVisible(false);
     this.pauseMenuBodyText.setVisible(false);
+    this.restoreGameplayMinimapPresentation();
     this.audioFeedback.play('uiConfirm', 0.72, this.time.now);
   }
 
@@ -1768,11 +1817,11 @@ export class RaycastScene extends Phaser.Scene {
           missionLine: 'Recupera la señal perdida y escapa del complejo.',
           objectiveLine: objective,
           hintLine: hint,
-          tokensLine: `Tokens · ${this.getKeyCount()}/${this.currentLevel.keys.length}`,
+          tokensLine: `Fichas · ${this.getKeyCount()}/${this.currentLevel.keys.length}`,
           secretsLine: `Secretos · ${this.collectedSecrets.size}/${this.currentLevel.secrets.length}`,
           modifiersLine
         },
-        { columnChars: Math.max(20, Math.min(30, Math.floor((GAME_WIDTH - 96) / 4))) }
+        { columnChars: 28 }
       )
     );
   }

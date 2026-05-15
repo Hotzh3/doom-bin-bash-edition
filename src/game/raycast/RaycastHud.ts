@@ -30,6 +30,9 @@ export interface RaycastHudLayout {
   healthTextY: number;
   weaponTextX: number;
   weaponTextY: number;
+  /** Puntaje / HI — esquina superior derecha, debajo de la barra de vida. */
+  scoreHudTextX: number;
+  scoreHudTextY: number;
   healthBarX: number;
   healthBarY: number;
   healthBarWidth: number;
@@ -213,40 +216,49 @@ export function buildRaycastScoreHudLine(score: number, highScore: number): stri
 }
 
 export function buildRaycastHudLayout(width: number, height: number): RaycastHudLayout {
-  const compactTopRightCluster = width <= 960 || height <= 540;
+  const pad = 24;
+  const compact = width <= 960 || height <= 540;
   const hudRightX = width - 16;
   const healthBarWidth = 168;
   const healthBarTrackHeight = 10;
   const healthBarFillHeight = 6;
-  const minimapFrameWidth = compactTopRightCluster ? 220 : 266;
-  const minimapFrameHeight = compactTopRightCluster ? 172 : 212;
-  const minimapPanelWidth = compactTopRightCluster ? 200 : 242;
-  const minimapPanelHeight = compactTopRightCluster ? 150 : 184;
-  const minimapFrameX = width - 16 - minimapFrameWidth * 0.5;
-  const minimapFrameTop = compactTopRightCluster ? 126 : 114;
+  const healthBarY = 74;
+  const minimapFrameWidth = compact ? 220 : 266;
+  const minimapFrameHeight = compact ? 172 : 212;
+  const minimapPanelWidth = compact ? 200 : 242;
+  const minimapPanelHeight = compact ? 150 : 184;
   const minimapTitleHeight = 20;
-  const minimapTitleGap = compactTopRightCluster ? 12 : 6;
+  const minimapTitleGap = compact ? 10 : 8;
+  /** Minimapa anclado arriba-izquierda (centro del marco); título encima con `pad` desde el borde. */
+  const minimapTitleY = pad + minimapTitleHeight * 0.5;
+  const frameTop = pad + minimapTitleHeight + minimapTitleGap;
+  const minimapFrameX = pad + minimapFrameWidth * 0.5;
+  const minimapFrameY = frameTop + minimapFrameHeight * 0.5;
+  const scoreHudTextX = hudRightX;
+  const scoreHudTextY = healthBarY + healthBarTrackHeight * 0.5 + 8;
 
   return {
     healthTextX: hudRightX,
     healthTextY: 14,
     weaponTextX: hudRightX,
     weaponTextY: 40,
+    scoreHudTextX,
+    scoreHudTextY,
     healthBarX: hudRightX - healthBarWidth,
-    healthBarY: 74,
+    healthBarY,
     healthBarWidth,
     healthBarTrackHeight,
     healthBarFillHeight,
     minimapTitleX: minimapFrameX,
-    minimapTitleY: minimapFrameTop - minimapTitleGap - minimapTitleHeight * 0.5,
-    minimapTitleWidth: compactTopRightCluster ? 108 : 122,
+    minimapTitleY,
+    minimapTitleWidth: compact ? 108 : 122,
     minimapTitleHeight,
     minimapFrameX,
-    minimapFrameY: minimapFrameTop + minimapFrameHeight * 0.5,
+    minimapFrameY,
     minimapFrameWidth,
     minimapFrameHeight,
     minimapPanelX: minimapFrameX - minimapPanelWidth * 0.5,
-    minimapPanelY: minimapFrameTop + 8,
+    minimapPanelY: frameTop + 8,
     minimapPanelWidth,
     minimapPanelHeight
   };
