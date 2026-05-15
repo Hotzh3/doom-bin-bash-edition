@@ -276,8 +276,15 @@ export class RaycastRenderer {
       const sx = projection.screenX + hitStaggerX;
       const savedEnemyX = projection.screenX;
       projection.screenX = sx;
-      this.graphics.fillStyle(enemyStyle.outlineColor, RAYCAST_ENEMY_BILLBOARD_READABILITY.outlineAlpha * visibility);
-      this.graphics.fillEllipse(sx, height * 0.5 + size * 0.08, size * 1.28, size * 1.42);
+      const currentSpriteState = this.getEnemySpriteState(projection, time);
+      const currentSpriteTextureKey = this.getEnemyTextureKey(projection.enemy.kind, currentSpriteState);
+      const willDrawEnemySprite =
+        currentSpriteTextureKey !== null && raycastTextureExists(this.scene, currentSpriteTextureKey);
+
+      if (!willDrawEnemySprite) {
+        this.graphics.fillStyle(enemyStyle.outlineColor, RAYCAST_ENEMY_BILLBOARD_READABILITY.outlineAlpha * visibility);
+        this.graphics.fillEllipse(sx, height * 0.5 + size * 0.08, size * 1.28, size * 1.42);
+      }
       if ((projection.enemy.shieldPulseUntil ?? 0) > time) {
         this.graphics.lineStyle(3, 0x8fd8ff, 0.62 * visibility);
         this.graphics.strokeEllipse(sx, height * 0.5 + size * 0.08, size * 1.38, size * 1.46);
