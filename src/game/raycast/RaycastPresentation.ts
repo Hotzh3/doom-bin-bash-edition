@@ -83,14 +83,14 @@ export interface MainMenuLayout {
 /** Death overlay — distinct voice from sector-clear screens (still terminal / horror). */
 export function buildRaycastDeathOverlaySummary(levelDisplayLine: string): string[] {
   return [
-    'UPLINK FLATLINED',
-    'The corridor won your route — patch mistakes with movement and priority picks.',
+    'ENLACE CAÍDO',
+    'El corredor rompió tu ruta. Ajusta movimiento y prioridades para sobrevivir.',
     levelDisplayLine
   ];
 }
 
 export function buildRaycastDeathOverlayHint(): string {
-  return 'R RESTART SECTOR  |  ESC MAIN MENU';
+  return 'R REINTENTAR SECTOR  |  ESC MENÚ PRINCIPAL';
 }
 
 export function buildRaycastEpisodeBanner(input: RaycastEpisodeBannerInput): string {
@@ -105,20 +105,20 @@ export function buildRaycastEpisodeBanner(input: RaycastEpisodeBannerInput): str
 
 export function buildRaycastOverlayHint(input: RaycastOverlayHintInput): string {
   if (input.episodeComplete && input.masteryUnlocked) {
-    return 'TRUE SIGNAL UNLOCKED  |  R REPLAY FINALE  |  ESC MENU';
+    return 'SEÑAL VERDADERA DESBLOQUEADA  |  R REPETIR FINAL  |  ESC MENÚ';
   }
   if (input.episodeComplete && input.finaleBossCleared && input.worldTwoLocked) {
-    return 'W WORLD 2 (LOCKED)  |  R REPLAY BOSS  |  ESC MENU';
+    return 'W MUNDO 2 (BLOQUEADO)  |  R REPETIR JEFE  |  ESC MENÚ';
   }
   if (!input.episodeComplete && input.finaleBossCleared && input.continueToWorldThree) {
-    return 'N CONTINUE TO WORLD 3 — EMBER MERIDIAN  |  R RESTART SECTOR  |  ESC MENU';
+    return 'N CONTINUAR A MUNDO 3 — MERIDIANA ASCUA  |  R REINICIAR SECTOR  |  ESC MENÚ';
   }
   if (!input.episodeComplete && input.finaleBossCleared && input.continueToWorldTwo) {
-    return 'N CONTINUE TO WORLD 2  |  R REPLAY BOSS  |  ESC MENU';
+    return 'N CONTINUAR A MUNDO 2  |  R REPETIR JEFE  |  ESC MENÚ';
   }
-  if (input.episodeComplete) return 'R REPLAY FINALE  |  ESC MENU';
-  if (input.canAdvance) return `N CONTINUE  |  R RESTART SECTOR  |  ESC MENU`;
-  return `R RESTART SECTOR  |  ESC MENU`;
+  if (input.episodeComplete) return 'R REPETIR FINAL  |  ESC MENÚ';
+  if (input.canAdvance) return `N CONTINUAR  |  R REINICIAR SECTOR  |  ESC MENÚ`;
+  return `R REINICIAR SECTOR  |  ESC MENÚ`;
 }
 
 export function buildRaycastMasteryEndingLines(input: {
@@ -130,14 +130,15 @@ export function buildRaycastMasteryEndingLines(input: {
 }): string[] {
   if (!input.episodeComplete || !input.fullArcClear) return [];
   if (!input.masteryUnlocked) {
-    return ['NORMAL ENDING // SIGNAL CONTAINED', 'MASTERY GOAL // EARN S OR SS ON ALL ARC SECTORS'];
+    return ['FINAL NORMAL // SEÑAL CONTENIDA', 'META DE MAESTRÍA // OBTÉN S O SS EN TODOS LOS SECTORES'];
   }
   const lines = [
-    'TRUE SIGNAL ENDING // CORE LATTICE STABILIZED',
-    'SECRET ENDING // CORRUPTED ECHO STILL CALLS BELOW'
+    'FINAL SEÑAL VERDADERA // MALLA NÚCLEO ESTABILIZADA',
+    'FINAL SECRETO // EL ECO CORRUPTO AÚN LLAMA DESDE ABAJO',
+    'EXTRACCIÓN COMPLETA // NAVE REPARADA, SEÑAL RESTAURADA, COMPLEJO SOBREVIVIDO'
   ];
-  if (input.impossibleModeUnlocked) lines.push('UNLOCK // IMPOSSIBLE MODE');
-  if (input.hiddenChallengeHookUnlocked) lines.push('HOOK // FINAL CHALLENGE NODE ARMED');
+  if (input.impossibleModeUnlocked) lines.push('DESBLOQUEO // MODO IMPOSIBLE');
+  if (input.hiddenChallengeHookUnlocked) lines.push('GANCHO // NODO DE DESAFÍO FINAL ACTIVADO');
   return lines;
 }
 
@@ -152,22 +153,22 @@ export function buildRaycastStatusMessage(
 ): string {
   if (levelComplete) {
     if (fullArcClear) {
-      return 'Full arc clear — Episode 1 + World 2 + Ember Meridian (World 3). Press R to retry sector or ESC for menu.';
+      return 'Arco completo despejado — Episodio 1 + Mundo 2 + Meridiana Ascua (Mundo 3). Presiona R para reintentar o ESC para menú.';
     }
     if (episodeComplete && finaleBossCleared && worldTwoLocked) {
-      return 'Boss purged. W for World 2 signal, R to replay boss, ESC for menu.';
+      return 'Jefe neutralizado. W para señal de Mundo 2, R para repetir jefe, ESC para menú.';
     }
     if (!episodeComplete && finaleBossCleared && !worldTwoLocked) {
       return worldTwoTransition
-        ? 'Archon down — abyss stratum tears open (not the same hell). Press N to descend the rift, R to replay boss, ESC for menu.'
-        : 'Boss purged. Press N to descend into World 2, R to replay boss, ESC for menu.';
+        ? 'Archon cayó — el estrato abisal se abrió. Presiona N para descender, R para repetir jefe, ESC para menú.'
+        : 'Jefe neutralizado. Presiona N para descender a Mundo 2, R para repetir jefe, ESC para menú.';
     }
     return episodeComplete
-      ? 'Episode clear. Press R to replay the finale or ESC for menu.'
-      : 'Sector clear. Press N to continue, R to replay, or ESC for menu.';
+      ? 'Episodio completado. Presiona R para repetir final o ESC para menú.'
+      : 'Sector despejado. Presiona N para continuar, R para repetir o ESC para menú.';
   }
-  if (playerAlive) return 'Sweep the sector. Keep moving.';
-  return 'Signal lost. Press R to retry or ESC for menu.';
+  if (playerAlive) return 'Barre el sector. Mantente en movimiento.';
+  return 'Señal perdida. Presiona R para reintentar o ESC para menú.';
 }
 
 export function buildRaycastDifficultyMenuLine(input: RaycastDifficultyMenuCopyInput): string {
@@ -182,17 +183,17 @@ export function buildRaycastHelpOverlayText(input: RaycastHelpOverlayInput = {})
       : null;
 
   return [
-    'MOVE // WASD',
-    'TURN // MOUSE, QE, ARROWS',
-    'FIRE // F, SPACE, CLICK',
-    'WEAPONS // 1, 2, 3',
-    `MAP // ${minimapToggleKey}`,
-    'INTERACT // WALK INTO GATES, LOCKS, AND EXIT NODES',
-    'RESET / MENU // R RESTART, ESC MENU',
-    'DEBUG // TAB',
+    'MOVER // WASD',
+    'GIRAR // MOUSE, QE, FLECHAS',
+    'DISPARO // F, ESPACIO, CLICK',
+    'ARMAS // 1, 2, 3',
+    `MAPA // ${minimapToggleKey}`,
+    'INTERACTUAR // CAMINA SOBRE PORTONES, CERRADURAS Y SALIDAS',
+    'REINICIO / MENÚ // R REINICIAR, ESC MENÚ',
+    'DEPURAR // TAB',
     difficultyLine,
-    'TITLE MENU // A 3D MODE  |  B 2D MODE',
-    'H OR ? // TOGGLE THIS HELP'
+    'MENÚ TÍTULO // A MODO 3D  |  B MODO 2D',
+    'H O ? // MOSTRAR/OCULTAR AYUDA'
   ]
     .filter((line): line is string => line !== null)
     .join('\n');
@@ -226,8 +227,8 @@ export function buildRaycastPriorityMessage(input: RaycastPriorityMessageInput):
       text:
         input.lowHealthHint ??
         (input.objective === 'REACH EXIT'
-          ? 'CRITICAL HEALTH. EXIT IS LIVE, PUSH EXTRACTION NOW.'
-          : 'CRITICAL HEALTH. BREAK CONTACT OR FORCE THE OBJECTIVE.'),
+          ? 'VIDA CRÍTICA. LA SALIDA ESTÁ ABIERTA, EMPUJA EXTRACCIÓN YA.'
+          : 'VIDA CRÍTICA. ROMPE CONTACTO O FUERZA EL OBJETIVO.'),
       tone: 'critical'
     };
   }
@@ -248,14 +249,14 @@ export function buildRaycastPriorityMessage(input: RaycastPriorityMessageInput):
 
   if (input.playerHealth <= 50) {
     return {
-      text: input.lowHealthHint ?? 'LOW HEALTH. STAY MOBILE AND AVOID TRADING DAMAGE.',
+      text: input.lowHealthHint ?? 'VIDA BAJA. MUÉVETE Y EVITA INTERCAMBIAR DAÑO.',
       tone: 'warning'
     };
   }
 
   if (input.objective === 'REACH EXIT') {
     return {
-      text: 'EXIT NODE LIVE. CUT TO EXTRACTION.',
+      text: 'NODO DE SALIDA ACTIVO. CORTA RUTA A EXTRACCIÓN.',
       tone: 'info'
     };
   }
@@ -268,18 +269,18 @@ export function buildRaycastPriorityMessage(input: RaycastPriorityMessageInput):
 
 export function buildRaycastLevelStartObjectiveMessage(input: RaycastLevelStartObjectiveInput): string {
   const objective = input.objective.trim().toUpperCase();
-  if (input.hasBoss) return 'OBJECTIVE // DEFEAT BOSS, THEN EXFIL.';
-  if (objective === 'FIND KEY' || objective === 'FIND TOKEN') return 'OBJECTIVE // RECOVER TOKEN, OPEN ROUTE.';
-  if (objective === 'OPEN DOOR' || objective === 'OPEN GATE') return 'OBJECTIVE // OPEN GATE, PUSH FOR EXFIL.';
+  if (input.hasBoss) return 'OBJETIVO // DERROTA AL JEFE Y EXTRAE.';
+  if (objective === 'FIND KEY' || objective === 'FIND TOKEN') return 'OBJETIVO // RECUPERA LA LLAVE Y ESCAPA.';
+  if (objective === 'OPEN DOOR' || objective === 'OPEN GATE') return 'OBJETIVO // ABRE LA COMPUERTA Y AVANZA.';
   if (objective === 'SURVIVE AMBUSH') {
     return (input.livingEnemyCount ?? 0) > 0
-      ? 'OBJECTIVE // CLEAR HOSTILES, THEN EXFIL.'
-      : 'OBJECTIVE // SURVIVE AMBUSH, THEN EXFIL.';
+      ? 'OBJETIVO // ELIMINA TODOS LOS HOSTILES.'
+      : 'OBJETIVO // SOBREVIVE A LA EMBOSCADA Y EXTRAE.';
   }
-  if (objective === 'REACH EXIT' || objective === 'EXIT READY') return 'OBJECTIVE // REACH EXFIL.';
+  if (objective === 'REACH EXIT' || objective === 'EXIT READY') return 'OBJETIVO // LLEGA AL PUNTO DE EXTRACCIÓN.';
   return input.keyTotal && input.keyTotal > 0
-    ? 'OBJECTIVE // FIND TOKEN, THEN EXFIL.'
-    : 'OBJECTIVE // PUSH TO EXFIL.';
+    ? 'OBJETIVO // RECUPERA LA LLAVE Y ESCAPA.'
+    : 'OBJETIVO // AVANZA A EXTRACCIÓN.';
 }
 
 export function getMainMenuCopy(): MainMenuCopy {

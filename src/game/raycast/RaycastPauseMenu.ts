@@ -1,13 +1,13 @@
 /** Pause menu labels shared by RaycastScene — keeps the gameplay scene slimmer. */
 
 export const RAYCAST_PAUSE_MENU_LABELS = [
-  'Resume',
-  'Restart Level',
-  'Main Menu',
-  'Volume Up',
-  'Volume Down',
-  'Toggle Minimap',
-  'Toggle Debug HUD'
+  'Reanudar',
+  'Reiniciar Nivel',
+  'Menú Principal',
+  'Subir Volumen',
+  'Bajar Volumen',
+  'Mostrar/Ocultar Minimap',
+  'Mostrar/Ocultar HUD Debug'
 ] as const;
 
 export type RaycastPauseMenuAction =
@@ -35,11 +35,11 @@ export function formatRaycastPauseMenuBody(volumePct: number, selectionIndex: nu
     return `${prefix}${label}`;
   });
   return [
-    '// SYSTEM HALT — INPUT LOCKED',
-    `MASTER VOLUME ${volumePct}%`,
+    '// SISTEMA EN PAUSA — ENTRADA BLOQUEADA',
+    `VOLUMEN MAESTRO ${volumePct}%`,
     '',
     ...lines,
     '',
-    '// UP/DOWN select · ENTER confirm · ESC resume'
+    '// ARRIBA/ABAJO seleccionar · ENTER confirmar · ESC reanudar'
   ].join('\n');
 }

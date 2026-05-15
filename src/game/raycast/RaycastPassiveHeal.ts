@@ -1,5 +1,4 @@
 import type { DirectorState } from '../systems/DirectorState';
-import { RAYCAST_PLAYER_MAX_HEALTH } from './RaycastItems';
 
 export interface RaycastPassiveHealConfig {
   /** No healing until this long after the last hit (ms). */
@@ -12,7 +11,7 @@ export interface RaycastPassiveHealConfig {
 export const DEFAULT_RAYCAST_PASSIVE_HEAL_CONFIG: RaycastPassiveHealConfig = {
   delayAfterDamageMs: 5000,
   healPerSecond: 2,
-  maxHealth: RAYCAST_PLAYER_MAX_HEALTH
+  maxHealth: 100
 };
 
 /**
@@ -71,7 +70,7 @@ export function getRaycastPassiveRegenHudState(input: {
   combatScale: number;
   isRegenerating: boolean;
 }): RaycastPassiveRegenHudState {
-  const maxH = Math.min(input.config.maxHealth, RAYCAST_PLAYER_MAX_HEALTH);
+  const maxH = Math.max(1, input.config.maxHealth);
   if (input.health >= maxH) return 'hidden';
   if (input.nowMs - input.lastDamageAtMs < input.config.delayAfterDamageMs) return 'waiting';
   if (input.combatScale <= 0) return 'blocked';
@@ -87,7 +86,7 @@ export function formatRaycastPassiveRegenHudLabel(state: RaycastPassiveRegenHudS
 
 export function tickRaycastPassiveHeal(input: TickRaycastPassiveHealInput): TickRaycastPassiveHealResult {
   const { health, nowMs, lastDamageAtMs, deltaMs, config, combatScale } = input;
-  const maxH = Math.min(config.maxHealth, RAYCAST_PLAYER_MAX_HEALTH);
+  const maxH = Math.max(1, config.maxHealth);
   const clampedHealth = Math.max(0, Math.min(health, maxH));
   const carry = Math.max(0, input.fractionalCarry ?? 0);
 

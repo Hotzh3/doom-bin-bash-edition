@@ -46,9 +46,9 @@ describe('raycast presentation helpers', () => {
 
   it('frames death overlay copy separately from sector-clear summaries', () => {
     const lines = buildRaycastDeathOverlaySummary('SECTOR 2/6 TEST');
-    expect(lines[0]).toContain('FLATLINED');
+    expect(lines[0]).toContain('ENLACE');
     expect(lines.join('\n')).toContain('SECTOR 2/6 TEST');
-    expect(buildRaycastDeathOverlayHint()).toContain('RESTART');
+    expect(buildRaycastDeathOverlayHint()).toContain('REINTENTAR');
   });
 
   it('builds a World 3 banner when the meridian arc is active', () => {
@@ -84,7 +84,7 @@ describe('raycast presentation helpers', () => {
         canAdvance: true,
         episodeComplete: false
       })
-    ).toBe('N CONTINUE  |  R RESTART SECTOR  |  ESC MENU');
+    ).toBe('N CONTINUAR  |  R REINICIAR SECTOR  |  ESC MENÚ');
 
     expect(
       buildRaycastOverlayHint({
@@ -92,7 +92,7 @@ describe('raycast presentation helpers', () => {
         canAdvance: false,
         episodeComplete: true
       })
-    ).toBe('R REPLAY FINALE  |  ESC MENU');
+    ).toBe('R REPETIR FINAL  |  ESC MENÚ');
 
     expect(
       buildRaycastOverlayHint({
@@ -102,7 +102,7 @@ describe('raycast presentation helpers', () => {
         finaleBossCleared: true,
         worldTwoLocked: true
       })
-    ).toBe('W WORLD 2 (LOCKED)  |  R REPLAY BOSS  |  ESC MENU');
+    ).toBe('W MUNDO 2 (BLOQUEADO)  |  R REPETIR JEFE  |  ESC MENÚ');
 
     expect(
       buildRaycastOverlayHint({
@@ -111,7 +111,7 @@ describe('raycast presentation helpers', () => {
         episodeComplete: true,
         masteryUnlocked: true
       })
-    ).toBe('TRUE SIGNAL UNLOCKED  |  R REPLAY FINALE  |  ESC MENU');
+    ).toBe('SEÑAL VERDADERA DESBLOQUEADA  |  R REPETIR FINAL  |  ESC MENÚ');
   });
 
   it('builds normal vs mastery ending footer lines compactly', () => {
@@ -122,7 +122,7 @@ describe('raycast presentation helpers', () => {
       impossibleModeUnlocked: false,
       hiddenChallengeHookUnlocked: false
     });
-    expect(normal[0]).toContain('NORMAL ENDING');
+    expect(normal[0]).toContain('FINAL NORMAL');
 
     const mastery = buildRaycastMasteryEndingLines({
       episodeComplete: true,
@@ -131,27 +131,27 @@ describe('raycast presentation helpers', () => {
       impossibleModeUnlocked: true,
       hiddenChallengeHookUnlocked: true
     });
-    expect(mastery.join('\n')).toContain('TRUE SIGNAL ENDING');
-    expect(mastery.join('\n')).toContain('SECRET ENDING');
-    expect(mastery.join('\n')).toContain('IMPOSSIBLE MODE');
+    expect(mastery.join('\n')).toContain('FINAL SEÑAL VERDADERA');
+    expect(mastery.join('\n')).toContain('FINAL SECRETO');
+    expect(mastery.join('\n')).toContain('MODO IMPOSIBLE');
   });
 
   it('builds status copy for play, clear, and death states', () => {
-    expect(buildRaycastStatusMessage(false, false, true)).toBe('Sweep the sector. Keep moving.');
+    expect(buildRaycastStatusMessage(false, false, true)).toBe('Barre el sector. Mantente en movimiento.');
     expect(buildRaycastStatusMessage(true, false, true)).toBe(
-      'Sector clear. Press N to continue, R to replay, or ESC for menu.'
+      'Sector despejado. Presiona N para continuar, R para repetir o ESC para menú.'
     );
-    expect(buildRaycastStatusMessage(true, true, true)).toBe('Episode clear. Press R to replay the finale or ESC for menu.');
+    expect(buildRaycastStatusMessage(true, true, true)).toBe('Episodio completado. Presiona R para repetir final o ESC para menú.');
     expect(buildRaycastStatusMessage(true, true, true, true, true)).toBe(
-      'Boss purged. W for World 2 signal, R to replay boss, ESC for menu.'
+      'Jefe neutralizado. W para señal de Mundo 2, R para repetir jefe, ESC para menú.'
     );
     expect(buildRaycastStatusMessage(true, false, true, true, false)).toBe(
-      'Boss purged. Press N to descend into World 2, R to replay boss, ESC for menu.'
+      'Jefe neutralizado. Presiona N para descender a Mundo 2, R para repetir jefe, ESC para menú.'
     );
     expect(buildRaycastStatusMessage(true, false, true, true, false, false, true)).toBe(
-      'Archon down — abyss stratum tears open (not the same hell). Press N to descend the rift, R to replay boss, ESC for menu.'
+      'Archon cayó — el estrato abisal se abrió. Presiona N para descender, R para repetir jefe, ESC para menú.'
     );
-    expect(buildRaycastStatusMessage(false, false, false)).toBe('Signal lost. Press R to retry or ESC for menu.');
+    expect(buildRaycastStatusMessage(false, false, false)).toBe('Señal perdida. Presiona R para reintentar o ESC para menú.');
   });
 
   it('builds a quick help overlay with the expected control reminders', () => {
@@ -160,14 +160,14 @@ describe('raycast presentation helpers', () => {
       difficultySummary: 'SOFTER DAMAGE // SLOWER PRESSURE // STRONGER REPAIRS'
     });
 
-    expect(help).toContain('MOVE // WASD');
-    expect(help).toContain('FIRE // F, SPACE, CLICK');
-    expect(help).toContain('WEAPONS // 1, 2, 3');
-    expect(help).toContain('MAP // M');
-    expect(help).toContain('INTERACT // WALK INTO GATES, LOCKS, AND EXIT NODES');
+    expect(help).toContain('MOVER // WASD');
+    expect(help).toContain('DISPARO // F, ESPACIO, CLICK');
+    expect(help).toContain('ARMAS // 1, 2, 3');
+    expect(help).toContain('MAPA // M');
+    expect(help).toContain('INTERACTUAR // CAMINA SOBRE PORTONES, CERRADURAS Y SALIDAS');
     expect(help).toContain('DIFFICULTY // ASSIST // SOFTER DAMAGE // SLOWER PRESSURE // STRONGER REPAIRS');
-    expect(help).toContain('TITLE MENU // A 3D MODE  |  B 2D MODE');
-    expect(help).toContain('H OR ? // TOGGLE THIS HELP');
+    expect(help).toContain('MENÚ TÍTULO // A MODO 3D  |  B MODO 2D');
+    expect(help).toContain('H O ? // MOSTRAR/OCULTAR AYUDA');
   });
 
   it('builds compact difficulty selector copy for the menu', () => {
@@ -219,14 +219,14 @@ describe('raycast presentation helpers', () => {
 
   it('builds short level-start objective callouts for the main goal types', () => {
     expect(buildRaycastLevelStartObjectiveMessage({ objective: 'FIND KEY', keyTotal: 1 })).toBe(
-      'OBJECTIVE // RECOVER TOKEN, OPEN ROUTE.'
+      'OBJETIVO // RECUPERA LA LLAVE Y ESCAPA.'
     );
     expect(buildRaycastLevelStartObjectiveMessage({ objective: 'SURVIVE AMBUSH', livingEnemyCount: 3 })).toBe(
-      'OBJECTIVE // CLEAR HOSTILES, THEN EXFIL.'
+      'OBJETIVO // ELIMINA TODOS LOS HOSTILES.'
     );
-    expect(buildRaycastLevelStartObjectiveMessage({ objective: 'REACH EXIT' })).toBe('OBJECTIVE // REACH EXFIL.');
+    expect(buildRaycastLevelStartObjectiveMessage({ objective: 'REACH EXIT' })).toBe('OBJETIVO // LLEGA AL PUNTO DE EXTRACCIÓN.');
     expect(buildRaycastLevelStartObjectiveMessage({ objective: 'SURVIVE AMBUSH', hasBoss: true })).toBe(
-      'OBJECTIVE // DEFEAT BOSS, THEN EXFIL.'
+      'OBJETIVO // DERROTA AL JEFE Y EXTRAE.'
     );
   });
 
@@ -245,7 +245,7 @@ describe('raycast presentation helpers', () => {
         blockedHintActive: false
       })
     ).toEqual({
-      text: 'EXIT NODE LIVE. CUT TO EXTRACTION.',
+      text: 'NODO DE SALIDA ACTIVO. CORTA RUTA A EXTRACCIÓN.',
       tone: 'info'
     });
 

@@ -335,6 +335,9 @@ export class RaycastScene extends Phaser.Scene {
   private bossPhaseText!: Phaser.GameObjects.Text;
   private bossBarTrack!: Phaser.GameObjects.Rectangle;
   private bossBarFill!: Phaser.GameObjects.Rectangle;
+  private bossNameTextSecondary!: Phaser.GameObjects.Text;
+  private bossBarTrackSecondary!: Phaser.GameObjects.Rectangle;
+  private bossBarFillSecondary!: Phaser.GameObjects.Rectangle;
   private objectiveText!: Phaser.GameObjects.Text;
   private hintText!: Phaser.GameObjects.Text;
   private instructionText!: Phaser.GameObjects.Text;
@@ -808,6 +811,26 @@ export class RaycastScene extends Phaser.Scene {
       .setVisible(false);
     this.bossBarFill = this.add
       .rectangle(GAME_WIDTH * 0.5 - 215, 86, 430, 10, 0xb84fff, 1)
+      .setOrigin(0, 0.5)
+      .setDepth(17)
+      .setVisible(false);
+    this.bossNameTextSecondary = this.add
+      .text(GAME_WIDTH * 0.5, 104, '', {
+        fontSize: '12px',
+        fontStyle: '700',
+        color: '#ffc88f',
+        stroke: '#020408',
+        strokeThickness: 3
+      })
+      .setOrigin(0.5, 0.5)
+      .setDepth(16)
+      .setVisible(false);
+    this.bossBarTrackSecondary = this.add
+      .rectangle(GAME_WIDTH * 0.5, 118, 430, 10, 0x020408, 0.9)
+      .setDepth(16)
+      .setVisible(false);
+    this.bossBarFillSecondary = this.add
+      .rectangle(GAME_WIDTH * 0.5 - 215, 118, 430, 6, 0xff7f3a, 1)
       .setOrigin(0, 0.5)
       .setDepth(17)
       .setVisible(false);
@@ -1674,6 +1697,7 @@ export class RaycastScene extends Phaser.Scene {
     const baseConfig = getRaycastDifficultyPassiveHealConfig(this.difficultyId);
     const config = {
       ...baseConfig,
+      maxHealth: this.playerMaxHealth,
       delayAfterDamageMs: Math.round(baseConfig.delayAfterDamageMs * (this.runModifier?.effects.passiveHealDelayMul ?? 1))
     };
     const result = tickRaycastPassiveHeal({
@@ -1790,7 +1814,33 @@ export class RaycastScene extends Phaser.Scene {
     );
     if (projectileDamage > 0) this.damagePlayer(projectileDamage);
     this.enemyProjectiles = this.enemyProjectiles.filter((projectile) => projectile.alive);
+    this.applyDualBossCoordination();
     this.applyDualBossSpacing();
+  }
+
+  private applyDualBossCoordination(): void {
+    const live = this.getLiveBosses();
+    if (live.length < 2) return;
+    const a = live[0];
+    const b = live[1];
+    const midX = (a.x + b.x) * 0.5;
+    const midY = (a.y + b.y) * 0.5;
+    const toPlayerX = this.player.x - midX;
+    const toPlayerY = this.player.y - midY;
+    const len = Math.hypot(toPlayerX, toPlayerY) || 1;
+    const nx = toPlayerX / len;
+    const ny = toPlayerY / len;
+    const flankX = -ny;
+    const flankY = nx;
+    const ring = 1.1;
+    const targetAX = this.player.x + flankX * ring;
+    const targetAY = this.player.y + flankY * ring;
+    const targetBX = this.player.x - flankX * ring;
+    const targetBY = this.player.y - flankY * ring;
+    a.x += (targetAX - a.x) * 0.02;
+    a.y += (targetAY - a.y) * 0.02;
+    b.x += (targetBX - b.x) * 0.02;
+    b.y += (targetBY - b.y) * 0.02;
   }
 
   private trySpawnBossAdds(liveBosses: RaycastBossState[]): void {
@@ -3021,7 +3071,9 @@ export class RaycastScene extends Phaser.Scene {
   }
 
   private updateBossHud(): void {
-    const boss = this.getLiveBosses()[0] ?? null;
+    const liveBosses = this.getLiveBosses();
+    const boss = liveBosses[0] ?? null;
+    const bossSecondary = liveBosses[1] ?? null;
     const showBossHud = Boolean(
       this.bossStates.length > 0 &&
       boss &&
@@ -3032,6 +3084,9 @@ export class RaycastScene extends Phaser.Scene {
     this.bossPhaseText.setVisible(showBossHud);
     this.bossBarTrack.setVisible(showBossHud);
     this.bossBarFill.setVisible(showBossHud);
+    this.bossNameTextSecondary.setVisible(showBossHud && bossSecondary !== null);
+    this.bossBarTrackSecondary.setVisible(showBossHud && bossSecondary !== null);
+    this.bossBarFillSecondary.setVisible(showBossHud && bossSecondary !== null);
     if (!showBossHud || !boss) return;
 
     const ratio = Phaser.Math.Clamp(boss.maxHealth <= 0 ? 0 : boss.health / boss.maxHealth, 0, 1);
@@ -3043,6 +3098,15 @@ export class RaycastScene extends Phaser.Scene {
     this.bossBarFill
       .setSize(430 * ratio, 10)
       .setFillStyle(telegraphing ? 0xff8833 : boss.phase === 3 ? 0xff3145 : boss.phase === 2 ? 0xff5b6f : 0xb84fff, 1);
+    if (bossSecondary) {
+      const ratio2 = Phaser.Math.Clamp(
+        bossSecondary.maxHealth <= 0 ? 0 : bossSecondary.health / bossSecondary.maxHealth,
+        0,
+        1
+      );
+      this.bossNameTextSecondary.setText(`JEFE 2 // ${bossSecondary.displayName.toUpperCase()} ${Math.ceil(ratio2 * 100)}%`);
+      this.bossBarFillSecondary.setSize(430 * ratio2, 6).setFillStyle(bossSecondary.phase === 3 ? 0xff4a2e : 0xff7f3a, 1);
+    }
   }
 
   private updateFocusedEnemyHud(): void {

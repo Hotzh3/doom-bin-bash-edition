@@ -156,4 +156,17 @@ describe('raycast passive heal', () => {
       )
     ).toBeNull();
   });
+
+  it('allows regeneration to reach dynamic max health above legacy caps', () => {
+    const result = tickRaycastPassiveHeal({
+      health: 120,
+      nowMs: 10_000,
+      lastDamageAtMs: 0,
+      deltaMs: 30_000,
+      config: { ...DEFAULT_RAYCAST_PASSIVE_HEAL_CONFIG, maxHealth: 144, healPerSecond: 2 },
+      combatScale: 1,
+      fractionalCarry: 0
+    });
+    expect(result.nextHealth).toBe(144);
+  });
 });
