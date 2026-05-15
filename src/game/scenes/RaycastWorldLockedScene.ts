@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { GAME_HEIGHT, GAME_WIDTH } from '../config';
 import { RAYCAST_CSS_WORLD2, RAYCAST_PALETTE } from '../raycast/RaycastPalette';
 
-/** Placeholder when Episode 2 / World 2 is not built yet. */
+/** Pantalla de bloqueo cuando no está disponible el arco del Mundo 2. */
 export class RaycastWorldLockedScene extends Phaser.Scene {
   constructor() {
     super('RaycastWorldLockedScene');
@@ -12,7 +12,7 @@ export class RaycastWorldLockedScene extends Phaser.Scene {
     this.cameras.main.setBackgroundColor(RAYCAST_PALETTE.voidBlack);
 
     this.add
-      .text(GAME_WIDTH * 0.5, GAME_HEIGHT * 0.38, 'ABYSS STRATUM — SIGNAL ABSENT', {
+      .text(GAME_WIDTH * 0.5, GAME_HEIGHT * 0.38, 'ESTRATO ABISAL — SEÑAL AUSENTE', {
         fontFamily: 'monospace',
         fontSize: '22px',
         fontStyle: '700',
@@ -25,7 +25,7 @@ export class RaycastWorldLockedScene extends Phaser.Scene {
       .text(
         GAME_WIDTH * 0.5,
         GAME_HEIGHT * 0.52,
-        'WORLD 2 RIFT ARC NOT PRESENT IN THIS BUILD — SHIPS WHEN STRATUM DATA IS BUNDLED',
+        'EL ARCO DE GRIETA DEL MUNDO 2 NO ESTÁ EN ESTA VERSIÓN — LLEGARÁ CUANDO SE INTEGRE EL PAQUETE DEL ESTRATO',
         {
           fontFamily: 'monospace',
           fontSize: '15px',
@@ -38,7 +38,7 @@ export class RaycastWorldLockedScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     this.add
-      .text(GAME_WIDTH * 0.5, GAME_HEIGHT * 0.72, 'Press ESC or ENTER for main menu', {
+      .text(GAME_WIDTH * 0.5, GAME_HEIGHT * 0.72, 'Pulsa ESC o ENTER para ir al menú principal', {
         fontFamily: 'monospace',
         fontSize: '13px',
         color: RAYCAST_CSS_WORLD2.mutedText,
