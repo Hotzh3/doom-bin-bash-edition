@@ -13,9 +13,9 @@ import { getEnemyConfig, getRaycastEnemyRoleAbbrev } from '../entities/enemyConf
 import type { EnemyKind } from '../types/game';
 import {
   AudioFeedbackSystem,
+  getDynamicAmbientAudioPlan,
   getDirectorEventAudioPlan,
-  getWeaponAudioPlan,
-  type AudioFeedbackCue
+  getWeaponAudioPlan
 } from '../systems/AudioFeedbackSystem';
 import type { DirectorEvent } from '../systems/DirectorEvents';
 import { DIRECTOR_STATE_LABELS, type DirectorDebugInfo, type DirectorState } from '../systems/DirectorState';
@@ -236,6 +236,10 @@ const DEV_SHORTCUT_ENABLED = import.meta.env.DEV;
 const BASE_PLAYER_MAX_HEALTH = 100;
 const REWARD_DAMAGE_STEP = 0.2;
 const REWARD_HEALTH_STEP = 1.2;
+const FIRE_SHAKE_DURATION_MS = 58;
+const FIRE_SHAKE_INTENSITY = 0.00105;
+const FIRE_SHAKE_INTENSITY_CAP = 0.0028;
+const FIRE_MUZZLE_ALPHA_CAP = 0.88;
 
 export class RaycastScene extends Phaser.Scene {
   private raycastRenderer!: RaycastRenderer;
@@ -1390,7 +1394,9 @@ export class RaycastScene extends Phaser.Scene {
 
     this.flashMuzzle();
     const weaponAudio = getWeaponAudioPlan(result.weaponKind);
-    this.audioFeedback.play(weaponAudio.cue, weaponAudio.intensity, this.time.now);
+    const firePitchVar = 0.94 + ((this.time.now % 37) / 37) * 0.12;
+    this.audioFeedback.play(weaponAudio.cue, weaponAudio.intensity * firePitchVar, this.time.now);
+    this.cameras.main.shake(FIRE_SHAKE_DURATION_MS, Math.min(FIRE_SHAKE_INTENSITY_CAP, FIRE_SHAKE_INTENSITY));
 
     const liveBosses = this.getLiveBosses();
     if (liveBosses.length > 0) {
@@ -1430,7 +1436,7 @@ export class RaycastScene extends Phaser.Scene {
           this.cameras.main.flash(160, 255, 214, 120);
           this.cameras.main.shake(210, 0.003);
         }
-        this.audioFeedback.play(killed ? 'kill' : 'hit', killed ? 1 : 0.9, this.time.now);
+        this.audioFeedback.play(killed ? 'kill' : 'hit', (killed ? 1 : 0.9) * (0.95 + ((this.time.now % 29) / 29) * 0.1), this.time.now);
         this.pulseCrosshair(killed ? '#ff5b6f' : '#ffffff', killed ? 118 : 92);
         this.flashHitMarker(killed, false);
         this.cameras.main.shake(killed ? 96 : 54, killed ? 0.00225 : 0.00135);
@@ -1459,7 +1465,11 @@ export class RaycastScene extends Phaser.Scene {
       this.cameras.main.shake(102, 0.00285);
       this.pulseFeedback(0xff8a3d, 0.08, 110);
     }
-    this.audioFeedback.play(result.killed ? 'kill' : 'hit', result.killed ? 1 : 0.9, this.time.now);
+    this.audioFeedback.play(
+      result.killed ? 'kill' : 'hit',
+      (result.killed ? 1 : 0.9) * (0.95 + ((this.time.now % 31) / 31) * 0.1),
+      this.time.now
+    );
     if (result.killed) {
       this.cameras.main.flash(48, 255, 236, 210, false);
       this.pulseFeedback(0xffe2c4, 0.095, 150);
@@ -1491,7 +1501,7 @@ export class RaycastScene extends Phaser.Scene {
     const flashDuration = weapon === 'LAUNCHER' ? 226 : weapon === 'SHOTGUN' ? 136 : 70;
     this.muzzleFlash.setSize(width, height);
     this.muzzleFlash.setFillStyle(weapon === 'LAUNCHER' ? RAYCAST_PALETTE.plasmaBright : weapon === 'SHOTGUN' ? 0xff8a3d : RAYCAST_ATMOSPHERE.muzzleFlash);
-    this.muzzleFlash.setAlpha(alpha);
+    this.muzzleFlash.setAlpha(Math.min(FIRE_MUZZLE_ALPHA_CAP, alpha));
     this.weaponOverlayFlashUntil = this.time.now + flashDuration;
     this.tweens.killTweensOf(this.muzzleFlash);
     this.tweens.add({
@@ -3051,32 +3061,22 @@ export class RaycastScene extends Phaser.Scene {
   private updateAtmospherePulse(): void {
     if (this.gamePaused || !this.playerAlive || this.levelComplete) return;
     if (this.time.now < this.nextAmbientCueAt) return;
-    const bossActive = Boolean(this.getLiveBosses().length > 0 && !this.levelComplete);
-    const segment = this.getWorldSegment();
+    const boss = this.getLiveBosses()[0] ?? null;
+    const bossPhase: 0 | 1 | 2 | 3 = boss ? boss.phase : 0;
     const dirState = this.directorDebug?.state;
     const pressure = dirState === 'AMBUSH' || dirState === 'PRESSURE';
-    const recovery = dirState === 'RECOVERY';
-
-    let cue: AudioFeedbackCue = 'ambient';
-    if (bossActive) cue = segment === 'world2' ? 'ambientCorrupt' : 'ambientIndustrial';
-    else if (pressure) cue = 'ambientIndustrial';
-    else if (segment === 'world2') cue = 'ambientCorrupt';
-
-    const baseIntensity = bossActive
-      ? segment === 'world2'
-        ? 0.88
-        : 0.84
-      : pressure
-        ? 0.81
-        : segment === 'world2'
-          ? 0.72
-          : 0.75;
-
-    this.audioFeedback.play(cue, baseIntensity, this.time.now);
-    if (bossActive) this.audioFeedback.play('directorWarning', 0.58, this.time.now + 120);
-
-    const interval = bossActive ? 3000 : recovery ? 13200 : pressure ? 4400 : 8200;
-    this.nextAmbientCueAt = this.time.now + interval;
+    const lowHp = this.playerHealth <= 26;
+    const plan = getDynamicAmbientAudioPlan({
+      inCombat: pressure || this.countLivingEnemies() > 0,
+      bossPhase,
+      lowHp,
+      worldSegment: this.getWorldSegment()
+    });
+    this.audioFeedback.play(plan.primary.cue, plan.primary.intensity, this.time.now);
+    for (const overlay of plan.overlays) {
+      this.audioFeedback.play(overlay.cue, overlay.intensity, this.time.now + 90);
+    }
+    this.nextAmbientCueAt = this.time.now + plan.intervalMs;
   }
 
   private applyExploderBursts(): void {
