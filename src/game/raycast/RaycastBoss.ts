@@ -15,14 +15,15 @@ export type RaycastBossBehaviorId = 'volt-archon' | 'bloom-warden' | 'ash-judge'
 
 const GRID_SCALE = 100;
 const BOSS_PROJECTILE_SPEED_GRID = 300;
-const BOSS_PROJECTILE_DAMAGE = 13;
+const BOSS_PROJECTILE_DAMAGE = 26;
+const BOSS_HEALTH_SCALE = 6;
 const BOSS_PROJECTILE_RADIUS = 0.1;
 const BOSS_PROJECTILE_COLOR = 0xff8833;
 /** Bloom Warden volleys — toxic yellow-green read vs Volt Archon ion orange (Phase 30). */
 const BLOOM_WARDEN_PROJECTILE_COLOR = 0xa8dd58;
 const ASH_JUDGE_PROJECTILE_COLOR = 0xff5522;
-const PHASE_TWO_DAMAGE_MUL = 1.05;
-const PHASE_THREE_DAMAGE_MUL = 1.15;
+const PHASE_TWO_DAMAGE_MUL = 1.2;
+const PHASE_THREE_DAMAGE_MUL = 1.4;
 
 export interface RaycastBossConfig {
   id: string;
@@ -72,14 +73,14 @@ function telegraphMs(state: Pick<RaycastBossState, 'phase' | 'behavior'>): numbe
 
 function cooldownMs(state: Pick<RaycastBossState, 'phase' | 'behavior'>): number {
   if (state.behavior === 'ash-judge') {
-    return state.phase === 1 ? 2080 : state.phase === 2 ? 1720 : 1420;
+    return state.phase === 1 ? 1680 : state.phase === 2 ? 1320 : 1040;
   }
   if (state.behavior === 'bloom-warden') {
-    return state.phase === 1 ? 2100 : state.phase === 2 ? 1720 : 1320;
+    return state.phase === 1 ? 1620 : state.phase === 2 ? 1280 : 980;
   }
-  if (state.phase === 1) return 2280;
-  if (state.phase === 2) return 1760;
-  return 1400;
+  if (state.phase === 1) return 1780;
+  if (state.phase === 2) return 1360;
+  return 1020;
 }
 
 export function getRaycastBossPhaseLabel(boss: Pick<RaycastBossState, 'phase' | 'behavior'>): string {
@@ -99,18 +100,19 @@ export function getRaycastBossPhaseLabel(boss: Pick<RaycastBossState, 'phase' | 
 }
 
 export function createRaycastBossState(config: RaycastBossConfig, time: number): RaycastBossState {
+  const scaledMaxHealth = Math.max(1, Math.round(config.maxHealth * BOSS_HEALTH_SCALE));
   return {
     id: config.id,
     displayName: config.displayName,
     x: config.x,
     y: config.y,
-    maxHealth: config.maxHealth,
+    maxHealth: scaledMaxHealth,
     hitRadius: config.hitRadius,
-    health: config.maxHealth,
+    health: scaledMaxHealth,
     phase: 1,
     behavior: config.behavior ?? 'volt-archon',
     telegraphUntil: 0,
-    nextVolleyReadyAt: time + 1400,
+    nextVolleyReadyAt: time + 1200,
     pendingVolleyAt: 0,
     hitFlashUntil: 0,
     alive: true,

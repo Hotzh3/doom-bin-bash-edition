@@ -1003,6 +1003,20 @@ export class RaycastRenderer {
     const diag = burstSize * 0.44;
     this.graphics.lineBetween(cx - diag, cy - diag, cx + diag, cy + diag);
     this.graphics.lineBetween(cx - diag, cy + diag, cx + diag, cy - diag);
+    const shards = 8;
+    for (let i = 0; i < shards; i += 1) {
+      const ang = (i / shards) * Math.PI * 2 + time * 0.02;
+      const outer = burstSize * (0.56 + shard * 0.68);
+      const inner = burstSize * 0.18;
+      const x0 = cx + Math.cos(ang) * inner;
+      const y0 = cy + Math.sin(ang) * inner;
+      const x1 = cx + Math.cos(ang) * outer;
+      const y1 = cy + Math.sin(ang) * outer;
+      this.graphics.lineStyle(2, i % 2 === 0 ? 0xfff0d0 : RAYCAST_PALETTE.plasmaBright, alpha * 0.64 * visibility * shard);
+      this.graphics.lineBetween(x0, y0, x1, y1);
+      this.graphics.fillStyle(projection.enemy.color, alpha * 0.5 * visibility * shard);
+      this.graphics.fillCircle(x1, y1, Math.max(1.2, burstSize * 0.03));
+    }
   }
 
   private drawEnemySilhouette(

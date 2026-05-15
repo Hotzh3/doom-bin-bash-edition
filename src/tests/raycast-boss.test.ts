@@ -31,14 +31,14 @@ describe('raycast boss', () => {
     const t = 1000;
     const boss = createRaycastBossState(CONFIG, t);
     expect(boss.alive).toBe(true);
-    expect(boss.health).toBe(120);
+    expect(boss.health).toBe(120 * 6);
     expect(boss.phase).toBe(1);
     expect(boss.arenaTwist).toBe('none');
   });
 
   it('starts a telegraphed arena twist when crossing into phase 2', () => {
     const boss = createRaycastBossState(CONFIG, 500);
-    damageRaycastBoss(boss, 61, 1000);
+    damageRaycastBoss(boss, 241, 1000);
     expect(boss.phase).toBe(2);
     expect(boss.arenaTwist).toBe('ion_veil');
     expect(boss.arenaTwistUntil).toBeGreaterThan(1000);
@@ -49,7 +49,7 @@ describe('raycast boss', () => {
       { ...CONFIG, id: 'bloom', displayName: 'Bloom Warden', behavior: 'bloom-warden' },
       0
     );
-    damageRaycastBoss(boss, 61, 200);
+    damageRaycastBoss(boss, 241, 200);
     expect(boss.arenaTwist).toBe('lateral_lane');
   });
 
@@ -63,22 +63,22 @@ describe('raycast boss', () => {
 
   it('transitions through phase 1 -> 2 -> 3 by health ratio bands', () => {
     const boss = createRaycastBossState(CONFIG, 0);
-    boss.health = 81;
+    boss.health = Math.round(boss.maxHealth * 0.68);
     syncRaycastBossPhase(boss);
     expect(boss.phase).toBe(1);
-    boss.health = 80;
+    boss.health = Math.round(boss.maxHealth * 0.66);
     syncRaycastBossPhase(boss);
     expect(boss.phase).toBe(2);
-    boss.health = 79;
+    boss.health = Math.round(boss.maxHealth * 0.64);
     syncRaycastBossPhase(boss);
     expect(boss.phase).toBe(2);
-    boss.health = 41;
+    boss.health = Math.round(boss.maxHealth * 0.35);
     syncRaycastBossPhase(boss);
     expect(boss.phase).toBe(2);
-    boss.health = 40;
+    boss.health = Math.round(boss.maxHealth * 0.33);
     syncRaycastBossPhase(boss);
     expect(boss.phase).toBe(3);
-    boss.health = 39;
+    boss.health = Math.round(boss.maxHealth * 0.31);
     syncRaycastBossPhase(boss);
     expect(boss.phase).toBe(3);
     expect(getRaycastBossPhaseLabel({ ...boss, phase: 2 })).toContain('ION BRACKET');
@@ -87,10 +87,10 @@ describe('raycast boss', () => {
 
   it('uses strict thresholds at exactly 66% and 33% hp', () => {
     const boss = createRaycastBossState(CONFIG, 0);
-    boss.health = 80; // 66.66%
+    boss.health = boss.maxHealth * (2 / 3);
     syncRaycastBossPhase(boss);
     expect(boss.phase).toBe(2);
-    boss.health = 40; // 33.33%
+    boss.health = boss.maxHealth * (1 / 3);
     syncRaycastBossPhase(boss);
     expect(boss.phase).toBe(3);
   });
@@ -151,7 +151,7 @@ describe('raycast boss', () => {
 
   it('dies and awards flat clear score hook', () => {
     const boss = createRaycastBossState({ ...CONFIG, maxHealth: 20 }, 0);
-    const killed = damageRaycastBoss(boss, 25, 100);
+    const killed = damageRaycastBoss(boss, 121, 100);
     expect(killed).toBe(true);
     expect(boss.alive).toBe(false);
     expect(addRaycastBossClearScore(100)).toBe(100 + 2500);
