@@ -19,6 +19,11 @@ import { RAYCAST_MAP } from '../game/raycast/RaycastMap';
 import { collides } from '../game/raycast/RaycastMovement';
 
 describe('raycast enemy system', () => {
+  it('applies global +15% enemy health on spawn', () => {
+    const enemy = createRaycastEnemy({ id: 'hp', kind: 'GRUNT', x: 1.5, y: 7.5 });
+    expect(enemy.maxHealth).toBe(Math.round(getEnemyConfig('GRUNT', 'raycast').health * 1.15));
+  });
+
   it('checks line of sight against raycast walls', () => {
     expect(hasLineOfSight(RAYCAST_MAP, { x: 1.5, y: 10.5 }, { x: 1.5, y: 7.5 })).toBe(true);
     expect(hasLineOfSight(RAYCAST_MAP, { x: 1.5, y: 10.5 }, { x: 8, y: 10.5 })).toBe(false);

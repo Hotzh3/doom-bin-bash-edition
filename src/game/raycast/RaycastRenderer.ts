@@ -138,12 +138,17 @@ export class RaycastRenderer {
         atmosphere.ambientDarkness,
         1
       );
+      const columnNoise = Math.sin(column * 0.37 + hit.distance * 0.42) * 0.035;
+      const hitFracX = Math.abs(hit.hitX - Math.floor(hit.hitX) - 0.5);
+      const hitFracY = Math.abs(hit.hitY - Math.floor(hit.hitY) - 0.5);
+      const edgeDarken = hitFracX > hitFracY ? 0.92 : 1;
+      const aoLikeShade = Phaser.Math.Clamp(shade * edgeDarken + columnNoise, atmosphere.ambientDarkness, 1);
       const baseWallColor = this.blendColors(
         WALL_COLORS[hit.wallType] ?? WALL_COLORS[1],
         surface.theme.accentColor,
         0.18 + surface.variant * 0.24
       );
-      const color = this.blendColors(this.applyShade(baseWallColor, shade), atmosphere.fogColor, 1 - shade);
+      const color = this.blendColors(this.applyShade(baseWallColor, aoLikeShade), atmosphere.fogColor, 1 - aoLikeShade);
       const x = column * columnWidth;
       const y = height * 0.5 - wallHeight * 0.5;
 

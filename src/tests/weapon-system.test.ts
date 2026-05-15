@@ -105,17 +105,36 @@ describe('WeaponSystem', () => {
     });
     expect(RAYCAST_WEAPON_CONFIG.SHOTGUN).toMatchObject({
       ...ARENA_WEAPON_CONFIG.SHOTGUN,
-      cooldownMs: 560,
-      damage: 14,
-      spreadRadians: 0.82,
-      aimToleranceRadians: 0.22
+      cooldownMs: 680,
+      damage: 22,
+      pelletCount: 10,
+      spreadRadians: 0.92,
+      aimToleranceRadians: 0.24
     });
     expect(RAYCAST_WEAPON_CONFIG.LAUNCHER).toMatchObject({
       cooldownMs: 1120,
       projectileSpeed: 365,
       explosionRadius: 122,
-      damage: ARENA_WEAPON_CONFIG.LAUNCHER.damage
+      damage: 87
     });
     expect(RAYCAST_WEAPON_CONFIG.SHOTGUN.projectileSize).not.toBe(ARENA_WEAPON_CONFIG.SHOTGUN.projectileSize);
+  });
+
+  it('supports manual reload and ammo capacities', () => {
+    const weapons = new WeaponSystem('raycast');
+    for (let i = 0; i < 10; i += 1) {
+      const shot = weapons.fire({
+        ownerTeam: 'P1',
+        origin: { x: 0, y: 0 },
+        direction: { x: 1, y: 0 },
+        time: 1000 + i * 250
+      });
+      expect(shot).not.toBeNull();
+    }
+    expect(weapons.getAmmo()).toBe(0);
+    expect(weapons.startReload(4000)).toBe(true);
+    expect(weapons.isReloading('PISTOL', 4300)).toBe(true);
+    weapons.tick(5200);
+    expect(weapons.getAmmo()).toBe(10);
   });
 });
