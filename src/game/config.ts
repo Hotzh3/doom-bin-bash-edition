@@ -1,12 +1,12 @@
 import Phaser from 'phaser';
+import { GAME_HEIGHT, GAME_WIDTH } from './dimensions';
 import { MenuScene } from './scenes/MenuScene';
 import { PrologueScene } from './scenes/PrologueScene';
 import { RaycastScene } from './scenes/RaycastScene';
 import { RaycastWorldLockedScene } from './scenes/RaycastWorldLockedScene';
 import { SettingsScene } from './scenes/SettingsScene';
 
-export const GAME_WIDTH = 960;
-export const GAME_HEIGHT = 540;
+export { GAME_HEIGHT, GAME_WIDTH } from './dimensions';
 
 export const gameConfig: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,

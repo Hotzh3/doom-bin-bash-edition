@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { GAME_HEIGHT, GAME_WIDTH } from '../config';
+import { GAME_HEIGHT, GAME_WIDTH } from '../dimensions';
 import { DoorSystem } from '../systems/DoorSystem';
 import { GameDirector, type SpawnRequest } from '../systems/GameDirector';
 import {
