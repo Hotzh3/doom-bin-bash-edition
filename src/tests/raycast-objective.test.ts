@@ -84,7 +84,7 @@ describe('raycast objective helpers', () => {
         playerStationaryMs: 0,
         recentBlockedReason: 'door-key'
       })
-    ).toContain('MISSING SIGNAL');
+    ).toContain('FALTA LA LLAVE');
 
     expect(
       buildRaycastHintText({
@@ -98,7 +98,7 @@ describe('raycast objective helpers', () => {
         playerStationaryMs: 0,
         recentBlockedReason: 'exit-trigger'
       })
-    ).toContain('FINAL BREACH');
+    ).toContain('BRECHA FINAL');
 
     expect(
       buildRaycastHintText({
@@ -112,7 +112,7 @@ describe('raycast objective helpers', () => {
         playerStationaryMs: 0,
         recentBlockedReason: 'exit-combat'
       })
-    ).toContain('CLEAR THE ACTIVE HOSTILES');
+    ).toContain('ELIMINA HOSTILES ACTIVOS');
 
     expect(
       buildRaycastHintText({
@@ -125,17 +125,17 @@ describe('raycast objective helpers', () => {
         livingEnemyCount: 0,
         playerStationaryMs: 9500
       })
-    ).toContain('CUT FOR THE EXIT');
+    ).toContain('SALIDA');
   });
 
   it('keeps the onboarding instructions concise and actionable', () => {
     const instructions = buildRaycastInstructionText();
 
-    expect(instructions).toContain('MOVE WASD');
-    expect(instructions).toContain('FIRE F/SPACE/CLICK');
-    expect(instructions).toContain('WEAPONS 1/2/3');
-    expect(instructions).toContain('MAP M');
-    expect(instructions).toContain('INTERACT WALK INTO GATES/EXITS');
-    expect(instructions).toContain('H/? HELP');
+    expect(instructions).toContain('MOVER WASD');
+    expect(instructions).toContain('DISPARAR F/ESPACIO/CLICK');
+    expect(instructions).toContain('ARMAS 1/2/3');
+    expect(instructions).toContain('MAPA M');
+    expect(instructions).toContain('INTERACTUAR CAMINA A PUERTAS/SALIDAS');
+    expect(instructions).toContain('H/? AYUDA');
   });
 });

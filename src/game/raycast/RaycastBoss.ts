@@ -85,18 +85,18 @@ function cooldownMs(state: Pick<RaycastBossState, 'phase' | 'behavior'>): number
 
 export function getRaycastBossPhaseLabel(boss: Pick<RaycastBossState, 'phase' | 'behavior'>): string {
   if (boss.behavior === 'ash-judge') {
-    if (boss.phase === 1) return 'PHASE 1: CINDER SPIRES';
-    if (boss.phase === 2) return 'PHASE 2: MERIDIAN HALO // SPLIT CUT';
-    return 'PHASE 3: VERDICT MAELSTROM // EMBER SHEAR';
+    if (boss.phase === 1) return 'FASE 1: AGUJAS DE CENIZA';
+    if (boss.phase === 2) return 'FASE 2: HALO MERIDIANO // CORTE DIVIDIDO';
+    return 'FASE 3: MAELSTROM DEL VEREDICTO // CORTE ÍGNEO';
   }
   if (boss.behavior === 'bloom-warden') {
-    if (boss.phase === 1) return 'PHASE 1: TWIN VEINS';
-    if (boss.phase === 2) return 'PHASE 2: BLOOM CROSS // PERPENDICULAR';
-    return 'PHASE 3: THORN MAELSTROM // LATTICE SWARM';
+    if (boss.phase === 1) return 'FASE 1: VENAS GEMELAS';
+    if (boss.phase === 2) return 'FASE 2: CRUZ FLORAL // PERPENDICULAR';
+    return 'FASE 3: MAELSTROM DE ESPINAS // ENJAMBRE EN MALLA';
   }
-  if (boss.phase === 1) return 'PHASE 1: TARGET SWEEP';
-  if (boss.phase === 2) return 'PHASE 2: CORE OVERDRIVE // ION BRACKET';
-  return 'PHASE 3: ARC STORM // HALO COLLAPSE';
+  if (boss.phase === 1) return 'FASE 1: BARRIDO DE OBJETIVO';
+  if (boss.phase === 2) return 'FASE 2: SOBRECARGA DEL NÚCLEO // CERCO IÓNICO';
+  return 'FASE 3: TORMENTA DE ARCO // COLAPSO DE HALO';
 }
 
 export function createRaycastBossState(config: RaycastBossConfig, time: number): RaycastBossState {

@@ -26,15 +26,15 @@ export function formatRaycastObjectiveHudLabel(
   if (!labels) return canonical;
   switch (canonical) {
     case 'FIND KEY':
-      return labels.findKey ?? canonical;
+      return labels.findKey ?? 'BUSCA LA LLAVE';
     case 'OPEN DOOR':
-      return labels.openDoor ?? canonical;
+      return labels.openDoor ?? 'ABRE LA PUERTA';
     case 'SURVIVE AMBUSH':
-      return labels.surviveAmbush ?? canonical;
+      return labels.surviveAmbush ?? 'SOBREVIVE LA EMBOSCADA';
     case 'REACH EXIT':
-      return labels.reachExit ?? canonical;
+      return labels.reachExit ?? 'LLEGA A LA SALIDA';
     case 'SECTOR PURGED':
-      return labels.sectorPurged ?? canonical;
+      return labels.sectorPurged ?? 'SECTOR PURGADO';
     default:
       return canonical;
   }
@@ -56,40 +56,40 @@ export function buildRaycastCurrentObjective(state: RaycastObjectiveState): stri
 }
 
 export function buildRaycastHintText(state: RaycastObjectiveState): string {
-  if (state.levelComplete) return 'PATH CLEARED. ADVANCE OR RESET THE LOOP.';
+  if (state.levelComplete) return 'RUTA LIBERADA. AVANZA O REINICIA EL CICLO.';
   if (state.recentBlockedReason === 'door-key') {
-    return 'TOKEN LOCKED. SWEEP THE SIDE ROUTE FOR THE MISSING SIGNAL, THEN RETURN TO THE GATE.';
+    return 'FALTA LA LLAVE. PEINA LA RUTA LATERAL Y REGRESA A LA PUERTA.';
   }
   if (state.recentBlockedReason === 'exit-key') {
-    return 'EXFIL REFUSED. AT LEAST ONE TOKEN SIGNAL IS STILL OUT IN THE SECTOR.';
+    return 'EXTRACCIÓN BLOQUEADA. AÚN FALTA AL MENOS UNA LLAVE EN EL SECTOR.';
   }
   if (state.recentBlockedReason === 'exit-door') {
-    return 'ROUTE STILL CHAINED. FIND THE SEALED GATE ON THE MAIN PATH AND BREACH IT.';
+    return 'RUTA BLOQUEADA. UBICA LA PUERTA SELLADA Y ÁBRELA.';
   }
   if (state.recentBlockedReason === 'exit-trigger') {
-    return 'TRIGGER PATH INCOMPLETE. PUSH DEEPER UNTIL THE ROUTE WAKES THE FINAL BREACH.';
+    return 'FALTA ACTIVAR EVENTOS. EMPUJA MÁS ADENTRO HASTA ABRIR LA BRECHA FINAL.';
   }
   if (state.recentBlockedReason === 'exit-combat') {
-    return 'SIGNAL JAMMED. CLEAR THE ACTIVE HOSTILES BEFORE EXTRACTION.';
+    return 'SEÑAL BLOQUEADA. ELIMINA HOSTILES ACTIVOS ANTES DE EXTRAER.';
   }
   if (state.playerStationaryMs >= 9000) {
     const objective = buildRaycastCurrentObjective(state);
-    if (objective === 'FIND KEY') return 'STILLNESS FEEDS THE HIVE. SWEEP FOR THE TOKEN PING.';
-    if (objective === 'OPEN DOOR') return 'TOKEN IN HAND. PUSH BACK TO THE SEALED GATE.';
-    if (objective === 'SURVIVE AMBUSH') return 'PRESSURE RISING. BREAK THE TRAP, THEN STABILIZE THE ROUTE.';
-    return 'NOISE IS A BEACON. CUT FOR THE EXIT.';
+    if (objective === 'FIND KEY') return 'NO TE QUEDES QUIETO. BUSCA LA SEÑAL DE LA LLAVE.';
+    if (objective === 'OPEN DOOR') return 'YA TIENES LA LLAVE. REGRESA A LA PUERTA SELLADA.';
+    if (objective === 'SURVIVE AMBUSH') return 'SUBE LA PRESIÓN. ROMPE LA TRAMPA Y ESTABILIZA LA RUTA.';
+    return 'NO TE DETENGAS. CORTA HACIA LA SALIDA.';
   }
 
   const objective = buildRaycastCurrentObjective(state);
-  if (objective === 'FIND KEY') return 'FOLLOW THE OFF-PATH SIGNAL. THE TOKEN NODE OPENS THE ROUTE.';
-  if (objective === 'OPEN DOOR') return 'THE SEALED GATE IS THE NEXT BREACH POINT.';
-  if (objective === 'SURVIVE AMBUSH') return 'EXPECT CONTACT BEYOND THE GATE. HOLD MOMENTUM AND CLEAR THE LANE.';
-  return 'EXIT NODE IS LIVE. FINISH THE ROUTE.';
+  if (objective === 'FIND KEY') return 'SIGUE LA SEÑAL FUERA DE RUTA. LA LLAVE ABRE EL CAMINO.';
+  if (objective === 'OPEN DOOR') return 'LA PUERTA SELLADA ES TU SIGUIENTE OBJETIVO.';
+  if (objective === 'SURVIVE AMBUSH') return 'VIENE CONTACTO DESPUÉS DE LA PUERTA. MANTÉN RITMO Y LIMPIA EL PASILLO.';
+  return 'LA SALIDA ESTÁ ACTIVA. CIERRA LA RUTA.';
 }
 
 export function buildRaycastInstructionText(minimapToggleKey = 'M'): string {
   return [
-    `MOVE WASD  TURN MOUSE/QE/ARROWS  FIRE F/SPACE/CLICK  WEAPONS 1/2/3`,
-    `INTERACT WALK INTO GATES/EXITS  MAP ${minimapToggleKey}  H/? HELP  TAB DEBUG`
+    `MOVER WASD  GIRAR MOUSE/QE/FLECHAS  DISPARAR F/ESPACIO/CLICK  ARMAS 1/2/3`,
+    `INTERACTUAR CAMINA A PUERTAS/SALIDAS  MAPA ${minimapToggleKey}  H/? AYUDA  TAB DEBUG`
   ].join('\n');
 }

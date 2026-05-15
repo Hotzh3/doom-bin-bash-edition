@@ -81,8 +81,8 @@ describe('raycast boss', () => {
     boss.health = Math.round(boss.maxHealth * 0.31);
     syncRaycastBossPhase(boss);
     expect(boss.phase).toBe(3);
-    expect(getRaycastBossPhaseLabel({ ...boss, phase: 2 })).toContain('ION BRACKET');
-    expect(getRaycastBossPhaseLabel(boss)).toContain('PHASE 3');
+    expect(getRaycastBossPhaseLabel({ ...boss, phase: 2 })).toContain('CERCO IÓNICO');
+    expect(getRaycastBossPhaseLabel(boss)).toContain('FASE 3');
   });
 
   it('uses strict thresholds at exactly 66% and 33% hp', () => {
@@ -163,7 +163,7 @@ describe('raycast boss', () => {
       0
     );
     boss.phase = 2;
-    expect(getRaycastBossPhaseLabel(boss)).toContain('BLOOM CROSS');
+    expect(getRaycastBossPhaseLabel(boss)).toContain('CRUZ FLORAL');
   });
 
   it('fires Bloom Warden volleys: twin rails then bloom cross pattern', () => {

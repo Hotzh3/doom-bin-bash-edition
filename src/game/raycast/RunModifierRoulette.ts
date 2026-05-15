@@ -37,58 +37,58 @@ export interface RunModifier {
 export const RUN_MODIFIER_ROULETTE: readonly RunModifier[] = [
   {
     id: 'DOUBLE_DAMAGE_LOW_HP',
-    label: 'DOUBLE DAMAGE / LOW HP',
-    summary: 'Hit much harder, survive with lower max HP.',
-    details: '+100% player damage, -35% max HP, +25% score gain.',
+    label: 'DOBLE DAÑO / VIDA BAJA',
+    summary: 'Pegas mucho más fuerte, pero con menos vida máxima.',
+    details: '+100% daño del jugador, -35% vida máxima, +25% de puntaje.',
     effects: { playerDamageMul: 2, playerMaxHealthMul: 0.65, scoreMul: 1.25 }
   },
   {
     id: 'FAST_ENEMIES_MORE_SCORE',
-    label: 'FAST ENEMIES / MORE SCORE',
-    summary: 'Enemies move faster, score rewards increase.',
-    details: '+18% enemy speed, +30% score gain.',
+    label: 'ENEMIGOS RÁPIDOS / MÁS PUNTAJE',
+    summary: 'Los enemigos se mueven más rápido y sube el puntaje.',
+    details: '+18% velocidad enemiga, +30% de puntaje.',
     effects: { enemySpeedMul: 1.18, scoreMul: 1.3 }
   },
   {
     id: 'NO_REGEN_HIGHER_RANK_BONUS',
-    label: 'NO REGEN / HIGHER RANK BONUS',
-    summary: 'Passive healing disabled for stronger rank rewards.',
-    details: 'Passive regen off, +55% rank/campaign completion bonus.',
+    label: 'SIN REGEN / BONO DE RANGO',
+    summary: 'Sin curación pasiva, pero mejor premio de rango.',
+    details: 'Regen pasiva desactivada, +55% bono de rango/campaña.',
     effects: { passiveHealMul: 0, rankBonusMul: 1.55 }
   },
   {
     id: 'GLASS_CANNON',
-    label: 'GLASS CANNON',
-    summary: 'Both sides deal more damage.',
-    details: '+45% player damage, +35% enemy damage, +20% score gain.',
+    label: 'CAÑÓN DE CRISTAL',
+    summary: 'Ambos lados hacen más daño.',
+    details: '+45% daño del jugador, +35% daño enemigo, +20% de puntaje.',
     effects: { playerDamageMul: 1.45, enemyDamageMul: 1.35, scoreMul: 1.2 }
   },
   {
     id: 'TREASURE_SIGNAL',
-    label: 'TREASURE SIGNAL',
-    summary: 'Secrets/tokens are worth more, ambush pressure rises.',
-    details: '+80% secret score, +120 token bonus, +18% spawn pressure.',
+    label: 'SEÑAL DE TESORO',
+    summary: 'Secretos/llaves valen más, pero suben emboscadas.',
+    details: '+80% puntaje de secretos, +120 bono de llaves, +18% presión de spawns.',
     effects: { secretScoreMul: 1.8, tokenScoreBonus: 120, spawnPressureMul: 1.18 }
   },
   {
     id: 'OVERCLOCKED',
-    label: 'OVERCLOCKED',
-    summary: 'You move/shoot faster, but healing takes longer to restart.',
-    details: '+12% movement, +18% fire rate, +60% regen delay.',
+    label: 'SOBREACELERADO',
+    summary: 'Te mueves y disparas más rápido, pero la regen tarda más.',
+    details: '+12% movimiento, +18% cadencia, +60% retraso de regen.',
     effects: { moveSpeedMul: 1.12, fireRateMul: 1.18, passiveHealDelayMul: 1.6 }
   },
   {
     id: 'HUNTER_MARK',
-    label: 'HUNTER MARK',
-    summary: 'Elites appear more often, scoring is boosted.',
-    details: '+22% elite rate, +28% score gain.',
+    label: 'MARCA DEL CAZADOR',
+    summary: 'Aparecen más élites y sube el puntaje.',
+    details: '+22% tasa de élites, +28% de puntaje.',
     effects: { eliteRateBonus: 0.22, scoreMul: 1.28 }
   },
   {
     id: 'DARK_ROUTE',
-    label: 'DARK ROUTE',
-    summary: 'Heavier fog/darkness in exchange for a bigger clear bonus.',
-    details: 'Denser fog + darker scenes, +35% clear/performance bonus.',
+    label: 'RUTA OSCURA',
+    summary: 'Más niebla/oscuridad a cambio de mayor bono de limpieza.',
+    details: 'Niebla más densa + escenas más oscuras, +35% bono de desempeño.',
     effects: { fogMul: 0.82, darknessAdd: 0.06, clearBonusMul: 1.35 }
   }
 ] as const;

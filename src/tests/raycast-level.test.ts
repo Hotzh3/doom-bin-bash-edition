@@ -38,6 +38,31 @@ const ALL_RAYCAST_LEVELS = [
 ];
 
 describe('raycast level catalog', () => {
+  it('avoids consecutive map repetition and keeps unique non-boss layouts per world catalog', () => {
+    const fullArc = [...RAYCAST_LEVEL_CATALOG, ...RAYCAST_WORLD_TWO_CATALOG, ...RAYCAST_WORLD_THREE_CATALOG];
+    for (let i = 1; i < fullArc.length; i += 1) {
+      expect(fullArc[i].map).not.toBe(fullArc[i - 1].map);
+    }
+
+    const uniqueNonBossWorld2 = new Set(RAYCAST_WORLD_TWO_CATALOG.filter((level) => !level.bossConfig).map((level) => level.map));
+    const uniqueNonBossWorld3 = new Set(RAYCAST_WORLD_THREE_CATALOG.filter((level) => !level.bossConfig).map((level) => level.map));
+    expect(uniqueNonBossWorld2.size).toBe(RAYCAST_WORLD_TWO_CATALOG.filter((level) => !level.bossConfig).length);
+    expect(uniqueNonBossWorld3.size).toBe(RAYCAST_WORLD_THREE_CATALOG.filter((level) => !level.bossConfig).length);
+  });
+
+  it('keeps authored map grids rectangular and enclosed by walls', () => {
+    ALL_RAYCAST_LEVELS.forEach((level) => {
+      const width = level.map.grid[0].length;
+      level.map.grid.forEach((row) => expect(row.length).toBe(width));
+
+      const top = level.map.grid[0];
+      const bottom = level.map.grid[level.map.grid.length - 1];
+      expect(top.every((tile) => tile !== RAYCAST_TILE.EMPTY)).toBe(true);
+      expect(bottom.every((tile) => tile !== RAYCAST_TILE.EMPTY)).toBe(true);
+      expect(level.map.grid.every((row) => row[0] !== RAYCAST_TILE.EMPTY && row[row.length - 1] !== RAYCAST_TILE.EMPTY)).toBe(true);
+    });
+  });
+
   it('includes six episode maps (five sectors + boss) with unique ids and stable ordering', () => {
     expect(RAYCAST_LEVEL_CATALOG).toHaveLength(6);
     expect(new Set(RAYCAST_LEVEL_CATALOG.map((level) => level.id)).size).toBe(6);

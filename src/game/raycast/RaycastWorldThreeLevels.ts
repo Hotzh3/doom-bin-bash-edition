@@ -3,11 +3,11 @@
  */
 import {
   RAYCAST_MAP_BOSS,
-  RAYCAST_MAP_LEVEL_1,
-  RAYCAST_MAP_LEVEL_5,
+  RAYCAST_MAP_LEVEL_7,
+  RAYCAST_MAP_LEVEL_8,
   RAYCAST_PLAYER_START_BOSS,
-  RAYCAST_PLAYER_START_LEVEL_1,
-  RAYCAST_PLAYER_START_LEVEL_5
+  RAYCAST_PLAYER_START_LEVEL_7,
+  RAYCAST_PLAYER_START_LEVEL_8
 } from './RaycastMap';
 import type { RaycastLevel } from './RaycastLevel';
 
@@ -46,8 +46,8 @@ export const RAYCAST_LEVEL_WORLD3_EMBER_RAMP: RaycastLevel = {
   name: 'Ember Meridian — Cinder Ramp',
   episodeTheme: 'meridian-ramp',
   worldSegment: 'world3',
-  map: RAYCAST_MAP_LEVEL_1,
-  playerStart: RAYCAST_PLAYER_START_LEVEL_1,
+  map: RAYCAST_MAP_LEVEL_8,
+  playerStart: RAYCAST_PLAYER_START_LEVEL_8,
   zones: [
     { id: 'm-start', x: 2.5, y: 12.3, width: 3.2, height: 1.4, visualTheme: 'ash-conduit' },
     { id: 'm-hall', x: 3.0, y: 9.2, width: 4.8, height: 5.2, visualTheme: 'ember-vault' },
@@ -245,8 +245,8 @@ export const RAYCAST_LEVEL_WORLD3_GATE_CUT: RaycastLevel = {
   name: 'Ember Meridian — Gate Cut',
   episodeTheme: 'meridian-gate',
   worldSegment: 'world3',
-  map: RAYCAST_MAP_LEVEL_5,
-  playerStart: RAYCAST_PLAYER_START_LEVEL_5,
+  map: RAYCAST_MAP_LEVEL_7,
+  playerStart: RAYCAST_PLAYER_START_LEVEL_7,
   zones: [
     { id: 'mg-start', x: 1.5, y: 11.5, width: 5.5, height: 5.0, visualTheme: 'ash-conduit' },
     { id: 'mg-sump', x: 1.0, y: 8.5, width: 6.0, height: 3.2, visualTheme: 'ember-vault' },

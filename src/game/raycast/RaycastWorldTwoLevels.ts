@@ -6,11 +6,11 @@ import {
   RAYCAST_MAP_BOSS,
   RAYCAST_MAP_LEVEL_2,
   RAYCAST_MAP_LEVEL_3,
-  RAYCAST_MAP_LEVEL_4,
+  RAYCAST_MAP_LEVEL_6,
   RAYCAST_PLAYER_START_BOSS,
   RAYCAST_PLAYER_START_LEVEL_2,
   RAYCAST_PLAYER_START_LEVEL_3,
-  RAYCAST_PLAYER_START_LEVEL_4
+  RAYCAST_PLAYER_START_LEVEL_6
 } from './RaycastMap';
 import type { RaycastLevel } from './RaycastLevel';
 
@@ -259,8 +259,8 @@ export const RAYCAST_LEVEL_WORLD2_THRESHOLD: RaycastLevel = {
   name: 'Nadir Ring — Signal Threshold',
   episodeTheme: 'signal-threshold',
   worldSegment: 'world2',
-  map: RAYCAST_MAP_LEVEL_4,
-  playerStart: RAYCAST_PLAYER_START_LEVEL_4,
+  map: RAYCAST_MAP_LEVEL_6,
+  playerStart: RAYCAST_PLAYER_START_LEVEL_6,
   zones: [
     { id: 'threshold-start', x: 1.5, y: 11.5, width: 5.5, height: 5.0, visualTheme: 'basalt-rift' },
     { id: 'spiral-cold', x: 1.0, y: 7.5, width: 5.5, height: 3.8, visualTheme: 'basalt-rift' },

@@ -890,7 +890,7 @@ export class RaycastScene extends Phaser.Scene {
       .setDepth(24)
       .setVisible(false);
     this.helpOverlayTitleText = this.add
-      .text(GAME_WIDTH * 0.5, GAME_HEIGHT * 0.34, 'RAYCAST QUICK HELP', {
+      .text(GAME_WIDTH * 0.5, GAME_HEIGHT * 0.34, 'AYUDA RÁPIDA RAYCAST', {
         fontSize: '18px',
         fontStyle: '700',
         color: this.hudCss.accentText,
@@ -1493,7 +1493,7 @@ export class RaycastScene extends Phaser.Scene {
       this.pulseCrosshair(this.hudCss.accentText, 72);
       this.pulseFeedback(RAYCAST_PALETTE.plasmaBright, 0.06, 78);
       this.audioFeedback.play('wallImpact', 0.95, this.time.now);
-      this.setCombatMessage('WALL IMPACT');
+      this.setCombatMessage('IMPACTO EN MURO');
       return;
     }
 
@@ -1788,17 +1788,17 @@ export class RaycastScene extends Phaser.Scene {
         event: this.activeLevelEvent
       });
       this.flashBlindUntil = Math.max(this.flashBlindUntil, this.time.now + duration);
-      this.setCombatMessage('FLASH BURST // VISION SCRAMBLED', 900);
+      this.setCombatMessage('RÁFAGA CEGADORA // VISIÓN ALTERADA', 900);
       this.pulseFeedback(0xd5b4ff, 0.08, 220);
     }
     if (activatedTelegraphs.length > 0) {
       this.audioFeedback.play('spawn', 0.84, this.time.now);
       this.pulseFeedback(0xffb347, 0.04, 120);
-      this.setCombatMessage(activatedTelegraphs.length > 1 ? 'HOSTILES MATERIALIZED' : 'HOSTILE BREACH FORMED');
+      this.setCombatMessage(activatedTelegraphs.length > 1 ? 'HOSTILES MATERIALIZADOS' : 'BRECHA HOSTIL ABIERTA');
     }
     if (enemyResult.spawnedProjectiles.length > 0) {
       this.enemyProjectiles.push(...enemyResult.spawnedProjectiles);
-      this.setCombatMessage('INCOMING HOSTILE PACKET');
+      this.setCombatMessage('PAQUETE HOSTIL ENTRANTE');
       this.audioFeedback.play('spawn', 0.92, this.time.now);
       this.pulseFeedback(0xff5b6f, 0.04, 120);
     }
@@ -1914,12 +1914,12 @@ export class RaycastScene extends Phaser.Scene {
     this.setCombatMessage(`${getRaycastCombatMessageForSegment(this.getWorldSegment(), 'damage')} -${appliedDamage}`);
     if (this.playerHealth === 0) {
       this.playerAlive = false;
-      this.setCombatMessage('SIGNAL TERMINATED');
+      this.setCombatMessage('SEÑAL TERMINADA');
       this.cameras.main.shake(200, 0.0042);
       this.pulseFeedback(0xff1a3a, 0.14, 400);
       this.audioFeedback.play('death', 1, this.time.now);
       this.audioFeedback.play('uiDeny', 0.7, this.time.now + 85);
-      this.showRunCompleteOverlay('SIGNAL TERMINATED', this.hudCss.warningText, false, true);
+      this.showRunCompleteOverlay('SEÑAL TERMINADA', this.hudCss.warningText, false, true);
       return;
     }
     if (
@@ -2095,15 +2095,15 @@ export class RaycastScene extends Phaser.Scene {
       const bossContinueWorldTwo =
         Boolean(this.currentLevel.bossConfig) && !this.episodeComplete && this.nextLevelId !== null;
 
-      let overlayTitle = 'LEVEL CLEAR';
+      let overlayTitle = 'NIVEL COMPLETADO';
       if (bossContinueWorldTwo) {
-        overlayTitle = 'BOSS DEFEATED';
+        overlayTitle = 'JEFE DERROTADO';
       } else if (this.episodeComplete && this.isTerminalArcSector()) {
-        overlayTitle = 'FULL ARC CLEAR';
+        overlayTitle = 'ARCO COMPLETO LIMPIO';
       } else if (this.episodeComplete && this.currentLevel.bossConfig) {
-        overlayTitle = 'BOSS DEFEATED';
+        overlayTitle = 'JEFE DERROTADO';
       } else if (this.episodeComplete) {
-        overlayTitle = 'EPISODE CLEAR';
+        overlayTitle = 'EPISODIO COMPLETADO';
       }
 
       this.playFeedbackEvent(this.episodeComplete ? 'episodeComplete' : 'levelComplete');
@@ -2347,7 +2347,7 @@ export class RaycastScene extends Phaser.Scene {
         y: door.y,
         color: getBillboardColor(this.doorSystem.isOpen(door.id) ? 'gate-open' : 'gate', this.doorSystem.isOpen(door.id)),
         radius: this.doorSystem.isOpen(door.id) ? 0.22 : 0.18,
-        label: this.doorSystem.isOpen(door.id) ? 'OPEN' : 'LOCK',
+        label: this.doorSystem.isOpen(door.id) ? 'ABIERTA' : 'BLOQ',
         style: this.doorSystem.isOpen(door.id) ? ('gate-open' as const) : ('gate' as const)
       }));
     const secretBillboards = this.currentLevel.secrets
@@ -2375,7 +2375,7 @@ export class RaycastScene extends Phaser.Scene {
       y: exit.y,
       color: getBillboardColor('exit', this.levelComplete),
       radius: exit.radius,
-      label: this.getObjectiveHint() === 'REACH EXIT' || this.levelComplete ? 'PORTAL' : exit.billboardLabel,
+      label: this.getObjectiveHint() === 'LLEGA A LA SALIDA' || this.levelComplete ? 'PORTAL' : exit.billboardLabel,
       style: 'exit' as const
     }));
 
@@ -3043,9 +3043,9 @@ export class RaycastScene extends Phaser.Scene {
 
   private shouldRenderMinimapMarkerLabel(marker: { kind: string; label: string; active: boolean }): boolean {
     if (!marker.active) return false;
-    if (marker.kind === 'door') return marker.label === 'LOCK' || marker.label === 'OPEN';
+    if (marker.kind === 'door') return marker.label === 'LOCK' || marker.label === 'OPEN' || marker.label === 'BLOQ' || marker.label === 'ABIERTA';
     if (marker.kind === 'exit') return marker.label === 'EXIT' || marker.label === 'PORTAL';
-    if (marker.kind === 'key') return marker.label === 'KEY';
+    if (marker.kind === 'key') return marker.label === 'KEY' || marker.label === 'LLAVE';
     if (marker.kind === 'landmark') return true;
     if (marker.kind === 'hazard') return true;
     return false;
@@ -3220,7 +3220,7 @@ export class RaycastScene extends Phaser.Scene {
       if ((close || !enemy.alive) && this.playerAlive && !this.levelComplete) {
         enemy.exploded = true;
         this.damagePlayer(burstDamage);
-        this.setCombatMessage('EXPLODER BURST', 900);
+        this.setCombatMessage('ESTALLIDO EXPLOSIVO', 900);
         this.pulseFeedback(0xffa35a, 0.1, 180);
       }
     }
@@ -3240,7 +3240,7 @@ export class RaycastScene extends Phaser.Scene {
         nextTickAt: this.time.now + 420
       };
       this.nextCorruptionZoneAt = this.time.now + 7000;
-      this.setCombatMessage('CORRUPTION SURGE ZONE FORMED', 1300);
+      this.setCombatMessage('ZONA DE CORRUPCIÓN FORMADA', 1300);
       return;
     }
     if (!this.corruptionZone) return;
@@ -3263,7 +3263,7 @@ export class RaycastScene extends Phaser.Scene {
     const rng = createSeededLevelEventRng(`${this.currentLevel.id}:blackout:${Math.floor(this.time.now / 1000)}`);
     if (rng() < 0.15) {
       this.blackoutPulseUntil = this.time.now + 780;
-      this.setCombatMessage('BLACKOUT PULSE // TRACK MOVEMENT', 900);
+      this.setCombatMessage('PULSO DE APAGÓN // SIGUE MOVIMIENTO', 900);
     }
   }
 
@@ -3277,7 +3277,7 @@ export class RaycastScene extends Phaser.Scene {
     if (tick.damage > 0) this.damagePlayer(tick.damage);
     if (tick.triggerDarknessPulse) {
       this.blackoutPulseUntil = Math.max(this.blackoutPulseUntil, this.time.now + 700);
-      this.setCombatMessage('HAZARD PULSE // LOW VIS', 800);
+      this.setCombatMessage('PULSO DE PELIGRO // BAJA VISIBILIDAD', 800);
     }
     if (tick.telegraphLabels.length > 0) {
       this.setCombatMessage(`HAZARD TELEGRAPH // ${tick.telegraphLabels.slice(0, 2).join(' + ')}`, 900);

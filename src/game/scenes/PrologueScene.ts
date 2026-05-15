@@ -80,8 +80,8 @@ export class PrologueScene extends Phaser.Scene {
     const story = copy.lines.join('\n\n');
     const controlsBlock =
       this.mode === 'raycast'
-        ? 'CONTROLS // MOVE WASD  |  LOOK MOUSE/QE/ARROWS  |  FIRE F/SPACE/CLICK  |  WEAPONS 1-3  |  MAP M'
-        : 'CONTROLS // MOVE WASD  |  LOOK ARROWS  |  FIRE F/SPACE/CLICK';
+        ? 'CONTROLES // MOVER WASD  |  MIRAR MOUSE/QE/FLECHAS  |  DISPARAR F/ESPACIO/CLICK  |  ARMAS 1-3  |  MAPA M'
+        : 'CONTROLES // MOVER WASD  |  MIRAR FLECHAS  |  DISPARAR F/ESPACIO/CLICK';
 
     this.add
       .text(width * 0.5, titleY, 'DOOM BIN BASH EDITION', {
@@ -137,7 +137,7 @@ export class PrologueScene extends Phaser.Scene {
       .setDepth(5);
 
     this.add
-      .text(width * 0.5, height - 18, '// SIGNAL FRAGMENT', {
+      .text(width * 0.5, height - 18, '// FRAGMENTO DE SEÑAL', {
         fontFamily: 'monospace',
         fontSize: '10px',
         color: ACCENT_COLOR,
@@ -247,8 +247,8 @@ export class PrologueScene extends Phaser.Scene {
   private buildModifierPrompt(): string {
     const selected = getRunModifierById(this.runModifierId);
     if (!selected) {
-      return 'MODIFIER ROULETTE (OPTIONAL)\\nACTIVE // NONE\\nM CYCLE  |  R ROLL RANDOM  |  N CLEAR';
+      return 'RULETA DE MODIFICADORES (OPCIONAL)\\nACTIVO // NINGUNO\\nM CAMBIAR  |  R TIRAR ALEATORIO  |  N LIMPIAR';
     }
-    return `MODIFIER ROULETTE (OPTIONAL)\\nACTIVE // ${selected.label}\\n${selected.summary}\\n${selected.details}\\nM CYCLE  |  R ROLL RANDOM  |  N CLEAR`;
+    return `RULETA DE MODIFICADORES (OPCIONAL)\\nACTIVO // ${selected.label}\\n${selected.summary}\\n${selected.details}\\nM CAMBIAR  |  R TIRAR ALEATORIO  |  N LIMPIAR`;
   }
 }
