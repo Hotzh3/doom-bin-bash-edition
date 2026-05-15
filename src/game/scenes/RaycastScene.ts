@@ -147,7 +147,6 @@ import {
   buildRaycastHudLayout,
   buildRaycastDebugLine,
   buildRaycastFocusedEnemyLine,
-  buildRaycastHudProgressLine,
   buildRaycastHudStatusLine,
   buildRaycastMinimapLegendLine,
   buildRaycastScoreHudLine,
@@ -166,7 +165,6 @@ import {
 import {
   buildRaycastDeathOverlayHint,
   buildRaycastDeathOverlaySummary,
-  buildRaycastEpisodeBanner,
   buildRaycastHelpOverlayText,
   buildRaycastLevelStartObjectiveMessage,
   buildRaycastMasteryEndingLines,
@@ -209,6 +207,7 @@ import {
   RAYCAST_PAUSE_MENU_LABELS
 } from '../raycast/RaycastPauseMenu';
 import { getBillboardColor } from '../raycast/RaycastVisualTheme';
+import { resolveRaycastBossShortcutLevelId } from '../raycast/RaycastBossShortcuts';
 import { palette } from '../theme/palette';
 
 interface RaycastSceneData {
@@ -498,10 +497,8 @@ export class RaycastScene extends Phaser.Scene {
   };
 
   private handleDevJumpToLevel(levelId: string, label: string): void {
-    if (!DEV_SHORTCUT_ENABLED) return;
     if (this.gamePaused || !this.isRaycastSceneActive()) return;
-    console.info(`[DEV SHORTCUT] Jumping to ${label}: ${levelId}`);
-    this.setCombatMessage(`DEV JUMP // ${label.toUpperCase()}`, 2600);
+    this.setCombatMessage(`SALTO // ${label.toUpperCase()}`, 2000);
     this.scene.restart({
       levelId,
       difficultyId: this.difficultyId,
@@ -513,26 +510,14 @@ export class RaycastScene extends Phaser.Scene {
   }
 
   private readonly handleDevBossShortcut = (event: KeyboardEvent): void => {
-    if (!DEV_SHORTCUT_ENABLED) return;
-    if (!event.shiftKey || event.repeat) return;
+    const levelId = resolveRaycastBossShortcutLevelId(event);
+    if (!levelId) return;
     const now = this.time.now;
     if (now - this.lastDevShortcutAt < 140) return;
     this.lastDevShortcutAt = now;
-    if (event.code === 'Digit4') {
-      this.handleDevJumpToLevel(RAYCAST_LEVEL_BOSS.id, 'World 1 Boss');
-      return;
-    }
-    if (event.code === 'Digit5') {
-      const world2Boss = RAYCAST_WORLD_TWO_CATALOG.find((level) => level.id === 'bloom-warden-pit');
-      if (!world2Boss) return;
-      this.handleDevJumpToLevel(world2Boss.id, 'World 2 Boss');
-      return;
-    }
-    if (event.code === 'Digit6') {
-      const world3Boss = RAYCAST_WORLD_THREE_CATALOG[RAYCAST_WORLD_THREE_CATALOG.length - 1];
-      if (!world3Boss) return;
-      this.handleDevJumpToLevel(world3Boss.id, 'World 3 Boss');
-    }
+    const world2BossId = RAYCAST_WORLD_TWO_CATALOG.find((level) => level.id === 'bloom-warden-pit')?.id;
+    const label = levelId === RAYCAST_LEVEL_BOSS.id ? 'Jefe Mundo 1' : levelId === world2BossId ? 'Jefe Mundo 2' : 'Jefe Mundo 3';
+    this.handleDevJumpToLevel(levelId, label);
   };
 
   private readonly handleDevShiftJ = (event: KeyboardEvent): void => {
@@ -661,44 +646,6 @@ export class RaycastScene extends Phaser.Scene {
     const ionHudAccent =
       segment === 'world2' ? RAYCAST_PALETTE.riftIon : segment === 'world3' ? RAYCAST_PALETTE.amberWarn : RAYCAST_PALETTE.plasmaBright;
 
-    const episodeState = getRaycastEpisodeState(this.currentLevel.id);
-    const worldTwoIndex = RAYCAST_WORLD_TWO_CATALOG.findIndex((entry) => entry.id === this.currentLevel.id);
-    const worldThreeIndex = RAYCAST_WORLD_THREE_CATALOG.findIndex((entry) => entry.id === this.currentLevel.id);
-    const bannerPayload =
-      worldThreeIndex >= 0
-        ? buildRaycastEpisodeBanner({
-            currentLevelNumber: episodeState.currentLevelNumber,
-            totalLevels: episodeState.totalLevels,
-            levelName: this.currentLevel.name,
-            worldThreeSector: { index: worldThreeIndex + 1, total: RAYCAST_WORLD_THREE_CATALOG.length }
-          })
-        : worldTwoIndex >= 0
-          ? buildRaycastEpisodeBanner({
-              currentLevelNumber: episodeState.currentLevelNumber,
-              totalLevels: episodeState.totalLevels,
-              levelName: this.currentLevel.name,
-              worldTwoSector: { index: worldTwoIndex + 1, total: RAYCAST_WORLD_TWO_CATALOG.length }
-            })
-          : buildRaycastEpisodeBanner({
-              currentLevelNumber: episodeState.currentLevelNumber,
-              totalLevels: episodeState.totalLevels,
-              levelName: this.currentLevel.name
-            });
-    this.add
-      .text(
-        16,
-        14,
-        bannerPayload,
-        {
-          fontSize: '13px',
-          fontStyle: '700',
-          color: palette.background.panelText,
-          backgroundColor: this.hudCss.hudPanel,
-          padding: { x: 8, y: 5 }
-        }
-      )
-      .setDepth(10);
-
     this.scoreHudText = this.add
       .text(16, 34, buildRaycastScoreHudLine(this.runScore, readRaycastHighScore()), {
         fontSize: '12px',
@@ -707,7 +654,8 @@ export class RaycastScene extends Phaser.Scene {
         backgroundColor: this.hudCss.hudPanel,
         padding: { x: 8, y: 4 }
       })
-      .setDepth(10);
+      .setDepth(10)
+      .setVisible(false);
 
     this.crosshair = this.add
       .text(GAME_WIDTH * 0.5, GAME_HEIGHT * 0.5, '+', {
@@ -843,7 +791,8 @@ export class RaycastScene extends Phaser.Scene {
         backgroundColor: this.hudCss.hudPanel,
         padding: { x: 8, y: 5 }
       })
-      .setDepth(12);
+      .setDepth(12)
+      .setVisible(false);
     this.hintText = this.add
       .text(16, GAME_HEIGHT - 76, '', {
         fontSize: '13px',
@@ -853,7 +802,8 @@ export class RaycastScene extends Phaser.Scene {
         padding: { x: 8, y: 5 },
         wordWrap: { width: 380 }
       })
-      .setDepth(12);
+      .setDepth(12)
+      .setVisible(false);
     this.instructionText = this.add
       .text(16, GAME_HEIGHT - 44, `${buildRaycastMinimapLegendLine()}  |  H/? HELP`, {
         fontSize: '11px',
@@ -862,7 +812,8 @@ export class RaycastScene extends Phaser.Scene {
         padding: { x: 8, y: 5 }
       })
       .setAlpha(0.82)
-      .setDepth(11);
+      .setDepth(11)
+      .setVisible(false);
     this.minimapFrame = this.add
       .rectangle(
         hudLayout.minimapFrameX,
@@ -1095,14 +1046,9 @@ export class RaycastScene extends Phaser.Scene {
     const objective = buildRaycastCurrentObjective(objectiveState);
     const objectiveHudBase = formatRaycastObjectiveHudLabel(objective, this.currentLevel.hudObjectiveLabels);
     const hintBase = buildRaycastHintText(objectiveState);
-    const objectiveHud = this.getEventAwareObjectiveText(objectiveHudBase);
+    this.getEventAwareObjectiveText(objectiveHudBase);
     const hint = this.getEventAwareHintText(hintBase);
-    let statusLine = buildRaycastHudStatusLine(
-      this.playerHealth,
-      this.playerMaxHealth,
-      this.combat.getWeaponLabel(),
-      getRaycastDifficultyPreset(this.difficultyId).shortLabel
-    );
+    let statusLine = buildRaycastHudStatusLine(this.playerHealth, this.playerMaxHealth, '', undefined);
     if (this.passiveRegenHudActive) {
       statusLine += `  |  ${this.passiveRegenHudLabel ?? 'REGEN'}`;
     } else if (this.passiveRegenHudLabel) {
@@ -1111,34 +1057,16 @@ export class RaycastScene extends Phaser.Scene {
     const ammoState = this.combat.getAmmoState();
     statusLine += `  |  MUNICIÓN ${ammoState.current}/${ammoState.capacity}${this.combat.isReloading(this.time.now) ? ' RECARGANDO' : ''}`;
     this.healthText.setText(statusLine);
-    this.weaponText.setText(
-      buildRaycastHudProgressLine(
-        this.getKeyCount(),
-        this.currentLevel.keys.length,
-        this.collectedSecrets.size,
-        this.currentLevel.secrets.length,
-        objective
-      )
-    );
-    this.scoreHudText.setText(buildRaycastScoreHudLine(this.runScore, readRaycastHighScore()));
-    const modifierHud = this.runModifier ? ` | MOD ${this.runModifier.label}` : '';
-    this.objectiveText.setText(`OBJETIVO // ${objectiveHud}  |  ${this.activeLevelEvent.hudText}${modifierHud}`);
-    this.hintText.setText(`PISTA // ${hint}  |  ${this.activeLevelEvent.objectiveText}`);
-    this.instructionText.setText(
-      this.gamePaused
-        ? 'HALT // UP/DOWN  SELECT  |  ENTER CONFIRM  |  ESC RESUME'
-        : `${buildRaycastMinimapLegendLine()}  |  R RECARGAR  |  T REINICIAR  |  H/? AYUDA`
-    );
+    this.weaponText.setText(`MUNICIÓN ${ammoState.current}/${ammoState.capacity}${this.combat.isReloading(this.time.now) ? '  RECARGANDO' : ''}`);
     const blinded = this.time.now < this.flashBlindUntil;
     const hudAlpha = blinded ? 0.55 : 1;
     this.healthText.setAlpha(hudAlpha);
     this.weaponText.setAlpha(hudAlpha);
-    this.objectiveText.setAlpha(hudAlpha);
-    this.hintText.setAlpha(blinded ? 0.5 : 1);
-    this.instructionText.setAlpha(blinded ? 0.45 : 0.82);
     this.updateHealthHud();
     this.updateBossHud();
-    this.updateFocusedEnemyHud();
+    this.targetText.setVisible(false);
+    this.targetBarTrack.setVisible(false);
+    this.targetBarFill.setVisible(false);
     this.updatePriorityMessage(objective, hint, objectiveState.recentBlockedReason !== undefined && objectiveState.recentBlockedReason !== null);
     this.renderMinimapThrottled();
     if (this.debugHudVisible) {
@@ -1678,7 +1606,35 @@ export class RaycastScene extends Phaser.Scene {
 
   private refreshPauseMenuBody(): void {
     const volPct = Math.round(this.audioMasterVolume * 100);
-    this.pauseMenuBodyText.setText(formatRaycastPauseMenuBody(volPct, this.pauseSelectionIndex));
+    const objectiveState = this.getObjectiveState();
+    const objective = this.getEventAwareObjectiveText(
+      formatRaycastObjectiveHudLabel(buildRaycastCurrentObjective(objectiveState), this.currentLevel.hudObjectiveLabels)
+    );
+    const hint = this.getEventAwareHintText(buildRaycastHintText(objectiveState));
+    const worldTwoIndex = RAYCAST_WORLD_TWO_CATALOG.findIndex((entry) => entry.id === this.currentLevel.id);
+    const worldThreeIndex = RAYCAST_WORLD_THREE_CATALOG.findIndex((entry) => entry.id === this.currentLevel.id);
+    const levelWorld =
+      worldThreeIndex >= 0
+        ? `MUNDO 3 · SECTOR ${worldThreeIndex + 1}/${RAYCAST_WORLD_THREE_CATALOG.length} · ${this.currentLevel.name}`
+        : worldTwoIndex >= 0
+          ? `MUNDO 2 · SECTOR ${worldTwoIndex + 1}/${RAYCAST_WORLD_TWO_CATALOG.length} · ${this.currentLevel.name}`
+          : `MUNDO 1 · NIVEL ${getRaycastEpisodeState(this.currentLevel.id).currentLevelNumber} · ${this.currentLevel.name}`;
+    const modifiers = [this.activeLevelEvent.name, this.runModifier?.label].filter((entry): entry is string => Boolean(entry)).join(' | ');
+
+    this.pauseMenuBodyText.setText(
+      formatRaycastPauseMenuBody(volPct, this.pauseSelectionIndex, {
+        mission: 'Recupera la señal perdida y escapa del complejo.',
+        objective,
+        hint,
+        difficulty: getRaycastDifficultyPreset(this.difficultyId).label,
+        levelWorld,
+        score: this.runScore,
+        highScore: readRaycastHighScore(),
+        tokens: `${this.getKeyCount()}/${this.currentLevel.keys.length}`,
+        secrets: `${this.collectedSecrets.size}/${this.currentLevel.secrets.length}`,
+        modifiers: modifiers.length > 0 ? modifiers : 'Ninguno'
+      })
+    );
   }
 
   private adjustAudioMasterVolume(delta: number): void {

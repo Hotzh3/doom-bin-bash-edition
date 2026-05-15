@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { getRaycastDifficultyPreset, RAYCAST_DIFFICULTY_REGISTRY_KEY, type RaycastDifficultyId } from '../raycast/RaycastDifficulty';
-import { getPrologueCopy, type PrologueGameMode } from '../raycast/RaycastPresentation';
+import { getPrologueCopy } from '../raycast/RaycastPresentation';
 import { RAYCAST_CSS, RAYCAST_PALETTE } from '../raycast/RaycastPalette';
 import {
   getRunModifierById,
@@ -8,6 +8,7 @@ import {
   RUN_MODIFIER_ROULETTE,
   type RunModifierId
 } from '../raycast/RunModifierRoulette';
+import { resolveRaycastBossShortcutLevelId } from '../raycast/RaycastBossShortcuts';
 
 const BG = RAYCAST_PALETTE.voidBlack;
 const BODY_COLOR = RAYCAST_CSS.bodyText;
@@ -15,13 +16,11 @@ const MUTED_COLOR = RAYCAST_CSS.mutedText;
 const ACCENT_COLOR = RAYCAST_CSS.accentText;
 
 export interface PrologueSceneData {
-  mode: PrologueGameMode;
   difficultyId?: RaycastDifficultyId;
   runModifierId?: RunModifierId | null;
 }
 
 export class PrologueScene extends Phaser.Scene {
-  private mode: PrologueGameMode = 'raycast';
   private difficultyId!: RaycastDifficultyId;
   private runModifierId: RunModifierId | null = null;
   private modifierText!: Phaser.GameObjects.Text;
@@ -33,22 +32,23 @@ export class PrologueScene extends Phaser.Scene {
     this.scene.start('RaycastScene', { difficultyId: this.difficultyId, runModifierId: this.runModifierId });
   };
 
-  private readonly handleContinueArena = (): void => {
-    this.cleanupInputListeners();
-    this.scene.start('ArenaScene');
-  };
-
   private readonly handleBackToMenu = (): void => {
     this.cleanupInputListeners();
     this.scene.start('MenuScene');
+  };
+
+  private readonly handleBossShortcut = (event: KeyboardEvent): void => {
+    const levelId = resolveRaycastBossShortcutLevelId(event);
+    if (!levelId) return;
+    this.cleanupInputListeners();
+    this.scene.start('RaycastScene', { levelId, difficultyId: this.difficultyId, runModifierId: this.runModifierId });
   };
 
   constructor() {
     super('PrologueScene');
   }
 
-  init(data: PrologueSceneData = { mode: 'raycast' }): void {
-    this.mode = data.mode ?? 'raycast';
+  init(data: PrologueSceneData = {}): void {
     this.difficultyId = getRaycastDifficultyPreset(data.difficultyId ?? this.registry.get(RAYCAST_DIFFICULTY_REGISTRY_KEY)).id;
     this.registry.set(RAYCAST_DIFFICULTY_REGISTRY_KEY, this.difficultyId);
     this.runModifierId = data.runModifierId ?? null;
@@ -67,28 +67,22 @@ export class PrologueScene extends Phaser.Scene {
       backdrop.lineBetween(0, y, width, y);
     }
 
-    const copy = getPrologueCopy(this.mode);
+    const copy = getPrologueCopy();
     const horizontalPadding = Math.max(18, Math.floor(width * 0.045));
-    const contentWidth = Math.min(width - horizontalPadding * 2, 900);
-    const topY = Math.max(18, Math.floor(height * 0.06));
-    const titleY = topY;
-    const storyY = titleY + 28;
-    const controlsY = Math.floor(height * 0.52);
-    const modifierY = this.mode === 'raycast' ? Math.floor(height * 0.67) : Math.floor(height * 0.72);
-    const promptY = height - 58;
-
-    const story = copy.lines.join('\n\n');
-    const controlsBlock =
-      this.mode === 'raycast'
-        ? 'CONTROLES // MOVER WASD  |  MIRAR MOUSE/QE/FLECHAS  |  DISPARAR F/ESPACIO/CLICK  |  ARMAS 1-3  |  MAPA M'
-        : 'CONTROLES // MOVER WASD  |  MIRAR FLECHAS  |  DISPARAR F/ESPACIO/CLICK';
+    const contentWidth = Math.min(width - horizontalPadding * 2, 760);
+    const titleY = Math.max(20, Math.floor(height * 0.08));
+    const missionY = titleY + 52;
+    const objectiveY = missionY + 96;
+    const controlsY = objectiveY + 92;
+    const modifierY = controlsY + 112;
+    const promptY = height - 52;
 
     this.add
       .text(width * 0.5, titleY, 'DOOM BIN BASH EDITION', {
         fontFamily: 'monospace',
-        fontSize: width <= 720 ? '11px' : '12px',
+        fontSize: width <= 720 ? '16px' : '20px',
         fontStyle: '700',
-        color: MUTED_COLOR,
+        color: ACCENT_COLOR,
         align: 'center',
         wordWrap: { width: contentWidth }
       })
@@ -97,27 +91,40 @@ export class PrologueScene extends Phaser.Scene {
       .setDepth(4);
 
     this.add
-      .text(width * 0.5, storyY, story, {
+      .text(width * 0.5, missionY, copy.missionBlock, {
         fontFamily: 'monospace',
-        fontSize: width <= 720 ? '12px' : '14px',
+        fontSize: width <= 720 ? '13px' : '15px',
         fontStyle: '700',
         color: BODY_COLOR,
         align: 'center',
-        lineSpacing: 6,
-        wordWrap: { width: Math.min(contentWidth, 680) }
+        lineSpacing: 8,
+        wordWrap: { width: Math.min(contentWidth, 720) }
       })
       .setOrigin(0.5, 0)
       .setDepth(4);
 
     this.add
-      .text(width * 0.5, controlsY, controlsBlock, {
+      .text(width * 0.5, objectiveY, copy.objectiveBlock, {
         fontFamily: 'monospace',
-        fontSize: width <= 720 ? '10px' : '11px',
+        fontSize: width <= 720 ? '13px' : '15px',
+        fontStyle: '700',
+        color: ACCENT_COLOR,
+        align: 'center',
+        lineSpacing: 7,
+        wordWrap: { width: Math.min(contentWidth, 720) }
+      })
+      .setOrigin(0.5, 0)
+      .setDepth(4);
+
+    this.add
+      .text(width * 0.5, controlsY, copy.controlsBlock, {
+        fontFamily: 'monospace',
+        fontSize: width <= 720 ? '12px' : '13px',
         fontStyle: '700',
         color: MUTED_COLOR,
         align: 'center',
-        lineSpacing: 4,
-        wordWrap: { width: Math.min(contentWidth, 860) }
+        lineSpacing: 6,
+        wordWrap: { width: Math.min(contentWidth, 720) }
       })
       .setOrigin(0.5, 0)
       .setDepth(4)
@@ -147,22 +154,20 @@ export class PrologueScene extends Phaser.Scene {
       .setAlpha(0.55)
       .setDepth(4);
 
-    if (this.mode === 'raycast') {
-      this.modifierText = this.add
-        .text(width * 0.5, modifierY, this.buildModifierPrompt(), {
-          fontFamily: 'monospace',
-          fontSize: width <= 720 ? '10px' : '11px',
-          backgroundColor: '#05120ccc',
-          color: ACCENT_COLOR,
-          align: 'center',
-          lineSpacing: 4,
-          padding: { x: 10, y: 8 },
-          wordWrap: { width: Math.min(contentWidth - 10, 700), useAdvancedWrap: true }
-        })
-        .setOrigin(0.5, 0)
-        .setDepth(5)
-        .setAlpha(0.94);
-    }
+    this.modifierText = this.add
+      .text(width * 0.5, modifierY, this.buildModifierPrompt(), {
+        fontFamily: 'monospace',
+        fontSize: width <= 720 ? '11px' : '12px',
+        backgroundColor: '#05120ccc',
+        color: ACCENT_COLOR,
+        align: 'center',
+        lineSpacing: 5,
+        padding: { x: 12, y: 10 },
+        wordWrap: { width: Math.min(contentWidth - 12, 720), useAdvancedWrap: true }
+      })
+      .setOrigin(0.5, 0)
+      .setDepth(5)
+      .setAlpha(0.94);
 
     this.cameras.main.fadeIn(380, 0, 0, 0);
 
@@ -175,23 +180,17 @@ export class PrologueScene extends Phaser.Scene {
     if (this.inputListenersRegistered) this.cleanupInputListeners();
     const kb = this.input.keyboard;
 
-    if (this.mode === 'raycast') {
-      kb?.once('keydown-SPACE', this.handleContinueRaycast);
-      kb?.once('keydown-ENTER', this.handleContinueRaycast);
-      kb?.once('keydown-A', this.handleContinueRaycast);
-      kb?.once('keydown-a', this.handleContinueRaycast);
-      kb?.on('keydown-M', this.handleCycleModifier);
-      kb?.on('keydown-m', this.handleCycleModifier);
-      kb?.on('keydown-R', this.handleRollModifier);
-      kb?.on('keydown-r', this.handleRollModifier);
-      kb?.on('keydown-N', this.handleClearModifier);
-      kb?.on('keydown-n', this.handleClearModifier);
-    } else {
-      kb?.once('keydown-SPACE', this.handleContinueArena);
-      kb?.once('keydown-ENTER', this.handleContinueArena);
-      kb?.once('keydown-B', this.handleContinueArena);
-      kb?.once('keydown-b', this.handleContinueArena);
-    }
+    kb?.once('keydown-SPACE', this.handleContinueRaycast);
+    kb?.once('keydown-ENTER', this.handleContinueRaycast);
+    kb?.once('keydown-A', this.handleContinueRaycast);
+    kb?.once('keydown-a', this.handleContinueRaycast);
+    kb?.on('keydown-M', this.handleCycleModifier);
+    kb?.on('keydown-m', this.handleCycleModifier);
+    kb?.on('keydown-R', this.handleRollModifier);
+    kb?.on('keydown-r', this.handleRollModifier);
+    kb?.on('keydown-N', this.handleClearModifier);
+    kb?.on('keydown-n', this.handleClearModifier);
+    kb?.on('keydown', this.handleBossShortcut);
 
     kb?.once('keydown-ESC', this.handleBackToMenu);
 
@@ -212,17 +211,13 @@ export class PrologueScene extends Phaser.Scene {
     kb?.off('keydown-r', this.handleRollModifier);
     kb?.off('keydown-N', this.handleClearModifier);
     kb?.off('keydown-n', this.handleClearModifier);
-    kb?.off('keydown-SPACE', this.handleContinueArena);
-    kb?.off('keydown-ENTER', this.handleContinueArena);
-    kb?.off('keydown-B', this.handleContinueArena);
-    kb?.off('keydown-b', this.handleContinueArena);
+    kb?.off('keydown', this.handleBossShortcut);
     kb?.off('keydown-ESC', this.handleBackToMenu);
 
     this.inputListenersRegistered = false;
   }
 
   private readonly handleCycleModifier = (): void => {
-    if (this.mode !== 'raycast') return;
     if (this.runModifierId === null) {
       this.runModifierId = RUN_MODIFIER_ROULETTE[0].id;
     } else {
@@ -233,13 +228,11 @@ export class PrologueScene extends Phaser.Scene {
   };
 
   private readonly handleRollModifier = (): void => {
-    if (this.mode !== 'raycast') return;
     this.runModifierId = rollRunModifier().id;
     this.modifierText?.setText(this.buildModifierPrompt());
   };
 
   private readonly handleClearModifier = (): void => {
-    if (this.mode !== 'raycast') return;
     this.runModifierId = null;
     this.modifierText?.setText(this.buildModifierPrompt());
   };
@@ -247,8 +240,8 @@ export class PrologueScene extends Phaser.Scene {
   private buildModifierPrompt(): string {
     const selected = getRunModifierById(this.runModifierId);
     if (!selected) {
-      return 'RULETA DE MODIFICADORES (OPCIONAL)\\nACTIVO // NINGUNO\\nM CAMBIAR  |  R TIRAR ALEATORIO  |  N LIMPIAR';
+      return 'RULETA DE MODIFICADORES (OPCIONAL)\\nACTIVO // NINGUNO\\nM CAMBIAR  |  R ALEATORIO  |  N LIMPIAR';
     }
-    return `RULETA DE MODIFICADORES (OPCIONAL)\\nACTIVO // ${selected.label}\\n${selected.summary}\\n${selected.details}\\nM CAMBIAR  |  R TIRAR ALEATORIO  |  N LIMPIAR`;
+    return `RULETA DE MODIFICADORES (OPCIONAL)\\nACTIVO // ${selected.label}\\n${selected.summary}\\n${selected.details}\\nM CAMBIAR  |  R ALEATORIO  |  N LIMPIAR`;
   }
 }

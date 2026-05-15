@@ -8,14 +8,13 @@ import {
 } from '../raycast/RaycastDifficulty';
 import { buildMainMenuLayout, getMainMenuCopy } from '../raycast/RaycastPresentation';
 import { RAYCAST_CSS, RAYCAST_PALETTE } from '../raycast/RaycastPalette';
-import { RAYCAST_LEVEL_BOSS, RAYCAST_WORLD_THREE_CATALOG, RAYCAST_WORLD_TWO_CATALOG } from '../raycast/RaycastLevel';
+import { resolveRaycastBossShortcutLevelId } from '../raycast/RaycastBossShortcuts';
 
 const MENU_BACKGROUND = RAYCAST_PALETTE.voidBlack;
 const MENU_CYAN = RAYCAST_PALETTE.plasmaBright;
 const MENU_CYAN_SOFT = RAYCAST_CSS.accentText;
 const MENU_EMBER = RAYCAST_PALETTE.amberWarn;
 const MENU_ROSE = RAYCAST_PALETTE.telegraphRose;
-const MENU_TEXT = RAYCAST_CSS.bodyText;
 
 export class MenuScene extends Phaser.Scene {
   private inputListenersRegistered = false;
@@ -23,14 +22,10 @@ export class MenuScene extends Phaser.Scene {
   private difficultyHintText!: Phaser.GameObjects.Text;
   private lastDevShortcutAt = 0;
 
-  private readonly handleStartArena = (): void => {
-    this.scene.start('PrologueScene', { mode: 'arena' });
-  };
-
   private readonly handleStartRaycast = (): void => {
     this.playFeedbackEvent('difficultyStart');
     const difficultyId = getRaycastDifficultyPreset(this.registry.get(RAYCAST_DIFFICULTY_REGISTRY_KEY)).id;
-    this.scene.start('PrologueScene', { mode: 'raycast', difficultyId });
+    this.scene.start('PrologueScene', { difficultyId });
   };
 
   private readonly handleCycleDifficulty = (): void => {
@@ -41,27 +36,13 @@ export class MenuScene extends Phaser.Scene {
   };
 
   private readonly handleDevBossShortcut = (event: KeyboardEvent): void => {
-    if (!import.meta.env.DEV) return;
-    if (!event.shiftKey || event.repeat) return;
+    const levelId = resolveRaycastBossShortcutLevelId(event);
+    if (!levelId) return;
     const now = this.time.now;
     if (now - this.lastDevShortcutAt < 140) return;
     this.lastDevShortcutAt = now;
     const difficultyId = getRaycastDifficultyPreset(this.registry.get(RAYCAST_DIFFICULTY_REGISTRY_KEY)).id;
-    if (event.code === 'Digit4') {
-      this.scene.start('RaycastScene', { levelId: RAYCAST_LEVEL_BOSS.id, difficultyId });
-      return;
-    }
-    if (event.code === 'Digit5') {
-      const world2Boss = RAYCAST_WORLD_TWO_CATALOG.find((level) => level.id === 'bloom-warden-pit');
-      if (!world2Boss) return;
-      this.scene.start('RaycastScene', { levelId: world2Boss.id, difficultyId });
-      return;
-    }
-    if (event.code === 'Digit6') {
-      const world3Boss = RAYCAST_WORLD_THREE_CATALOG[RAYCAST_WORLD_THREE_CATALOG.length - 1];
-      if (!world3Boss) return;
-      this.scene.start('RaycastScene', { levelId: world3Boss.id, difficultyId });
-    }
+    this.scene.start('RaycastScene', { levelId, difficultyId });
   };
 
   private buildDifficultyMenuLine(): string {
@@ -112,26 +93,11 @@ export class MenuScene extends Phaser.Scene {
       .setInteractive({ useHandCursor: true })
       .on(Phaser.Input.Events.POINTER_DOWN, this.handleStartRaycast);
 
-    const line2d = this.add
-      .text(layout.centerX, layout.option2dY, copy.press2d, {
-        fontFamily: 'monospace',
-        fontSize: '17px',
-        fontStyle: '700',
-        color: MENU_TEXT,
-        align: 'center'
-      })
-      .setOrigin(0.5)
-      .setDepth(8)
-      .setInteractive({ useHandCursor: true })
-      .on(Phaser.Input.Events.POINTER_DOWN, this.handleStartArena);
-
     line3d.on(Phaser.Input.Events.POINTER_OVER, () => line3d.setColor('#ffffff'));
     line3d.on(Phaser.Input.Events.POINTER_OUT, () => line3d.setColor(MENU_CYAN_SOFT));
-    line2d.on(Phaser.Input.Events.POINTER_OVER, () => line2d.setColor(MENU_CYAN_SOFT));
-    line2d.on(Phaser.Input.Events.POINTER_OUT, () => line2d.setColor(MENU_TEXT));
 
     this.difficultyHintText = this.add
-      .text(layout.centerX, layout.option2dY + 46, this.buildDifficultyMenuLine(), {
+      .text(layout.centerX, layout.option3dY + 46, this.buildDifficultyMenuLine(), {
         fontFamily: 'monospace',
         fontSize: '13px',
         fontStyle: '700',
@@ -198,8 +164,6 @@ export class MenuScene extends Phaser.Scene {
     const kb = this.input.keyboard;
     kb?.once('keydown-A', this.handleStartRaycast);
     kb?.once('keydown-a', this.handleStartRaycast);
-    kb?.once('keydown-B', this.handleStartArena);
-    kb?.once('keydown-b', this.handleStartArena);
     kb?.on('keydown-D', this.handleCycleDifficulty);
     kb?.on('keydown-d', this.handleCycleDifficulty);
     kb?.on('keydown', this.handleDevBossShortcut);
@@ -211,8 +175,6 @@ export class MenuScene extends Phaser.Scene {
     const kb = this.input.keyboard;
     kb?.off('keydown-A', this.handleStartRaycast);
     kb?.off('keydown-a', this.handleStartRaycast);
-    kb?.off('keydown-B', this.handleStartArena);
-    kb?.off('keydown-b', this.handleStartArena);
     kb?.off('keydown-D', this.handleCycleDifficulty);
     kb?.off('keydown-d', this.handleCycleDifficulty);
     kb?.off('keydown', this.handleDevBossShortcut);

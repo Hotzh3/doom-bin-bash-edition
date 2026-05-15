@@ -64,18 +64,16 @@ export interface RaycastLevelStartObjectiveInput {
   livingEnemyCount?: number;
 }
 
-/** Strings and vertical placement for the boot MenuScene (title + two mode lines). */
+/** Strings and vertical placement for the boot MenuScene. */
 export interface MainMenuCopy {
   title: string;
   press3d: string;
-  press2d: string;
 }
 
 export interface MainMenuLayout {
   centerX: number;
   titleY: number;
   option3dY: number;
-  option2dY: number;
   /** Center Y for the decorative frame behind the title */
   titleFrameCenterY: number;
 }
@@ -192,7 +190,7 @@ export function buildRaycastHelpOverlayText(input: RaycastHelpOverlayInput = {})
     'REINICIO / MENÚ // R REINICIAR, ESC MENÚ',
     'DEPURAR // TAB',
     difficultyLine,
-    'MENÚ TÍTULO // A MODO 3D  |  B MODO 2D',
+    'MENÚ TÍTULO // A INICIAR OPERACIÓN',
     'H O ? // MOSTRAR/OCULTAR AYUDA'
   ]
     .filter((line): line is string => line !== null)
@@ -286,42 +284,26 @@ export function buildRaycastLevelStartObjectiveMessage(input: RaycastLevelStartO
 export function getMainMenuCopy(): MainMenuCopy {
   return {
     title: 'DOOM BIN BASH EDITION',
-    press3d: 'Press A: 3D Mode',
-    press2d: 'Press B: 2D Mode'
+    press3d: 'A / ENTER: INICIAR'
   };
 }
 
-export type PrologueGameMode = 'raycast' | 'arena';
-
 export interface PrologueCopy {
-  lines: string[];
+  missionBlock: string;
+  objectiveBlock: string;
+  controlsBlock: string;
   continueLine: string;
   backLine: string;
 }
 
-/** Terminal-style prologue shown after choosing 3D or 2D from the boot menu. */
-export function getPrologueCopy(mode: PrologueGameMode): PrologueCopy {
-  if (mode === 'raycast') {
-    return {
-      lines: [
-        'You were sent to recover a dead signal under an abandoned terminal complex.',
-        'Extraction failed. The buried system woke up and tagged your uplink as hostile.',
-        'Five sectors — each authored with distinct chokepoints — rewrite themselves between you and the core.',
-        'Advance fast: every loop the system learns your path and hunts harder.'
-      ],
-      continueLine: '// CONTINUE // SPACE  |  ENTER  |  A',
-      backLine: '// BACK // ESC'
-    };
-  }
-
+/** Pantalla previa limpia para la corrida raycast. */
+export function getPrologueCopy(): PrologueCopy {
   return {
-    lines: [
-      'Simulation uplink restored.',
-      'Two operators enter a corrupted combat sandbox.',
-      'Survive the pressure protocol and hold signal lock.'
-    ],
-    continueLine: '// CONTINUE // SPACE  |  ENTER  |  B',
-    backLine: '// BACK // ESC'
+    missionBlock: 'MISIÓN:\nRecupera la señal perdida dentro del complejo abandonado.',
+    objectiveBlock: 'OBJETIVO:\nSobrevive y alcanza la extracción.',
+    controlsBlock: 'CONTROLES:\nWASD mover\nMouse apuntar\n1/2/3 armas\nR recargar\nESC pausa',
+    continueLine: '[ ENTER PARA INICIAR ]',
+    backLine: '[ ESC PARA VOLVER AL MENÚ ]'
   };
 }
 
@@ -330,16 +312,13 @@ export function buildMainMenuLayout(width: number, height: number): MainMenuLayo
   const shortViewport = width <= 720 || height <= 405;
   const titleY = Math.round(height * (shortViewport ? 0.4 : 0.42));
   const titleToFirstLine = shortViewport ? 52 : 58;
-  const lineGap = shortViewport ? 30 : 34;
   const option3dY = titleY + titleToFirstLine;
-  const option2dY = option3dY + lineGap;
   const titleFrameCenterY = titleY - Math.round(titleToFirstLine * 0.22);
 
   return {
     centerX,
     titleY,
     option3dY,
-    option2dY,
     titleFrameCenterY
   };
 }

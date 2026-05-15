@@ -1,5 +1,4 @@
 import Phaser from 'phaser';
-import { ArenaScene } from './scenes/ArenaScene';
 import { MenuScene } from './scenes/MenuScene';
 import { PrologueScene } from './scenes/PrologueScene';
 import { RaycastScene } from './scenes/RaycastScene';
@@ -19,5 +18,5 @@ export const gameConfig: Phaser.Types.Core.GameConfig = {
     autoCenter: Phaser.Scale.CENTER_BOTH
   },
   physics: { default: 'arcade', arcade: { debug: false } },
-  scene: [MenuScene, PrologueScene, ArenaScene, RaycastScene, RaycastWorldLockedScene]
+  scene: [MenuScene, PrologueScene, RaycastScene, RaycastWorldLockedScene]
 };

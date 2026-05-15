@@ -16,20 +16,14 @@ import {
 } from '../game/raycast/RaycastPresentation';
 
 describe('raycast presentation helpers', () => {
-  it('exposes boot prologue copy for raycast and arena paths', () => {
-    const ray = getPrologueCopy('raycast');
-    const arena = getPrologueCopy('arena');
+  it('exposes a simplified pre-run briefing in español', () => {
+    const copy = getPrologueCopy();
 
-    expect(ray.lines).toHaveLength(4);
-    expect(ray.lines[0]).toContain('dead signal');
-    expect(ray.lines[1]).toContain('buried system woke up');
-    expect(ray.lines[2]).toContain('Five sectors');
-    expect(ray.continueLine).toContain('A');
-    expect(arena.lines).toHaveLength(3);
-    expect(arena.lines[0]).toContain('Simulation uplink');
-    expect(arena.continueLine).toContain('B');
-    expect(ray.backLine).toContain('ESC');
-    expect(arena.backLine).toContain('ESC');
+    expect(copy.missionBlock).toContain('MISIÓN');
+    expect(copy.objectiveBlock).toContain('OBJETIVO');
+    expect(copy.controlsBlock).toContain('WASD mover');
+    expect(copy.continueLine).toContain('ENTER');
+    expect(copy.backLine).toContain('ESC');
   });
 
   it('builds a banner that presents the mini episode and controls', () => {
@@ -166,7 +160,7 @@ describe('raycast presentation helpers', () => {
     expect(help).toContain('MAPA // M');
     expect(help).toContain('INTERACTUAR // CAMINA SOBRE PORTONES, CERRADURAS Y SALIDAS');
     expect(help).toContain('DIFFICULTY // ASSIST // SOFTER DAMAGE // SLOWER PRESSURE // STRONGER REPAIRS');
-    expect(help).toContain('MENÚ TÍTULO // A MODO 3D  |  B MODO 2D');
+    expect(help).toContain('MENÚ TÍTULO // A INICIAR OPERACIÓN');
     expect(help).toContain('H O ? // MOSTRAR/OCULTAR AYUDA');
   });
 
@@ -288,20 +282,18 @@ describe('raycast presentation helpers', () => {
     });
   });
 
-  it('exposes the boot menu title and A/B mode lines', () => {
+  it('exposes the boot menu title and single start line', () => {
     const copy = getMainMenuCopy();
 
     expect(copy.title).toBe('DOOM BIN BASH EDITION');
-    expect(copy.press3d).toBe('Press A: 3D Mode');
-    expect(copy.press2d).toBe('Press B: 2D Mode');
+    expect(copy.press3d).toBe('A / ENTER: INICIAR');
   });
 
-  it('keeps the main menu layout ordered title then 3D then 2D option', () => {
+  it('keeps the main menu layout ordered title then start option', () => {
     const layout = buildMainMenuLayout(960, 540);
 
     expect(layout.centerX).toBe(480);
     expect(layout.titleY).toBeLessThan(layout.option3dY);
-    expect(layout.option3dY).toBeLessThan(layout.option2dY);
     expect(layout.titleFrameCenterY).toBeLessThan(layout.titleY);
   });
 
@@ -315,7 +307,6 @@ describe('raycast presentation helpers', () => {
     for (const { width, height } of layouts) {
       const layout = buildMainMenuLayout(width, height);
       expect(layout.titleY).toBeLessThan(layout.option3dY);
-      expect(layout.option3dY).toBeLessThan(layout.option2dY);
     }
   });
 });

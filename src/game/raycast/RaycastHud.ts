@@ -154,7 +154,11 @@ export interface RaycastHudSummaryState {
 }
 
 export function buildRaycastHudStatusLine(health: number, maxHealth: number, weaponLabel: string, difficultyLabel?: string): string {
-  return [buildRaycastPlayerHealthLine({ health, maxHealth }), `WPN ${weaponLabel}`, difficultyLabel ? `MODE ${difficultyLabel}` : null]
+  return [
+    buildRaycastPlayerHealthLine({ health, maxHealth }),
+    weaponLabel.trim().length > 0 ? `WPN ${weaponLabel}` : null,
+    difficultyLabel ? `MODE ${difficultyLabel}` : null
+  ]
     .filter((part): part is string => part !== null)
     .join('  |  ');
 }
