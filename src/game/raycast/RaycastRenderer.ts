@@ -1035,11 +1035,22 @@ export class RaycastRenderer {
   }
 
   private getEnemyTextureKey(enemyKind: RaycastEnemy['kind']): string | null {
-    if (enemyKind === 'GRUNT') {
-      return RAYCAST_OPTIONAL_TEXTURE_KEYS.enemyGruntIdleFront;
-    }
-
-    return null;
+    switch (enemyKind) {
+      case 'GRUNT':
+        return RAYCAST_OPTIONAL_TEXTURE_KEYS.enemyGruntIdleFront;
+      case 'BRUTE':
+        return RAYCAST_OPTIONAL_TEXTURE_KEYS.enemyBruteIdleFront;
+      case 'STALKER':
+        return RAYCAST_OPTIONAL_TEXTURE_KEYS.enemyStalkerIdleFront;
+      case 'RANGED':
+        return RAYCAST_OPTIONAL_TEXTURE_KEYS.enemyRangedIdleFront;
+      case 'SCRAMBLER':
+        return RAYCAST_OPTIONAL_TEXTURE_KEYS.enemyScramblerIdleFront;
+      case 'FLASHER':
+        return RAYCAST_OPTIONAL_TEXTURE_KEYS.enemyFlasherIdleFront;
+     default:
+      return null;
+  }
   }
 
   private getEnemySpriteFromPool(): Phaser.GameObjects.Image {
