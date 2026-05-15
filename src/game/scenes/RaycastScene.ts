@@ -384,6 +384,7 @@ export class RaycastScene extends Phaser.Scene {
   private corruptionZone: { x: number; y: number; radius: number; expiresAt: number; nextTickAt: number } | null = null;
   private blackoutPulseUntil = 0;
   private flashBlindUntil = 0;
+  private lastDevShortcutAt = 0;
 
   private readonly handleExitToMenu = (): void => {
     if (!this.isRaycastSceneActive()) return;
@@ -492,26 +493,27 @@ export class RaycastScene extends Phaser.Scene {
     });
   }
 
-  private readonly handleDevShiftFour = (event: KeyboardEvent): void => {
+  private readonly handleDevBossShortcut = (event: KeyboardEvent): void => {
     if (!DEV_SHORTCUT_ENABLED) return;
-    if (!event.shiftKey) return;
-    this.handleDevJumpToLevel(RAYCAST_LEVEL_BOSS.id, 'World 1 Boss');
-  };
-
-  private readonly handleDevShiftFive = (event: KeyboardEvent): void => {
-    if (!DEV_SHORTCUT_ENABLED) return;
-    if (!event.shiftKey) return;
-    const world2Boss = RAYCAST_WORLD_TWO_CATALOG.find((level) => level.id === 'bloom-warden-pit');
-    if (!world2Boss) return;
-    this.handleDevJumpToLevel(world2Boss.id, 'World 2 Boss');
-  };
-
-  private readonly handleDevShiftSix = (event: KeyboardEvent): void => {
-    if (!DEV_SHORTCUT_ENABLED) return;
-    if (!event.shiftKey) return;
-    const world3Boss = RAYCAST_WORLD_THREE_CATALOG[RAYCAST_WORLD_THREE_CATALOG.length - 1];
-    if (!world3Boss) return;
-    this.handleDevJumpToLevel(world3Boss.id, 'World 3 Boss');
+    if (!event.shiftKey || event.repeat) return;
+    const now = this.time.now;
+    if (now - this.lastDevShortcutAt < 140) return;
+    this.lastDevShortcutAt = now;
+    if (event.code === 'Digit4') {
+      this.handleDevJumpToLevel(RAYCAST_LEVEL_BOSS.id, 'World 1 Boss');
+      return;
+    }
+    if (event.code === 'Digit5') {
+      const world2Boss = RAYCAST_WORLD_TWO_CATALOG.find((level) => level.id === 'bloom-warden-pit');
+      if (!world2Boss) return;
+      this.handleDevJumpToLevel(world2Boss.id, 'World 2 Boss');
+      return;
+    }
+    if (event.code === 'Digit6') {
+      const world3Boss = RAYCAST_WORLD_THREE_CATALOG[RAYCAST_WORLD_THREE_CATALOG.length - 1];
+      if (!world3Boss) return;
+      this.handleDevJumpToLevel(world3Boss.id, 'World 3 Boss');
+    }
   };
 
   private readonly handleDevShiftJ = (event: KeyboardEvent): void => {
@@ -1227,9 +1229,7 @@ export class RaycastScene extends Phaser.Scene {
     keyboard?.on('keydown-H', this.handleToggleHelp);
     keyboard?.on('keydown-SLASH', this.handleHelpShortcut);
     if (DEV_SHORTCUT_ENABLED) {
-      keyboard?.on('keydown-FOUR', this.handleDevShiftFour);
-      keyboard?.on('keydown-FIVE', this.handleDevShiftFive);
-      keyboard?.on('keydown-SIX', this.handleDevShiftSix);
+      keyboard?.on('keydown', this.handleDevBossShortcut);
       keyboard?.on('keydown-J', this.handleDevShiftJ);
     }
     keyboard?.on('keydown-TAB', this.handleToggleDebug);
@@ -1265,9 +1265,7 @@ export class RaycastScene extends Phaser.Scene {
     keyboard?.off('keydown-H', this.handleToggleHelp);
     keyboard?.off('keydown-SLASH', this.handleHelpShortcut);
     if (DEV_SHORTCUT_ENABLED) {
-      keyboard?.off('keydown-FOUR', this.handleDevShiftFour);
-      keyboard?.off('keydown-FIVE', this.handleDevShiftFive);
-      keyboard?.off('keydown-SIX', this.handleDevShiftSix);
+      keyboard?.off('keydown', this.handleDevBossShortcut);
       keyboard?.off('keydown-J', this.handleDevShiftJ);
     }
     keyboard?.off('keydown-TAB', this.handleToggleDebug);

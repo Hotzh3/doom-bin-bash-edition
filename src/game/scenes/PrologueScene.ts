@@ -25,6 +25,7 @@ export class PrologueScene extends Phaser.Scene {
   private difficultyId!: RaycastDifficultyId;
   private runModifierId: RunModifierId | null = null;
   private modifierText!: Phaser.GameObjects.Text;
+  private promptText!: Phaser.GameObjects.Text;
   private inputListenersRegistered = false;
 
   private readonly handleContinueRaycast = (): void => {
@@ -67,35 +68,76 @@ export class PrologueScene extends Phaser.Scene {
     }
 
     const copy = getPrologueCopy(this.mode);
+    const horizontalPadding = Math.max(18, Math.floor(width * 0.045));
+    const contentWidth = Math.min(width - horizontalPadding * 2, 900);
+    const topY = Math.max(18, Math.floor(height * 0.06));
+    const titleY = topY;
+    const storyY = titleY + 28;
+    const controlsY = Math.floor(height * 0.52);
+    const modifierY = this.mode === 'raycast' ? Math.floor(height * 0.67) : Math.floor(height * 0.72);
+    const promptY = height - 58;
+
     const story = copy.lines.join('\n\n');
-    const block = `${story}\n\n${copy.continueLine}\n${copy.backLine}`;
+    const controlsBlock =
+      this.mode === 'raycast'
+        ? 'CONTROLS // MOVE WASD  |  LOOK MOUSE/QE/ARROWS  |  FIRE F/SPACE/CLICK  |  WEAPONS 1-3  |  MAP M'
+        : 'CONTROLS // MOVE WASD  |  LOOK ARROWS  |  FIRE F/SPACE/CLICK';
 
     this.add
-      .text(width * 0.5, height * 0.5, block, {
+      .text(width * 0.5, titleY, 'DOOM BIN BASH EDITION', {
         fontFamily: 'monospace',
-        fontSize: width <= 720 ? '13px' : '15px',
+        fontSize: width <= 720 ? '11px' : '12px',
         fontStyle: '700',
-        color: BODY_COLOR,
-        align: 'center',
-        lineSpacing: 6,
-        wordWrap: { width: Math.min(width - 48, 520) }
-      })
-      .setOrigin(0.5)
-      .setDepth(4);
-
-    this.add
-      .text(width * 0.5, height * 0.08, 'DOOM BIN BASH EDITION', {
-        fontFamily: 'monospace',
-        fontSize: '11px',
         color: MUTED_COLOR,
-        align: 'center'
+        align: 'center',
+        wordWrap: { width: contentWidth }
       })
       .setOrigin(0.5, 0)
       .setAlpha(0.85)
       .setDepth(4);
 
     this.add
-      .text(width * 0.5, height - 22, '// SIGNAL FRAGMENT', {
+      .text(width * 0.5, storyY, story, {
+        fontFamily: 'monospace',
+        fontSize: width <= 720 ? '12px' : '14px',
+        fontStyle: '700',
+        color: BODY_COLOR,
+        align: 'center',
+        lineSpacing: 6,
+        wordWrap: { width: Math.min(contentWidth, 680) }
+      })
+      .setOrigin(0.5, 0)
+      .setDepth(4);
+
+    this.add
+      .text(width * 0.5, controlsY, controlsBlock, {
+        fontFamily: 'monospace',
+        fontSize: width <= 720 ? '10px' : '11px',
+        fontStyle: '700',
+        color: MUTED_COLOR,
+        align: 'center',
+        lineSpacing: 4,
+        wordWrap: { width: Math.min(contentWidth, 860) }
+      })
+      .setOrigin(0.5, 0)
+      .setDepth(4)
+      .setAlpha(0.92);
+
+    this.promptText = this.add
+      .text(width * 0.5, promptY, `${copy.continueLine}\n${copy.backLine}`, {
+        fontFamily: 'monospace',
+        fontSize: width <= 720 ? '10px' : '11px',
+        color: ACCENT_COLOR,
+        align: 'center',
+        lineSpacing: 3,
+        wordWrap: { width: contentWidth }
+      })
+      .setOrigin(0.5, 1)
+      .setAlpha(0.8)
+      .setDepth(5);
+
+    this.add
+      .text(width * 0.5, height - 18, '// SIGNAL FRAGMENT', {
         fontFamily: 'monospace',
         fontSize: '10px',
         color: ACCENT_COLOR,
@@ -107,16 +149,19 @@ export class PrologueScene extends Phaser.Scene {
 
     if (this.mode === 'raycast') {
       this.modifierText = this.add
-        .text(width * 0.5, height * 0.78, this.buildModifierPrompt(), {
+        .text(width * 0.5, modifierY, this.buildModifierPrompt(), {
           fontFamily: 'monospace',
-          fontSize: width <= 720 ? '11px' : '12px',
+          fontSize: width <= 720 ? '10px' : '11px',
+          backgroundColor: '#05120ccc',
           color: ACCENT_COLOR,
           align: 'center',
-          wordWrap: { width: Math.min(width - 40, 620) }
+          lineSpacing: 4,
+          padding: { x: 10, y: 8 },
+          wordWrap: { width: Math.min(contentWidth - 10, 700), useAdvancedWrap: true }
         })
-        .setOrigin(0.5)
+        .setOrigin(0.5, 0)
         .setDepth(5)
-        .setAlpha(0.92);
+        .setAlpha(0.94);
     }
 
     this.cameras.main.fadeIn(380, 0, 0, 0);
@@ -202,8 +247,8 @@ export class PrologueScene extends Phaser.Scene {
   private buildModifierPrompt(): string {
     const selected = getRunModifierById(this.runModifierId);
     if (!selected) {
-      return 'MODIFIER ROULETTE (OPTIONAL): NONE\\nM cycle  |  R roll random  |  N clear\\nPress SPACE/ENTER to accept and start';
+      return 'MODIFIER ROULETTE (OPTIONAL)\\nACTIVE // NONE\\nM CYCLE  |  R ROLL RANDOM  |  N CLEAR';
     }
-    return `MODIFIER ROULETTE (OPTIONAL): ${selected.label}\\n${selected.summary}\\n${selected.details}\\nM cycle  |  R roll random  |  N clear`;
+    return `MODIFIER ROULETTE (OPTIONAL)\\nACTIVE // ${selected.label}\\n${selected.summary}\\n${selected.details}\\nM CYCLE  |  R ROLL RANDOM  |  N CLEAR`;
   }
 }

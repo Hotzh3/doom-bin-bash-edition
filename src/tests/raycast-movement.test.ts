@@ -110,11 +110,11 @@ describe('raycast movement', () => {
     expect(collides(openedMap, crossed.x, crossed.y, RAYCAST_MOVEMENT.collisionRadius)).toBe(false);
   });
 
-  it('uses an expanded wide classic FPS FOV', () => {
+  it('uses a wider classic FPS FOV while staying readable', () => {
     const fovDegrees = (RAYCAST_RENDERER_CONFIG.fovRadians * 180) / Math.PI;
 
-    expect(fovDegrees).toBeGreaterThanOrEqual(96);
-    expect(fovDegrees).toBeLessThanOrEqual(101);
+    expect(fovDegrees).toBeGreaterThanOrEqual(106);
+    expect(fovDegrees).toBeLessThanOrEqual(111);
   });
 
   it('keeps default mouse sensitivity below prior 100% feel', () => {
