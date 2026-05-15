@@ -8,7 +8,9 @@ export const RAYCAST_OPTIONAL_TEXTURE_KEYS = {
   weaponPistol: 'raycast_weapon_pistol',
   weaponShotgun: 'raycast_weapon_shotgun',
   weaponLauncher: 'raycast_weapon_launcher',
-  hudFrame: 'raycast_hud_frame'
+  hudFrame: 'raycast_hud_frame',
+
+  enemyGruntIdleFront: 'raycast_enemy_grunt_idle_front'
 } as const;
 
 export function raycastTextureExists(scene: Phaser.Scene, key: string): boolean {
@@ -21,6 +23,18 @@ export function getRaycastTextureIfPresent(scene: Phaser.Scene, key: string): Ph
 
 /** Call from RaycastScene when adding optional image loads later; safe no-op until assets exist. */
 export function registerRaycastOptionalAssets(scene: Phaser.Scene): void {
-  void scene;
-  /* Future: scene.load.image(RAYCAST_OPTIONAL_TEXTURE_KEYS.weaponPistol, 'raycast/pistol.png'); scene.load.start(); */
+  let queuedAsset = false;
+
+  if (!scene.textures.exists(RAYCAST_OPTIONAL_TEXTURE_KEYS.enemyGruntIdleFront)) {
+    scene.load.image(
+      RAYCAST_OPTIONAL_TEXTURE_KEYS.enemyGruntIdleFront,
+      'assets/raycast/enemies/grunt/grunt_idle_front.png'
+    );
+
+    queuedAsset = true;
+  }
+
+  if (queuedAsset && !scene.load.isLoading()) {
+    scene.load.start();
+  }
 }
