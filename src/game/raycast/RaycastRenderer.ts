@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { RAYCAST_OPTIONAL_TEXTURE_KEYS, raycastTextureExists } from './raycastAssetHooks';
 import { castRay, type RaycastHit, type RaycastMap } from './RaycastMap';
 import {
   getRaycastEnemySpawnTelegraphProgress,
@@ -76,19 +77,27 @@ export interface RaycastBillboard {
 const PROJECTION_POOL_CAP = 160;
 
 export class RaycastRenderer {
+  private readonly scene: Phaser.Scene;
   private readonly graphics: Phaser.GameObjects.Graphics;
   private readonly depthBuffer: number[];
+  private readonly weaponSprite: Phaser.GameObjects.Image;
+  private readonly preparedWeaponTextureKeys = new Set<string>();
   private readonly enemyProjectionScratch: EnemyProjection[] = [];
   private readonly projectileProjectionScratch: ProjectileProjection[] = [];
   private readonly billboardProjectionScratch: BillboardProjection[] = [];
 
   constructor(
-    scene: Phaser.Scene,
-    private readonly map: RaycastMap,
-    private readonly level: RaycastLevel = RAYCAST_LEVEL,
-    private readonly config = RAYCAST_RENDERER_CONFIG
+  scene: Phaser.Scene,
+  private readonly map: RaycastMap,
+  private readonly level: RaycastLevel = RAYCAST_LEVEL,
+  private readonly config = RAYCAST_RENDERER_CONFIG
   ) {
+    this.scene = scene;
     this.graphics = scene.add.graphics();
+    this.weaponSprite = scene.add.image(0, 0, RAYCAST_OPTIONAL_TEXTURE_KEYS.weaponPistol);
+    this.weaponSprite.setVisible(false);
+    this.weaponSprite.setOrigin(0.5, 1);
+    this.weaponSprite.setDepth(1000);
     this.depthBuffer = new Array(this.config.rayCount);
     for (let i = 0; i < PROJECTION_POOL_CAP; i += 1) {
       this.enemyProjectionScratch.push({
@@ -464,11 +473,63 @@ export class RaycastRenderer {
     return { x: eased * 8.8, y: eased * 34 };
   }
 
+  private prepareWeaponTexture(textureKey: string): void {
+  if (this.preparedWeaponTextureKeys.has(textureKey)) return;
+
+  const texture = this.scene.textures.get(textureKey);
+  texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
+
+  this.preparedWeaponTextureKeys.add(textureKey);
+}
+  private getWeaponTextureKey(weapon: WeaponKind): string | null {
+    switch (weapon) {
+      case 'PISTOL':
+        return RAYCAST_OPTIONAL_TEXTURE_KEYS.weaponPistol;
+      case 'SHOTGUN':
+        return RAYCAST_OPTIONAL_TEXTURE_KEYS.weaponShotgun;
+      case 'LAUNCHER':
+        return RAYCAST_OPTIONAL_TEXTURE_KEYS.weaponLauncher;
+      default:
+        return null;
+    }
+  }
+
   renderWeaponOverlay(weapon: WeaponKind, width: number, height: number, muzzleAlpha: number): void {
     const kick = Phaser.Math.Clamp(muzzleAlpha, 0, 1);
     const { x: recoilX, y: recoilY } = this.weaponRecoilOffset(weapon, kick);
     const baseY = height - 18 + recoilY;
     const cx = width * 0.5 + recoilX;
+        const weaponTextureKey = this.getWeaponTextureKey(weapon);
+    const hasWeaponSprite =
+      weaponTextureKey !== null && raycastTextureExists(this.scene, weaponTextureKey);
+
+    if (hasWeaponSprite && weaponTextureKey) {
+      this.prepareWeaponTexture(weaponTextureKey);
+      const displaySize =
+        weapon === 'SHOTGUN'
+        ? width * 0.36
+        : weapon === 'LAUNCHER'
+        ? width * 0.34
+        : width * 0.28;
+
+      const kickScale = 1 + kick * 0.035;
+
+      this.weaponSprite
+        .setTexture(weaponTextureKey)
+        .setBlendMode(Phaser.BlendModes.NORMAL)
+        .setVisible(true)
+        .setAlpha(1)
+        .setPosition(
+          cx,
+          weapon === 'PISTOL' ? height + 78 + recoilY : height + 18 + recoilY
+        )
+        .setDisplaySize(displaySize * kickScale, displaySize * kickScale)
+        .setDepth(1000);
+
+      return;
+    }
+
+    this.weaponSprite.setVisible(false);
     const weaponColor = weapon === 'SHOTGUN' ? 0x6d4028 : weapon === 'LAUNCHER' ? 0x29414d : 0x334150;
     const trimColor = weapon === 'SHOTGUN' ? RAYCAST_PALETTE.rustBright : weapon === 'LAUNCHER' ? RAYCAST_PALETTE.plasmaBright : RAYCAST_PALETTE.muzzleWarm;
     const deepShadow = RAYCAST_PALETTE.floorVoid;

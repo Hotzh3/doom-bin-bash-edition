@@ -21,6 +21,33 @@ export function getRaycastTextureIfPresent(scene: Phaser.Scene, key: string): Ph
 
 /** Call from RaycastScene when adding optional image loads later; safe no-op until assets exist. */
 export function registerRaycastOptionalAssets(scene: Phaser.Scene): void {
-  void scene;
-  /* Future: scene.load.image(RAYCAST_OPTIONAL_TEXTURE_KEYS.weaponPistol, 'raycast/pistol.png'); scene.load.start(); */
+  let queuedAsset = false;
+
+  if (!scene.textures.exists(RAYCAST_OPTIONAL_TEXTURE_KEYS.weaponPistol)) {
+    scene.load.image(
+      RAYCAST_OPTIONAL_TEXTURE_KEYS.weaponPistol,
+      'assets/raycast/weapons/pistol.png'
+    );
+    queuedAsset = true;
+  }
+
+  if (!scene.textures.exists(RAYCAST_OPTIONAL_TEXTURE_KEYS.weaponShotgun)) {
+    scene.load.image(
+      RAYCAST_OPTIONAL_TEXTURE_KEYS.weaponShotgun,
+      'assets/raycast/weapons/shotgun.png'
+    );
+    queuedAsset = true;
+  }
+
+  if (!scene.textures.exists(RAYCAST_OPTIONAL_TEXTURE_KEYS.weaponLauncher)) {
+    scene.load.image(
+      RAYCAST_OPTIONAL_TEXTURE_KEYS.weaponLauncher,
+      'assets/raycast/weapons/raygun.png'
+    );
+    queuedAsset = true;
+  }
+
+  if (queuedAsset && !scene.load.isLoading()) {
+    scene.load.start();
+  }
 }
